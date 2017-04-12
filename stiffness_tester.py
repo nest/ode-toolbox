@@ -1,9 +1,11 @@
 import pygsl.odeiv as odeiv
+import numpy as np
 import Numeric
 import math
-import random
+
 
 class iaf_cond_alpha:
+
     def __init__(self, name):
         self.name = name
         self.dimension = 5
@@ -17,15 +19,19 @@ class iaf_cond_alpha:
         self.C_m = 250
         self.V_th = -55.0
 
-    def get_initial_state(self): 
-        return (self.E_L, 0.0, 0.0, 0.0, 0.0)
+        self.state = np.asarray([self.E_L, 0.0, 0.0, 0.0, 0.0])
+
+    def get_initial_state(self):
+        return [self.E_L, 0.0, 0.0, 0.0, 0.0]
+
+    def set_state(self, state):
+        self.state = state
 
     def initial_values(self):
-        return [0, 0, math.e / self.tau_synE, 0, -math.e / self.tau_synI]
+        return np.asarray([0, 0, math.e / self.tau_synE, 0, -math.e / self.tau_synI])
         
     @staticmethod
     def step(t, y, params):
-       
         real_this = iaf_cond_alpha("iaf_cond_alpha_real_this")
         f = Numeric.zeros((real_this.dimension,), Numeric.Float)
 
@@ -75,11 +81,14 @@ class iaf_cond_alpha:
         dfdt = Numeric.zeros((5,))
         return dfdy, dfdt
 
+    @staticmethod
     def threshold(V_m):
-      if V_m > self.V_th:
-          return True
-      else:
-          return False
+        real_this = iaf_cond_alpha("iaf_cond_alpha_real_this")
+        if V_m < -100:
+            return True
+        else:
+            return False
+
 
 class stiff_ODE:
     def __init__(self, name):
@@ -111,6 +120,7 @@ class stiff_ODE:
 
         #print "    " + str(t)
         return f
+
     @staticmethod
     def jac(t, y, t_m):
         real_this = iaf_cond_alpha("iaf_cond_alpha_real_this")
@@ -122,10 +132,11 @@ class stiff_ODE:
         dfdt = Numeric.zeros((2,))
         return dfdy, dfdt
 
+
 def make_stiffness_test_for(neuron):
     print("Runs stiffness test for the neuron " + neuron.name)
     h = 0.1
-    sim_time = 0.5
+    sim_time = 100.5
     simulation_slots = int(round(sim_time / h))
     print "Simulation slots:"+ str(simulation_slots) 
 
@@ -139,8 +150,9 @@ def make_stiffness_test_for(neuron):
                                        iaf_cond_alpha.jac,
                                        [gen_inh] * neuron.dimension,
                                        neuron.get_initial_state(),
-                                       neuron.initial_values()
-                                       None)
+                                       neuron.initial_values(),
+                                       iaf_cond_alpha.threshold)
+
     print ("######### rk expl ########")
     step_min_exp = evaluate_integrator(h,
                                        sim_time,
@@ -151,12 +163,22 @@ def make_stiffness_test_for(neuron):
                                        [gen_inh] * neuron.dimension,
                                        neuron.get_initial_state(),
                                        neuron.initial_values(),
-                                       None)
+                                       iaf_cond_alpha.threshold)
     print ("######### results #######")
     print "imp: {} exp: {}".format(step_min_imp, step_min_exp)
     print ("########## end ##########")
 
-def evaluate_integrator(h, sim_time, simulation_slots, integrator, step_function, jacobian, spikes, y, initial_values):
+
+def evaluate_integrator(h,
+                        sim_time,
+                        simulation_slots,
+                        integrator,
+                        step_function,
+                        jacobian,
+                        spikes,
+                        y,
+                        initial_values,
+                        threshold):
     s_min = h  # the minimal step size cannot be larger than the maximal stepsize h
 
     step = integrator(len(y), step_function, jacobian)
@@ -174,15 +196,18 @@ def evaluate_integrator(h, sim_time, simulation_slots, integrator, step_function
         print "End while loop"
         
         if threshold is not None and threshold(y[0]):
-            print("crossed")        
+            y[0] = -70.
+            print("crossed")
+
         for idx, initial_value in enumerate(initial_values):
             y[idx] += initial_value * spikes[idx][time_slot]
     return s_min
 
+
 def generate_spike_train(SIMULATION_SLOTS):
     spike_train = [0.0, 0.1,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.0]
-    return spike_train * max(int(SIMULATION_SLOTS/len(spike_train)), 1)
+    return spike_train * int(math.ceil(float(SIMULATION_SLOTS)/len(spike_train)))
 
 if __name__ == "__main__":
     make_stiffness_test_for(iaf_cond_alpha("iaf_cond_alpha"))
-    make_stiffness_test_for(iaf_cond_alpha("stiff_ODE"))
+    #make_stiffness_test_for(iaf_cond_alpha("stiff_ODE"))
