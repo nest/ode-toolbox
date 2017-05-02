@@ -227,7 +227,7 @@ class aeif_cond_exp:
     def __init__(self, name):
         self.name = name
         self.dimension = 4
-        self.tau_synE = 0.1
+        self.tau_synE = 0.05
         self.tau_synI = 2.0
         self.E_ex = 0.0
         self.E_in = -85.0
@@ -309,8 +309,8 @@ class aeif_cond_exp:
 
 def make_stiffness_test_for(neuron):
     print("Runs stiffness test for the neuron " + neuron.name)
-    h = 0.6
-    sim_time = 2.0
+    h = 0.2
+    sim_time = 4.0
     simulation_slots = int(round(sim_time / h))
     print "Simulation slots:"+ str(simulation_slots) 
 
