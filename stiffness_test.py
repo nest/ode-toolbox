@@ -47,6 +47,37 @@ class TestStiffnessChecker(unittest.TestCase):
         odes = ["f_0 = -y_0/Tau + y_2 / C_m",
                 "f_1 = -y_1 / tau_syn_in",
                 "f_2 = y_1 - (y_2 / tau_syn_in)"]
+                
+    def test_aeif_cond_alpha:
+        threshold_body = "y_0 >= V_peak"
+        reset_statement = "y_0 = V_peak"
+
+    def __init__(self, name):
+        default_values =["name = 'aeif_cond_alpha'",
+                         "dimension = 6",
+                         "tau_synE = 0.2",
+                         "tau_synI = 2.0",
+                         "E_ex = 0.0",
+                         "E_in = -85.0",
+                         "g_L = 30.0",
+                         "I_e = 0.0",
+                         "E_L = -70.6",
+                         "C_m = 281.0",
+                         "V_th = -50.4",
+                         "V_peak = 0.0",
+                         "tau_w = 144.0",
+                         "a = 4.0",
+                         "Delta_T = 2.0"
+                         "start_vvalues = [E_L, 0.0, 0.0, 0.0, 0.0, 0.0]",
+                         "initial_values = [0, math.e / tau_synE, 0, -math.e / tau_synI, 0, 0]"]
+                         
+        odes = ["f_0 = (g_L * (y_0 - E_L) + g_L * Delta_T * math.exp((y_0 - V_th) / Delta_T) - y_2 * (y_0 - E_ex)  - y_4 * (y_0 - E_in) - y_5 + I_e) / C_m",
+                "f_1 = -_1 / tau_synE",
+                "f_2 = y_1 - (y_2 / tau_synE)",
+                "f_3 = -y_3 / tau_synI",
+                "f_4 = y_3 - (y_4 / tau_synI)",
+                "f_5 = (a * (y_0 - E_L) - y_5) / tau_w"]
+
 
         # TODO runs to slow check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
         
