@@ -28,7 +28,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_3 = -y_3 / tau_synI",
                 "f_4 = y_3 - (y_4 / tau_synI)"]
 
-        check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
+        #check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
 
     def test_iaf_neuron(self):
         threshold_body = "y_0 >= Theta"
@@ -47,12 +47,13 @@ class TestStiffnessChecker(unittest.TestCase):
         odes = ["f_0 = -y_0/Tau + y_2 / C_m",
                 "f_1 = -y_1 / tau_syn_in",
                 "f_2 = y_1 - (y_2 / tau_syn_in)"]
+
+        #check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
                 
-    def test_aeif_cond_alpha:
+    def test_aeif_cond_alpha(self):
         threshold_body = "y_0 >= V_peak"
         reset_statement = "y_0 = V_peak"
 
-    def __init__(self, name):
         default_values =["name = 'aeif_cond_alpha'",
                          "dimension = 6",
                          "tau_synE = 0.2",
@@ -67,16 +68,18 @@ class TestStiffnessChecker(unittest.TestCase):
                          "V_peak = 0.0",
                          "tau_w = 144.0",
                          "a = 4.0",
-                         "Delta_T = 2.0"
-                         "start_vvalues = [E_L, 0.0, 0.0, 0.0, 0.0, 0.0]",
+                         "Delta_T = 2.0",
+                         "start_values = [E_L, 0.0, 0.0, 0.0, 0.0, 0.0]",
                          "initial_values = [0, math.e / tau_synE, 0, -math.e / tau_synI, 0, 0]"]
                          
         odes = ["f_0 = (g_L * (y_0 - E_L) + g_L * Delta_T * math.exp((y_0 - V_th) / Delta_T) - y_2 * (y_0 - E_ex)  - y_4 * (y_0 - E_in) - y_5 + I_e) / C_m",
-                "f_1 = -_1 / tau_synE",
+                "f_1 = -y_1 / tau_synE",
                 "f_2 = y_1 - (y_2 / tau_synE)",
                 "f_3 = -y_3 / tau_synI",
                 "f_4 = y_3 - (y_4 / tau_synI)",
                 "f_5 = (a * (y_0 - E_L) - y_5) / tau_w"]
+
+        check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
 
 
         # TODO runs to slow check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)

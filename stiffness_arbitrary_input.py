@@ -5,6 +5,8 @@ import pygsl.odeiv as odeiv
 from sympy.parsing.sympy_parser import parse_expr
 from sympy import *
 import re
+import numpy as np
+
 
 # the following variables must be defined globally since they are accessed from the step, jacobian, threshold and
 # reset functions
@@ -175,7 +177,7 @@ def check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_s
     step_function_implementation = compile(step_function_implementation, '<string>', 'exec')
 
     h = 0.2
-    sim_time = 200.
+    sim_time = 2.
     simulation_slots = int(round(sim_time / h))
     gen_inh = generate_spike_train(simulation_slots)
     print("####SUMMARY####")
@@ -184,7 +186,7 @@ def check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_s
     for ode in right_hand_sides:
         print(ode)
     print("####END####")
-    print ("######### rk imp #########")
+    print ("######### imp #########")
     step_min_imp, step_average_imp = evaluate_integrator(
         h,
         sim_time,
