@@ -177,7 +177,7 @@ def check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_s
     step_function_implementation = compile(step_function_implementation, '<string>', 'exec')
 
     h = 0.2
-    sim_time = 2.
+    sim_time = 200.
     simulation_slots = int(round(sim_time / h))
     gen_inh = generate_spike_train(simulation_slots)
     print("####SUMMARY####")
