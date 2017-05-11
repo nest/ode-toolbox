@@ -140,8 +140,6 @@ class TestStiffnessChecker(unittest.TestCase):
                               "gL_1 = 10",
                               "I_e_1 = 0.0",
                               "C_m_1 = 150",
-                              "start_values_1 = [E_L_1, 0.0, 0.0, 0.0, 0.0]",
-                              "initial_values_1 = [0, math.e / tau_synE_1, 0, -math.e / tau_synI_1, 0]",
                               "E_L_2 = -70.0",
                               "tau_synE_2 = 0.5",
                               "tau_synI_2 = 2.0",
@@ -150,8 +148,6 @@ class TestStiffnessChecker(unittest.TestCase):
                               "gL_2 = 5.0",
                               "I_e_2 = 0.0",
                               "C_m_2 = 75.",
-                              "start_values_2 = [E_L_2, 0.0, 0.0, 0.0, 0.0]",
-                              "initial_values_2 = [0, math.e / tau_synE_2, 0, -math.e / tau_synI_2, 0]",
                               "E_L_3 = -70.0",
                               "tau_synE_3 = 0.5",
                               "tau_synI_3 = 2.0",
@@ -160,8 +156,8 @@ class TestStiffnessChecker(unittest.TestCase):
                               "gL_3 = 10",
                               "I_e_3 = 0.0",
                               "C_m_3 = 150",
-                              "start_values_3 = [E_L_3, 0.0, 0.0, 0.0, 0.0]",
-                              "initial_values_3 = [0, math.e / tau_synE_3, 0, -math.e / tau_synI_3, 0]",
+                              "start_values = [E_L_1, 0.0, 0.0, 0.0, 0.0, E_L_2, 0.0, 0.0, 0.0, 0.0, E_L_3, 0.0, 0.0, 0.0, 0.0]",
+                              "initial_values = [0, math.e / tau_synE_1, 0, -math.e / tau_synI_1, 0, 0, math.e / tau_synE_2, 0, -math.e / tau_synI_2, 0, 0, math.e / tau_synE_3, 0, -math.e / tau_synI_3, 0]",
                               "conn_1 = 2.5",
                               "conn_2 = 1.0"]
 
