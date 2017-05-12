@@ -18,33 +18,33 @@ ode_definitions = []
 function_variables = []
 function_variable_definitions = []
 step_function_implementation = None
-jacobian_function_implementation = None
 dimension = 0
 
 
 def check_ode_system_for_stiffness(odes_and_function_variables, default_values, threshold_body):
     """
     Performs the test of the ODE system defined in `odes_and_function_variables`
-    :param odes_and_function_variables: A list with odes and functions 
-    :param default_values: a list with variable declrations that 
-    :param threshold_body: defines a boolean statement that becomes true if the
+    
+    :param odes_and_function_variables: A list with ode and function definitions
+    :param default_values: a list with variable declarations together with their start values. It must contain to special
+                          lists: 'initial_values' and 'start_values' with floating point values. Length of these lists 
+                          equals the number of ODEs
+     
+    :param threshold_body: defines a boolean expression that becomes true if when of membrane potential crosses a 
+                           threshold.
     """
-    # Process input
     global state_variables
     global ode_definitions
     global function_variables
     global function_variable_definitions
 
+    # reset global variables that can have values from a previous function run
     function_variables = []
     function_variable_definitions = []
     state_variables = []
     ode_definitions = []
 
-    parse_input_parameters(function_variable_definitions,
-                           function_variables,
-                           ode_definitions,
-                           odes_and_function_variables,
-                           state_variables)
+    parse_input_parameters(odes_and_function_variables)
     # `default_values` contains a series of variables from the differential equations declaration separated by the
     # newline they are defined in the global scope so that different functions can access them either
     for default_value in default_values:
@@ -53,6 +53,7 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     global dimension
     dimension = len(ode_definitions)
 
+    print("#### SUMMARY ####")
     prepare_jacobian_matrix(function_variable_definitions, function_variables, ode_definitions, state_variables)
     prepare_step_function(function_variable_definitions, function_variables, ode_definitions, state_variables)
 
@@ -60,55 +61,121 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     sim_time = 20.  # in ms
     sim_time_in_sec = sim_time * 0.001
 
+    # define the length of a in seconds and milliseconds
     slot_width = 0.2  # slot width in ms
     slot_width_in_sec = slot_width * 0.001
 
     gen_inh = generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec)
 
     simulation_slots = int(round(sim_time / slot_width))
-
-    print("#### SUMMARY ####")
-    print("State variables:\n" + str(state_variables))
-    print("ODE definitions:")
-    for ode in ode_definitions:
-        print(ode)
     print("#### END ####")
 
     print("Starts stiffness test for the ODE system...")
-    print ("######### imp #########")
+    imp_solver = odeiv.step_bsimp
+    print ("######### {} #########".format(imp_solver.__name__))
     step_min_imp, step_average_imp = evaluate_integrator(
         slot_width,
         sim_time,
         simulation_slots,
-        odeiv.step_bsimp,
+        imp_solver,
         step,
         jacobian,
         [gen_inh] * dimension,
-        start_values,
-        initial_values,
+        start_values,    # this variable must be added in ` exec (default_value) in globals()`
+        initial_values,  # this variable must be added in ` exec (default_value) in globals()`
         threshold_body)
 
     # `default_values` contains a series of variables from the differential equations declaration separated by the
     # newline they are defined in the global scope so that different functions can access them either
     for default_value in default_values:
         exec (default_value) in globals()
-    print ("######### rk expl ########")
+    exp_solver = odeiv.step_rk4
+    print ("######### {} #########".format(exp_solver.__name__))
     step_min_exp, step_average_exp = evaluate_integrator(
         slot_width,
         sim_time,
         simulation_slots,
-        odeiv.step_rk4,
+        exp_solver,
         step,
         jacobian,
         [gen_inh] * dimension,
-        start_values,
-        initial_values,
+        start_values,  # this variable must be added in ` exec (default_value) in globals()`
+        initial_values,  # this variable must be added in ` exec (default_value) in globals()`
         threshold_body)
 
     print ("######### results #######")
-    print "min_imp: {} min_exp: {}".format(step_min_imp, step_min_exp)
-    print "avg_imp: {} avg_exp: {}".format(step_average_imp, step_average_exp)
+    print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
+    print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
     print ("########## end ##########")
+
+
+def parse_input_parameters(odes_and_function_variables):
+    """    
+    :param odes_and_function_variables: A list with ode and function definitions 
+    :return: Initializes global variables:`state_variables`, `ode_definitions`, `function_variables`, 
+            `function_variable_definitions` 
+    """
+    global state_variables
+    global ode_definitions
+    global function_variables
+    global function_variable_definitions
+    for entry in odes_and_function_variables:
+        if entry.startswith("function"):
+            # e.g. 'function a = b'
+            # extract assignment
+            assig = entry[len("function"):]
+            variable = assig.split("=")[0].strip()
+            defining_expression = assig.split("=")[1].strip()
+            function_variables.append(variable)
+            function_variable_definitions.append(defining_expression)
+
+        else:
+            lhs = entry.split("=")[0].strip()
+            lhs = lhs.replace('f', 'y')
+            rhs = entry.split("=")[1].strip()
+
+            state_variables.append(lhs)
+            ode_definitions.append(rhs)
+
+
+def prepare_jacobian_matrix(function_variable_definitions, function_variables, ode_definitions, state_variables):
+    jacobian_function_body = (
+        "{% for var, defining_expr in function_variables %}\n"
+        "{{var}} = parse_expr('{{defining_expr}}', local_dict=locals())\n"
+        "{% endfor %}\n"
+        "state_variable_expr = []\n"
+        "right_hand_sides_expr = []\n"
+        "{% for state_var, defining_expr in odes %}\n"
+        "state_variable_expr.append(parse_expr('{{state_var}}', local_dict=locals()))\n"
+        "right_hand_sides_expr.append(parse_expr('{{defining_expr}}', local_dict=locals()))\n"
+        "{% endfor %}\n"
+        "result_matrix_str = ''\n"
+        "for rhs in right_hand_sides_expr:\n"
+        "    row = []\n"
+        "    for state_variable in state_variable_expr:\n"
+        "        result_matrix_str += str(diff(rhs, state_variable)) + ' '\n"
+        "        row.append(replace_state_variables_through_array_access(str(diff(rhs, state_variable))))\n"
+        "    result_matrix_str = result_matrix_str + '\\n'\n"
+        "    result_matrix.append(row)\n" )
+    jacobian_function_implementation = jinja2.Template(jacobian_function_body)
+    jacobian_function_implementation = jacobian_function_implementation.render(
+        odes=zip(state_variables, ode_definitions),
+        function_variables=zip(function_variables, function_variable_definitions))
+    print "jacobian function implementation:"
+    print jacobian_function_implementation
+    jacobian_function_implementation = compile(jacobian_function_implementation, '<string>', 'exec')
+    # this matrix is used in the jacobian function
+    global jacobian_matrix
+    jacobian_matrix = calculate_jacobian(jacobian_function_implementation)
+
+
+def calculate_jacobian(jacobian_function_implementation):
+    result_matrix = []
+    exec(jacobian_function_implementation)
+    print("\nCalculated jacobian matrix: ")
+    # `result_matrix_str` is calculated as a part of the `jacobian_function_implementation`
+    print("\n" + result_matrix_str)
+    return result_matrix
 
 
 def prepare_step_function(function_variable_definitions, function_variables, ode_definitions, state_variables):
@@ -137,64 +204,6 @@ def prepare_step_function(function_variable_definitions, function_variables, ode
     step_function_implementation = compile(step_function_implementation, '<string>', 'exec')
 
 
-def prepare_jacobian_matrix(function_variable_definitions, function_variables, ode_definitions, state_variables):
-    global jacobian_function_implementation
-    jacobian_function_body = (
-        "{% for var, defining_expr in function_variables %}\n"
-        "{{var}} = parse_expr('{{defining_expr}}', local_dict=locals())\n"
-        "{% endfor %}\n"
-        "state_variable_expr = []\n"
-        "right_hand_sides_expr = []\n"
-        "{% for state_var, defining_expr in odes %}\n"
-        "state_variable_expr.append(parse_expr('{{state_var}}', local_dict=locals()))\n"
-        "right_hand_sides_expr.append(parse_expr('{{defining_expr}}', local_dict=locals()))\n"
-        "{% endfor %}\n"
-        "for rhs in right_hand_sides_expr:\n"
-        "    row = []\n"
-        "    result_matrix_str = ''\n"
-        "    for state_variable in state_variable_expr:\n"
-        "        result_matrix_str += str(diff(rhs, state_variable)) + ' '\n"
-        "        row.append(replace_state_variables_through_array_access(str(diff(rhs, state_variable))))\n"
-        "    print(result_matrix_str)\n"
-        "    result_matrix.append(row)\n"
-
-    )
-    jacobian_function_implementation = jinja2.Template(jacobian_function_body)
-    jacobian_function_implementation = jacobian_function_implementation.render(
-        odes=zip(state_variables, ode_definitions),
-        function_variables=zip(function_variables, function_variable_definitions))
-    print "jacobian function implementation:"
-    print jacobian_function_implementation
-    jacobian_function_implementation = compile(jacobian_function_implementation, '<string>', 'exec')
-    # this matrix is used in the jacobian function
-    global jacobian_matrix
-    jacobian_matrix = calculate_jacobian()
-
-
-def parse_input_parameters(function_variable_definitions,
-                           function_variables,
-                           ode_definitions,
-                           odes_and_function_variables,
-                           state_variables):
-    for entry in odes_and_function_variables:
-        if entry.startswith("function"):
-            # e.g. 'function a = b'
-            # extract assignment
-            assig = entry[len("function"):]
-            variable = assig.split("=")[0].strip()
-            defining_expression = assig.split("=")[1].strip()
-            function_variables.append(variable)
-            function_variable_definitions.append(defining_expression)
-
-        else:
-            lhs = entry.split("=")[0].strip()
-            lhs = lhs.replace('f', 'y')
-            rhs = entry.split("=")[1].strip()
-
-            state_variables.append(lhs)
-            ode_definitions.append(rhs)
-
-
 def replace_state_variables_through_array_access(definition):
     match_f_or_y = re.compile(r"\b(y|f)_(\d)+\b")
     result = match_f_or_y.sub(r"\1[\2]", definition)
@@ -206,17 +215,6 @@ def state_variables_to_f(state_variable):
     for idx in range(0, len(state_variable)):
         result.append("f[" + str(idx) + "]")
     return result
-
-
-def step(t, y, params):
-    f = Numeric.zeros((dimension,), Numeric.Float)
-    exec (step_function_implementation)
-    return f
-
-
-def threshold(y, threshold_body):
-    threshold_body = replace_state_variables_through_array_access(threshold_body)
-    return eval(threshold_body)
 
 
 def generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec):
@@ -294,10 +292,10 @@ def evaluate_integrator(h,
     return s_min_old, step_average
 
 
-def calculate_jacobian():
-    result_matrix = []
-    exec(jacobian_function_implementation)
-    return result_matrix
+def step(t, y, params):
+    f = Numeric.zeros((dimension,), Numeric.Float)
+    exec(step_function_implementation)
+    return f
 
 
 def jacobian(t, y, t_m):
@@ -317,4 +315,6 @@ def jacobian(t, y, t_m):
     return dfdy, dfdt
 
 
-
+def threshold(y, threshold_body):
+    threshold_body = replace_state_variables_through_array_access(threshold_body)
+    return eval(threshold_body)
