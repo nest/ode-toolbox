@@ -54,8 +54,8 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     dimension = len(ode_definitions)
 
     print("#### SUMMARY ####")
-    prepare_jacobian_matrix(function_variable_definitions, function_variables, ode_definitions, state_variables)
-    prepare_step_function(function_variable_definitions, function_variables, ode_definitions, state_variables)
+    prepare_jacobian_matrix()
+    prepare_step_function()
 
     # define simulation time in seconds and milliseconds
     sim_time = 20.  # in ms
@@ -81,8 +81,8 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
         step,
         jacobian,
         [gen_inh] * dimension,
-        start_values,    # this variable must be added in ` exec (default_value) in globals()`
-        initial_values,  # this variable must be added in ` exec (default_value) in globals()`
+        start_values,    # this variable was be added in `exec (default_value) in globals()`
+        initial_values,  # this variable was be added in `exec (default_value) in globals()`
         threshold_body)
 
     # `default_values` contains a series of variables from the differential equations declaration separated by the
@@ -99,8 +99,8 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
         step,
         jacobian,
         [gen_inh] * dimension,
-        start_values,  # this variable must be added in ` exec (default_value) in globals()`
-        initial_values,  # this variable must be added in ` exec (default_value) in globals()`
+        start_values,  # this variable was be added in `exec (default_value) in globals()`
+        initial_values,  # this variable was be added in `exec (default_value) in globals()`
         threshold_body)
 
     print ("######### results #######")
@@ -138,7 +138,32 @@ def parse_input_parameters(odes_and_function_variables):
             ode_definitions.append(rhs)
 
 
-def prepare_jacobian_matrix(function_variable_definitions, function_variables, ode_definitions, state_variables):
+def prepare_jacobian_matrix():
+    """
+    Compute the jacobian matrix for the current ODE system.
+    :param: global state_variables List of state variables which are passed as global variables
+    :param: global ode_definitions List of  ode definitions for every state variable from `state_variables` which are 
+                                   passed as global variables
+    :param: global function_variables List of state variables which are passed as global variables
+    :param: global function_variable_definitions List of  ode definitions for every state variable from 
+                                                 `function_variables` which are passed as global variables
+
+    :return: jacobian_matrix Stores the entries of the jacobian matrix as list of lists. Every entry of the matrix is
+                             an expression that can evaluated in the `jacobian` function.
+    """
+    global state_variables
+    global ode_definitions
+    global function_variables
+    global function_variable_definitions
+
+    # defines the implementation of the jacobian matrix computation as an jinja2 template
+    # Logic:
+    # 1) for all function variables create a SymPy variable that stores its definition as a SymPy-expression
+    # 2) For every ODE: create a SymPy symbol for every lefthandside of the ode and create a SymPy-expression
+    # 3) Create the jacobian matrix as:
+    #     every row is composed of the derivation of the righthandside of one with respect to every state variable from
+    #     `state_variables`
+    #     repeat this procedure for every ODE from `ode_definitions`
     jacobian_function_body = (
         "{% for var, defining_expr in function_variables %}\n"
         "{{var}} = parse_expr('{{defining_expr}}', local_dict=locals())\n"
@@ -157,20 +182,33 @@ def prepare_jacobian_matrix(function_variable_definitions, function_variables, o
         "        row.append(replace_state_variables_through_array_access(str(diff(rhs, state_variable))))\n"
         "    result_matrix_str = result_matrix_str + '\\n'\n"
         "    result_matrix.append(row)\n" )
+    # create jinja2 template
     jacobian_function_implementation = jinja2.Template(jacobian_function_body)
     jacobian_function_implementation = jacobian_function_implementation.render(
         odes=zip(state_variables, ode_definitions),
         function_variables=zip(function_variables, function_variable_definitions))
+
     print "jacobian function implementation:"
     print jacobian_function_implementation
+    # compile the generated code from the  jinja2 template for the better performance
     jacobian_function_implementation = compile(jacobian_function_implementation, '<string>', 'exec')
-    # this matrix is used in the jacobian function
+    # this matrix which is stored in the global variable is used in the `jacobian` function
     global jacobian_matrix
     jacobian_matrix = calculate_jacobian(jacobian_function_implementation)
 
 
 def calculate_jacobian(jacobian_function_implementation):
+    """
+    Computes the specific jacobian matrix for current system of odes
+    This function uses the following global variables: `state_variables`, `ode_definitions`, `function_variables`,
+    `function_variable_definitions`
+    :return: result_matrix that stores the entries of the jacobian matrix as list of lists. Every entry of the matrix is
+             an expression that can evaluated in the `jacobian` function.
+    """
+
+    # both variables are set during the execution of the `jacobian_function_implementation`
     result_matrix = []
+    result_matrix_str = ""
     exec(jacobian_function_implementation)
     print("\nCalculated jacobian matrix: ")
     # `result_matrix_str` is calculated as a part of the `jacobian_function_implementation`
@@ -178,14 +216,33 @@ def calculate_jacobian(jacobian_function_implementation):
     return result_matrix
 
 
-def prepare_step_function(function_variable_definitions, function_variables, ode_definitions, state_variables):
+def prepare_step_function():
+    """
+    Create the implementation of the  step function used in the GSL framework to compute one integration step.
+    :param: global state_variables List of state variables which are passed as global variables
+    :param: global ode_definitions List of  ode definitions for every state variable from `state_variables` which are 
+                                   passed as global variables
+    :param: global function_variables List of state variables which are passed as global variables
+    :param: global function_variable_definitions List of  ode definitions for every state variable from 
+                                                 `function_variables` which are passed as global variables
+
+    :return: step_function_implementation Stores a compiled Python-code that performs one integration step. 
+    """
+    global state_variables
+    global ode_definitions
+    global function_variables
+    global function_variable_definitions
+
+    # The input provided as the fucntion parameters is not valid Python/GSL code. Convert all references of f_n and y_n
+    # to f[n] and y[n]
     for idx in range(0, len(ode_definitions)):
         ode_definitions[idx] = replace_state_variables_through_array_access(ode_definitions[idx])
     for idx in range(0, len(function_variable_definitions)):
         function_variable_definitions[idx] = replace_state_variables_through_array_access(
             function_variable_definitions[idx])
 
-    # This computation is done here only due to performance considerations
+    # defines the implementation of the jacobian matrix computation as an jinja2 template
+    # Logic:
     global step_function_implementation
     step_function_body = (
         "{% for var, defining_expr in function_variables %}\n"
@@ -205,12 +262,23 @@ def prepare_step_function(function_variable_definitions, function_variables, ode
 
 
 def replace_state_variables_through_array_access(definition):
+    """
+    Convert all references of f_n and y_n in `definition` to f[n] and y[n]
+    :param definition: String to convert 
+    :return: Converted string
+    """
     match_f_or_y = re.compile(r"\b(y|f)_(\d)+\b")
     result = match_f_or_y.sub(r"\1[\2]", definition)
     return result
 
 
 def state_variables_to_f(state_variable):
+    """
+    Converts all state variables to a list composed of `f[n]`, n in {0 to len(state_variables)}. This list is used
+    to generate the lefthandside of the assignments of ODEs in the `step`-function
+    :param state_variable: 
+    :return: 
+    """
     result = []
     for idx in range(0, len(state_variable)):
         result.append("f[" + str(idx) + "]")
@@ -218,6 +286,13 @@ def state_variables_to_f(state_variable):
 
 
 def generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec):
+    """
+    The function computes representative spike trains for the given simulation length. Uses a poisson distribution to 
+    create biologically realistic characteristics of the spiketrains
+    :param sim_time_in_sec: The time of the simulation in seconds 
+    :param slot_width_in_sec: The length of the particular grind
+    :return: A list with bins which contain the number of spikes which happened in the corresponding bin.
+    """
     rate = 10. * 1000.
     mean_ISI = 1. / rate
 
@@ -242,9 +317,9 @@ def generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec):
     for slot in range(0, time_slots):
         t = list(filter(lambda x: slot * slot_width_in_sec <= x < (slot + 1) * slot_width_in_sec, spikes))
         spikes_per_slot[slot] = len(t)
-    # return spikes_per_slot
-    spike_train = [0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0]
-    return spike_train * time_slots
+    return spikes_per_slot
+    # spike_train = [0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0]
+    # return spike_train * time_slots
 
 
 def evaluate_integrator(h,
@@ -293,12 +368,26 @@ def evaluate_integrator(h,
 
 
 def step(t, y, params):
+    """
+    The GSL callback function that computes of integration step.
+    :param y: the current state vector of the ODE system
+    :param step_function_implementation: global variable that contains the implementation of the step function.
+    :param _: Prescribed GSL parameters which are  not used in this step function.
+    :return: Updated state vector stored in `f`
+    """
+    global step_function_implementation
     f = Numeric.zeros((dimension,), Numeric.Float)
     exec(step_function_implementation)
     return f
 
 
-def jacobian(t, y, t_m):
+def jacobian(t, y, params):
+    """
+    Callback function that computes the jacobian matrix for the current state vector `y`.
+    :param y: represents the current state vector of the ODE system as updated through the GSL integrator.
+    :param _: another prescribed parameters which are not used here
+    :return: dfdy that contains the jacobian matrix with respect to y`dfdt` is not computed now.
+    """
     dfdy = Numeric.zeros((dimension, dimension), Numeric.Float)
     dfdt = Numeric.zeros((dimension,))
 
@@ -307,8 +396,10 @@ def jacobian(t, y, t_m):
     g = globals()
     g["y"] = y
 
+    # evaluate every entry of the `jacobian_matrix` and store the result in the corresponding entry of the `dfdy`
     for row in range(0, dimension):
         for col in range(0, dimension):
+            # wrap the expression to a lambda function for the improved performance
             tmp = eval("lambda: " + jacobian_matrix[row][col], g)
             dfdy[row, col] = tmp()
 
@@ -316,5 +407,13 @@ def jacobian(t, y, t_m):
 
 
 def threshold(y, threshold_body):
+    """
+    :param y: represents the current state vector as updates through GSL.
+    Evaluates the user defined threshold expression. 
+    :param threshold_body: A python boolean expression that implements the threshold check.
+    :return: true iff. the state vector `y` (or any entry) ceosses the threshold
+    """
+    # threshold is defined in terms of state variables. replace them through array accesses to `y` with corresponding
+    # indices.
     threshold_body = replace_state_variables_through_array_access(threshold_body)
     return eval(threshold_body)
