@@ -379,6 +379,8 @@ def evaluate_integrator(h,
             if s_min < 0.000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
                                 "in order to support reasonable simulation")
+        # it is possible that the last step in a simulation_slot is very small, as it is simply
+        # the length of the remaining slot. Therefore we don't take the last step into account        
         s_min = s_min_old
 
         print "End while loop"
@@ -395,7 +397,12 @@ def evaluate_integrator(h,
 
 def draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp):
     """
-    This function takes the 
+    This function takes the minimal and average step size of the implicit and explicit evolution method.
+    The idea is 1. that if the ODE system is stiff the average step size of the implicit method tends to 
+    be larger. The function checks if it is twice as large. This points to the facht that the ODE system 
+    is possibly stiff expecially that it could be even more stiff for minor changes in stepzise and and 
+    parameters. Further if the minimal step size is close to machine precision for one of the methods but
+    not for the other, this suggest that the other is more stable and should be used instead.
     :param step_min_imp: 
     :param step_min_exp: 
     :param step_average_imp:
