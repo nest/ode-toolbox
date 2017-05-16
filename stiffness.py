@@ -25,11 +25,11 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     """
     Performs the test of the ODE system defined in `odes_and_function_variables`. The idea is not
     to compare if the given implicit method or the explicit method is better suited for this small
-    simulation but to check for tendancies of stiffness. If we find that the average step size of
+    simulation but to check for tendencies of stiffness. If we find that the average step size of
     the implicit evolution method is alot larger than the average step size of the explicit method
     this points to the fact that this ODE system could be stiff. Especially that, when a different 
     step size is used or when parameters are changed, it become significantly more stiff and an 
-    implicit evolution scheme could become increaingly important. It is important to note here, that
+    implicit evolution scheme could become increasingly important. It is important to note here, that
     this analysis depends significantly on the size of parameters that are assigned for an ODE system
     If these are changed significantly in magnitude the result of the analysis is also changed significantly.
     
@@ -111,7 +111,7 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
         step,
         jacobian,
         [gen_inh] * dimension,
-        start_values,  # this variable was be added in `exec (default_value) in globals()`
+        start_values,    # this variable was be added in `exec (default_value) in globals()`
         initial_values,  # this variable was be added in `exec (default_value) in globals()`
         threshold_body)
 
@@ -119,6 +119,7 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
     print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
     print ("########## end ##########")
+    return draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
 def parse_input_parameters(odes_and_function_variables):
@@ -378,8 +379,6 @@ def evaluate_integrator(h,
             if s_min < 0.000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
                                 "in order to support reasonable simulation")
-        # it is possible that the last step is very small, not out of numerical reasons, but because
-        # it the remaining step up to `t_new` is simply very small        
         s_min = s_min_old
 
         print "End while loop"
@@ -393,6 +392,30 @@ def evaluate_integrator(h,
     step_average = sim_time / step_counter
     return s_min_old, step_average
 
+
+def draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp):
+    """
+    This function takes the 
+    :param step_min_imp: 
+    :param step_min_exp: 
+    :param step_average_imp:
+    :param step_average_exp:
+    """
+    # check minimal step lengths as used by GSL integration method
+    machine_precision = np.finfo(float).eps
+    if step_min_imp > 10. * machine_precision and step_min_exp < 10. * machine_precision:
+        return "implicit"
+    elif step_min_imp < 10. * machine_precision and step_min_exp > 10. * machine_precision:
+        return "explicit"
+    elif step_min_imp < 10. * machine_precision and step_min_exp < 10. * machine_precision:
+        return "warning"
+    elif step_min_imp > 10. * machine_precision and step_min_exp > 10. * machine_precision:
+        if step_average_imp > 2*step_average_exp:
+            return "implicit"
+        else:
+            return "explicit"
+    else:
+        None  # This case cannot happen.
 
 def step(t, y, params):
     """
