@@ -378,6 +378,8 @@ def evaluate_integrator(h,
             if s_min < 0.000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
                                 "in order to support reasonable simulation")
+        # it is possible that the last step is very small, not out of numerical reasons, but because
+        # it the remaining step up to `t_new` is simply very small        
         s_min = s_min_old
 
         print "End while loop"
