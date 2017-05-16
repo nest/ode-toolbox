@@ -28,11 +28,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_3 = -y_3 / tau_synI",
                 "f_4 = y_3 - (y_4 / tau_synI)"]
 
-<<<<<<< HEAD
-        #check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
-=======
         check_ode_system_for_stiffness(odes, default_values, threshold_body)
->>>>>>> f79a4f95fcdd1a68761ad385d6f11bcdb1cfba68
 
     def test_iaf_neuron(self):
         threshold_body = "y_0 >= Theta"
@@ -51,17 +47,12 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_1 = -y_1 / tau_syn_in",
                 "f_2 = y_1 - (y_2 / tau_syn_in)"]
 
-<<<<<<< HEAD
-        #check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
-=======
         check_ode_system_for_stiffness(odes, default_values, threshold_body)
->>>>>>> f79a4f95fcdd1a68761ad385d6f11bcdb1cfba68
-                
+
     def test_aeif_cond_alpha(self):
         threshold_body = "y_0 >= V_th"
 
         default_values =["name = 'aeif_cond_alpha'",
-                         "dimension = 6",
                          "tau_synE = 0.2",
                          "tau_synI = 2.0",
                          "E_ex = 0.0",
@@ -131,11 +122,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_6 = -dI_in / tau_synI",
                 "f_7 = dI_in - ( I_in / tau_synI )"]
 
-<<<<<<< HEAD
-        #check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
-=======
         check_ode_system_for_stiffness(odes, default_values, threshold_body)
->>>>>>> f79a4f95fcdd1a68761ad385d6f11bcdb1cfba68
 
     def test_with_iaf_cond_alpha_mc(self):
         threshold_body = "y_0 >= V_th"
@@ -188,11 +175,8 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_13= -y_13 / tau_synI_3",
                 "f_14 = y_13 - (y_14 / tau_synI_3)"]
 
-<<<<<<< HEAD
-        #check_ode_system_for_stiffness(odes, default_values, threshold_body, reset_statement)
-=======
         check_ode_system_for_stiffness(odes, default_values, threshold_body)
->>>>>>> f79a4f95fcdd1a68761ad385d6f11bcdb1cfba68
+
 
 if __name__ == '__main__':
     unittest.main()
