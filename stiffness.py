@@ -23,7 +23,15 @@ dimension = 0
 
 def check_ode_system_for_stiffness(odes_and_function_variables, default_values, threshold_body):
     """
-    Performs the test of the ODE system defined in `odes_and_function_variables`
+    Performs the test of the ODE system defined in `odes_and_function_variables`. The idea is not
+    to compare if the given implicit method or the explicit method is better suited for this small
+    simulation but to check for tendancies of stiffness. If we find that the average step size of
+    the implicit evolution method is alot larger than the average step size of the explicit method
+    this points to the fact that this ODE system could be stiff. Especially that, when a different 
+    step size is used or when parameters are changed, it become significantly more stiff and an 
+    implicit evolution scheme could become increaingly important. It is important to note here, that
+    this analysis depends significantly on the size of parameters that are assigned for an ODE system
+    If these are changed significantly in magnitude the result of the analysis is also changed significantly.
     
     :param odes_and_function_variables: A list with ode and function definitions
     :param default_values: a list with variable declarations together with their start values. It must contain to special
@@ -61,16 +69,19 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     sim_time = 20.  # in ms
     sim_time_in_sec = sim_time * 0.001
 
-    # define the length of a in seconds and milliseconds
+    # define the length of the slotwidth in seconds and milliseconds
     slot_width = 0.2  # slot width in ms
     slot_width_in_sec = slot_width * 0.001
 
     gen_inh = generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec)
-
+    
+    #calculate the amount of simulation slots
     simulation_slots = int(round(sim_time / slot_width))
     print("#### END ####")
 
     print("Starts stiffness test for the ODE system...")
+    # our aim is not to compare to evolution methods but to find tendancies of stiffness for the system
+    # therefore we use one implicit evolution method, here the bulirsh stoer method and one explicit method
     imp_solver = odeiv.step_bsimp
     print ("######### {} #########".format(imp_solver.__name__))
     step_min_imp, step_average_imp = evaluate_integrator(
@@ -89,6 +100,7 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     # newline they are defined in the global scope so that different functions can access them either
     for default_value in default_values:
         exec (default_value) in globals()
+    # the explicit evolution method is a runge kutta 4
     exp_solver = odeiv.step_rk4
     print ("######### {} #########".format(exp_solver.__name__))
     step_min_exp, step_average_exp = evaluate_integrator(
@@ -332,6 +344,19 @@ def evaluate_integrator(h,
                         y,
                         initial_values,
                         threshold_body):
+    """
+    This function computes the average step size and the minimal step size that a given 
+    integration method from GSL uses to evolve a certain system of ODEs during a certain
+    simulation time, integration method from GSL and spike train for a given maximal stepsize.
+    :param h: The maximal stepsize for one evolution step in miliseconds
+    :param sim_time: The maximal total time of the simulation in miliseconds 
+    :param integrator: A method from the GSL library for evolving ODES, e.g. rk4
+    :param step_function: The function f that defines the system of ODEs as f(y)= y' that is evolved by the GSL method
+    :pram jacobian: the jacobian matrix of the function `step_function`
+    :param spikes: A representative spike train for the given simulation time `sim_time`
+    :param y: The 'state variables' in f(y)=y'
+    :return: Average and minimal step size.
+    """
     s_min = h  # the minimal step size cannot be larger than the maximal stepsize h
 
     gls_stepper = integrator(len(y), step_function, jacobian)  # must be jaccobian
