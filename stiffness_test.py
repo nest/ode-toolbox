@@ -28,7 +28,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_3 = -y_3 / tau_synI",
                 "f_4 = y_3 - (y_4 / tau_synI)"]
 
-        check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        #check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
     def test_iaf_neuron(self):
         threshold_body = "y_0 >= Theta"
@@ -47,13 +47,13 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_1 = -y_1 / tau_syn_in",
                 "f_2 = y_1 - (y_2 / tau_syn_in)"]
 
-        check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        #check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
     def test_aeif_cond_alpha(self):
         threshold_body = "y_0 >= V_th"
 
         default_values =["name = 'aeif_cond_alpha'",
-                         "tau_synE = 0.2",
+                         "tau_synE = 0.05",
                          "tau_synI = 2.0",
                          "E_ex = 0.0",
                          "E_in = -85.0",
@@ -68,6 +68,7 @@ class TestStiffnessChecker(unittest.TestCase):
                          "Delta_T = 2.0",
                          "start_values = [E_L, 0.0, 0.0, 0.0]",
                          "initial_values = [0, 1, -1, 0]"]
+
                          
         odes = ["function I_syn_exc = y_1 * (y_0 - E_ex)",
                 "function I_syn_inh = y_2 * (y_0 - E_in)",
@@ -77,7 +78,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_2 = -y_2 / tau_synI",
                 "f_3 = (a * (y_0 - E_L) - y_3) / tau_w"]
 
-        check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        #check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
     def test_hh_iaf_psc_alpha(self):
         threshold_body = "false"
@@ -122,7 +123,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_6 = -dI_in / tau_synI",
                 "f_7 = dI_in - ( I_in / tau_synI )"]
 
-        check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        #check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
     def test_with_iaf_cond_alpha_mc(self):
         threshold_body = "y_0 >= V_th"
@@ -135,15 +136,15 @@ class TestStiffnessChecker(unittest.TestCase):
                           "tau_synI_1 = 2.0",
                           "E_ex_1 = 0.0",
                           "E_in_1 = -85.0",
-                          "g_L_1 = 10",
+                          "g_L_1 = 1",
                           "I_e_1 = 0.0",
                           "C_m_1 = 150",
-                          "E_L_2 = -70.0",
+                          "E_L_2 = -85.0",
                           "tau_synE_2 = 0.5",
                           "tau_synI_2 = 2.0",
                           "E_ex_2 = 0.0",
-                          "E_in_2 = -85.0",
-                          "g_L_2 = 5.0",
+                          "E_in_2 = -70.0",
+                          "g_L_2 = 500.0",
                           "I_e_2 = 0.0",
                           "C_m_2 = 75.",
                           "E_L_3 = -70.0",
@@ -154,10 +155,10 @@ class TestStiffnessChecker(unittest.TestCase):
                           "g_L_3 = 10",
                           "I_e_3 = 0.0",
                           "C_m_3 = 150",
-                          "start_values = [E_L_1, 0.0, 0.0, 0.0, 0.0, E_L_2, 0.0, 0.0, 0.0, 0.0, E_L_3, 0.0, 0.0, 0.0, 0.0]",
+                          "start_values = [E_L_1, 0.0, 0.0, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 0.0, E_L_3, 0.0, 0.0, 0.0, 0.0]",
                           "initial_values = [0, e / tau_synE_1, 0, -e / tau_synI_1, 0, 0, e / tau_synE_2, 0, -e / tau_synI_2, 0, 0, e / tau_synE_3, 0, -e / tau_synI_3, 0]",
-                          "conn_1 = 2.5",
-                          "conn_2 = 1.0"]
+                          "conn_1 = 10",
+                          "conn_2 = 0."]
 
         odes = ["f_0 = (-(g_L_1 * (y_0 - E_L_1)) - (y_2 * (y_0 - E_ex_1)) - y_4 * (y_0 - E_in_1) + conn_1 * (y_0 - y_5) + I_e_1) / C_m_1",
                 "f_1 = -y_1 / tau_synE_1",
