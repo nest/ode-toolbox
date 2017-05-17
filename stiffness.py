@@ -366,10 +366,13 @@ def evaluate_integrator(h,
 
     t = 0.0
     step_counter = 0
+    sum_last_steps = 0
     for time_slot in range(simulation_slots):
         t_new = t + h
         print "Start while loop at slot " + str(time_slot)
+        counter_while_loop = 0
         while t < t_new:
+            counter_while_loop += 1
             t_old = t
             t, h_, y = evolve.apply(t, t_new, h, y)  # h_ is NOT the reached step size but the suggested next step size!
             step_counter += 1
@@ -378,10 +381,13 @@ def evaluate_integrator(h,
             print str(time_slot) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
             if s_min < 0.000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
-                                "in order to support reasonable simulation")
-        # it is possible that the last step in a simulation_slot is very small, as it is simply
-        # the length of the remaining slot. Therefore we don't take the last step into account        
-        s_min = s_min_old
+                                   "in order to support reasonable simulation")
+        if counter_while_loop >1:
+            step_counter -=1
+            sum_last_steps += t_new - t_old
+            # it is possible that the last step in a simulation_slot is very small, as it is simply
+            # the length of the remaining slot. Therefore we don't take the last step into account        
+            s_min = s_min_old
 
         print "End while loop"
 
@@ -391,7 +397,7 @@ def evaluate_integrator(h,
 
         for idx, initial_value in enumerate(initial_values):
             y[idx] += initial_value * spikes[idx][time_slot]
-    step_average = sim_time / step_counter
+    step_average = (t -sum_last_steps) / step_counter
     return s_min_old, step_average
 
 
