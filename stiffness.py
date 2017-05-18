@@ -75,7 +75,7 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
 
     gen_inh = generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec)
     
-    #calculate the amount of simulation slots
+    # calculate the amount of simulation slots
     simulation_slots = int(round(sim_time / slot_width))
     print("#### END ####")
 
@@ -86,7 +86,6 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     print ("######### {} #########".format(imp_solver.__name__))
     step_min_imp, step_average_imp = evaluate_integrator(
         slot_width,
-        sim_time,
         simulation_slots,
         imp_solver,
         step,
@@ -105,7 +104,6 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     print ("######### {} #########".format(exp_solver.__name__))
     step_min_exp, step_average_exp = evaluate_integrator(
         slot_width,
-        sim_time,
         simulation_slots,
         exp_solver,
         step,
@@ -336,7 +334,6 @@ def generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec):
 
 
 def evaluate_integrator(h,
-                        sim_time,
                         simulation_slices,
                         integrator,
                         step_function,
