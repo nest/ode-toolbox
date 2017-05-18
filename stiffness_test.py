@@ -28,7 +28,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_3 = -y_3 / tau_synI",
                 "f_4 = y_3 - (y_4 / tau_synI)"]
 
-        #check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        print check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
     def test_iaf_neuron(self):
         threshold_body = "y_0 >= Theta"
@@ -47,7 +47,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_1 = -y_1 / tau_syn_in",
                 "f_2 = y_1 - (y_2 / tau_syn_in)"]
 
-        #check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        print check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
     def test_aeif_cond_alpha(self):
         threshold_body = "y_0 >= V_th"
@@ -78,7 +78,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_2 = -y_2 / tau_synI",
                 "f_3 = (a * (y_0 - E_L) - y_3) / tau_w"]
 
-        #check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        print check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
     def test_hh_iaf_psc_alpha(self):
         threshold_body = "false"
@@ -123,7 +123,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_6 = -dI_in / tau_synI",
                 "f_7 = dI_in - ( I_in / tau_synI )"]
 
-        #check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        print check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
     def test_with_iaf_cond_alpha_mc(self):
         threshold_body = "y_0 >= V_th"
@@ -176,7 +176,7 @@ class TestStiffnessChecker(unittest.TestCase):
                 "f_13= -y_13 / tau_synI_3",
                 "f_14 = y_13 - (y_14 / tau_synI_3)"]
 
-        check_ode_system_for_stiffness(odes, default_values, threshold_body)
+        print check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
 
 if __name__ == '__main__':
