@@ -337,7 +337,7 @@ def generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec):
 
 def evaluate_integrator(h,
                         sim_time,
-                        simulation_slots,
+                        simulation_slices,
                         integrator,
                         step_function,
                         jacobian,
@@ -367,9 +367,9 @@ def evaluate_integrator(h,
     t = 0.0
     step_counter = 0
     sum_last_steps = 0
-    for time_slot in range(simulation_slots):
+    for time_slice in range(simulation_slices):
         t_new = t + h
-        print "Start while loop at slot " + str(time_slot)
+        print "Start while loop at slot " + str(time_slice)
         counter_while_loop = 0
         while t < t_new:
             counter_while_loop += 1
@@ -378,7 +378,7 @@ def evaluate_integrator(h,
             step_counter += 1
             s_min_old = s_min
             s_min = min(s_min, t - t_old)
-            print str(time_slot) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
+            print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
             if s_min < 0.000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
                                    "in order to support reasonable simulation")
@@ -396,7 +396,7 @@ def evaluate_integrator(h,
             break
 
         for idx, initial_value in enumerate(initial_values):
-            y[idx] += initial_value * spikes[idx][time_slot]
+            y[idx] += initial_value * spikes[idx][time_slice]
     step_average = (t -sum_last_steps) / step_counter
     return s_min_old, step_average
 
