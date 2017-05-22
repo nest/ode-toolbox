@@ -73,7 +73,7 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     slot_width = 0.2  # slot width in ms
     slot_width_in_sec = slot_width * 0.001
 
-    gen_inh = generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec)
+    gen_inh = generate_spikes(sim_time_in_sec, slot_width_in_sec)
     
     # calculate the amount of simulation slots
     simulation_slots = int(round(sim_time / slot_width))
@@ -296,7 +296,7 @@ def state_variables_to_f(state_variable):
     return result
 
 
-def generate_representative_spike_train(sim_time_in_sec, slot_width_in_sec):
+def generate_spikes(sim_time_in_sec, slot_width_in_sec):
     """
     The function computes representative spike trains for the given simulation length. Uses a poisson distribution to 
     create biologically realistic characteristics of the spiketrains
@@ -379,8 +379,8 @@ def evaluate_integrator(h,
             if s_min < 0.000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
                                    "in order to support reasonable simulation")
-        if counter_while_loop >1:
-            step_counter -=1
+        if counter_while_loop > 1:
+            step_counter -= 1
             sum_last_steps += t_new - t_old
             # it is possible that the last step in a simulation_slot is very small, as it is simply
             # the length of the remaining slot. Therefore we don't take the last step into account        
