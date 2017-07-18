@@ -121,8 +121,8 @@ class TestStiffnessChecker(unittest.TestCase):
     def test_range_with_hh_iaf_psc_alpha(self):
         threshold_body = "false"
 
-        start = 0.11
-        stop = 0.14
+        start = 0.1
+        stop = 0.2
         step = 0.01
 
         result = {}
@@ -274,15 +274,16 @@ class TestStiffnessChecker(unittest.TestCase):
     def test_range_with_izhikevich(self):
         threshold_body = "false"
 
-        start = 0.03
-        stop = 1.0
-        step = 0.01
+        start = 50.
+        stop = 80.
+        step = 1.
 
         result = {}
+
         current_step = start
         while current_step <= stop:
             default_values = ["neuron_name = 'izhikevich'",
-                              "a = 0.02",
+                              "a = {}".format(current_step),
                               "b = 0.2",
                               "I_e = 0.0",
                               "I = 0.0",
@@ -296,6 +297,7 @@ class TestStiffnessChecker(unittest.TestCase):
             result[current_step] = method
             print current_step, method
             current_step += step
+        print result
 
 
 if __name__ == '__main__':

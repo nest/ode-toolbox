@@ -61,7 +61,7 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     global dimension
     dimension = len(ode_definitions)
 
-    print("#### SUMMARY ####")
+    # print("#### SUMMARY ####")
     prepare_jacobian_matrix()
     prepare_step_function()
 
@@ -77,13 +77,13 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     
     # calculate the amount of simulation slots
     simulation_slots = int(round(sim_time / slot_width))
-    print("#### END ####")
+    # print("#### END ####")
 
-    print("Starts stiffness test for the ODE system...")
+    # print("Starts stiffness test for the ODE system...")
     # our aim is not to compare to evolution methods but to find tendancies of stiffness for the system
     # therefore we use one implicit evolution method, here the bulirsh stoer method and one explicit method
     imp_solver = odeiv.step_bsimp
-    print ("######### {} #########".format(imp_solver.__name__))
+    # print ("######### {} #########".format(imp_solver.__name__))
     step_min_imp, step_average_imp = evaluate_integrator(
         slot_width,
         simulation_slots,
@@ -101,7 +101,7 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
         exec (default_value) in globals()
     # the explicit evolution method is a runge kutta 4
     exp_solver = odeiv.step_rk4
-    print ("######### {} #########".format(exp_solver.__name__))
+    # print ("######### {} #########".format(exp_solver.__name__))
     step_min_exp, step_average_exp = evaluate_integrator(
         slot_width,
         simulation_slots,
@@ -113,10 +113,10 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
         initial_values,  # this variable was be added in `exec (default_value) in globals()`
         threshold_body)
 
-    print ("######### results #######")
-    print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
-    print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
-    print ("########## end ##########")
+    # print ("######### results #######")
+    # print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
+    # print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
+    # print ("########## end ##########")
     return draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
@@ -199,8 +199,8 @@ def prepare_jacobian_matrix():
         odes=zip(state_variables, ode_definitions),
         function_variables=zip(function_variables, function_variable_definitions))
 
-    print "jacobian function implementation:"
-    print jacobian_function_implementation
+    # print "jacobian function implementation:"
+    # print jacobian_function_implementation
     # compile the generated code from the  jinja2 template for the better performance
     jacobian_function_implementation = compile(jacobian_function_implementation, '<string>', 'exec')
     # this matrix which is stored in the global variable is used in the `jacobian` function
@@ -221,9 +221,9 @@ def calculate_jacobian(jacobian_function_implementation):
     result_matrix = []
     result_matrix_str = ""
     exec(jacobian_function_implementation)
-    print("\nCalculated jacobian matrix: ")
+    # print("\nCalculated jacobian matrix: ")
     # `result_matrix_str` is calculated as a part of the `jacobian_function_implementation`
-    print("\n" + result_matrix_str)
+    # print("\n" + result_matrix_str)
     return result_matrix
 
 
@@ -266,8 +266,8 @@ def prepare_step_function():
     step_function_implementation = step_function_implementation.render(
         odes=zip(state_variables_to_f(state_variables), ode_definitions),
         function_variables=zip(function_variables, function_variable_definitions))
-    print "step function implementation:"
-    print step_function_implementation
+    # print "step function implementation:"
+    # print step_function_implementation
     # compile the code to boost the performance
     step_function_implementation = compile(step_function_implementation, '<string>', 'exec')
 
@@ -366,7 +366,7 @@ def evaluate_integrator(h,
     sum_last_steps = 0
     for time_slice in range(simulation_slices):
         t_new = t + h
-        print "Start while loop at slot " + str(time_slice)
+        # print "Start while loop at slot " + str(time_slice)
         counter_while_loop = 0
         while t < t_new:
             counter_while_loop += 1
@@ -375,7 +375,7 @@ def evaluate_integrator(h,
             step_counter += 1
             s_min_old = s_min
             s_min = min(s_min, t - t_old)
-            print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
+            # print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
             if s_min < 0.000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
                                    "in order to support reasonable simulation")
@@ -386,10 +386,10 @@ def evaluate_integrator(h,
             # the length of the remaining slot. Therefore we don't take the last step into account        
             s_min = s_min_old
 
-        print "End while loop"
+        # print "End while loop"
 
         if threshold is not None and threshold(y, threshold_body):
-            print("The predefined threshold is crossed. Terminate the evaluation procedure.")
+            # print("The predefined threshold is crossed. Terminate the evaluation procedure.")
             break
 
         for idx, initial_value in enumerate(initial_values):
