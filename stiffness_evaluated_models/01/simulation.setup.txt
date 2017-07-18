@@ -1,0 +1,5 @@
+start = 0.03
+stop = 0.4
+step = 0.005
+'aeif_cond_alpha', default_values_aeif_cond_alpha, odes_aeif_cond_alpha, threshold_body_aeif_cond_alpha, 0.01, stop, step
+'izhikevich', default_values_izhikevich, odes_izhikevich, threshold_body_izhikevich, 50., 85., 0.1
