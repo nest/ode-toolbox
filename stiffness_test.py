@@ -66,7 +66,7 @@ class TestStiffnessChecker(unittest.TestCase):
 
         print check_ode_system_for_stiffness(odes, default_values, threshold_body)
 
-    def test_iaf_neuron(self):
+    def test_iaf_psc_alpha(self):
         threshold_body = "y_0 >= Theta"
 
         default_values = ["neuron_name = 'iaf_neuron'",
@@ -276,7 +276,7 @@ class TestStiffnessChecker(unittest.TestCase):
 
         start = 50.
         stop = 80.
-        step = 1.
+        step = 0.5
 
         result = {}
 

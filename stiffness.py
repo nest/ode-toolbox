@@ -376,9 +376,9 @@ def evaluate_integrator(h,
             s_min_old = s_min
             s_min = min(s_min, t - t_old)
             # print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
-            if s_min < 0.000005:
+            if s_min < 0.000000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
-                                   "in order to support reasonable simulation")
+                                   "in order to support reasonable simulation", s_min)
         if counter_while_loop > 1:
             step_counter -= 1
             sum_last_steps += t_new - t_old

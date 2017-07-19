@@ -169,31 +169,51 @@ default_values_izhikevich = ["neuron_name = 'izhikevich'",
 odes_izhikevich = ["f_0 =  0.04 * y_0 * y_0 + 5.0 * y_0 + ( 140 - y_1 ) + ( (I + I_e) )",
                    "f_1 = a*(b*y_0-y_1)"]
 
+########################################################################################################################
+# iaf_psc_alpha
+########################################################################################################################
+threshold_body_iaf_psc_alpha = "y_0 >= Theta"
+
+default_values_iaf_psc_alpha = ["neuron_name = 'iaf_psc_alpha'",
+                                "tau_syn_in = 2.",
+                                "tau_syn_ex = {}",
+                                "V_m = -70.",
+                                "C_m = 250.",
+                                "E_L = -70.",
+                                "Tau = 10.",
+                                "Theta = -55.",
+                                "start_values = [E_L, 0.0, 0.0, 0.0, 0.0]",
+                                "initial_values = [0, e / tau_syn_ex, 0, -e / tau_syn_in, 0]"]
+
+odes_iaf_psc_alpha = ["f_0 = -y_0 / Tau + (y_2 + y_4)/ C_m",
+                      "f_1 = -y_1 / tau_syn_ex",
+                      "f_2 = y_1 - (y_2 / tau_syn_ex)",
+                      "f_3 = -y_3 / tau_syn_in",
+                      "f_4 = y_3 - (y_4 / tau_syn_in)"]
+
 
 def test_range_for_parameter(neuron_name, default_values, odes, threshold_body, start, stop, step):
-    result = {}
+    print "Starts the test", neuron_name, "in", "[", start, ", ", stop, "]"
     current_step = start
+    f = open(neuron_name, 'w')
     while current_step <= stop:
         working_values = [v.format(current_step) for v in default_values]
         method = check_ode_system_for_stiffness(odes, working_values, threshold_body)
-        result[current_step] = method
         print current_step, method
+        f.write(str(current_step) + ":" + method + "\n")
         current_step += step
-    f = open(neuron_name, 'w')
-
-    for k in sorted(result.keys()):
-        f.write(str(k) + ":" + result[k] + "\n")
 
 # start = 0.03
 # stop = 0.05
 # step = 0.01
 if __name__ == "__main__":
-    start = 0.23
-    stop = 0.25
-    step = 0.01
+    start = 0.03
+    stop = 0.4
+    step = 0.005
 
-    #test_range_for_parameter('iaf_cond_alpha', default_values_iaf_cond_alpha, odes_iaf_cond_alpha, threshold_body_iaf_cond_alpha, start, stop, step)
-    #test_range_for_parameter('aeif_cond_alpha', default_values_aeif_cond_alpha, odes_aeif_cond_alpha, threshold_body_aeif_cond_alpha, start, stop, step)
-    #test_range_for_parameter('hh_iaf_psc_alpha', default_values_hh_iaf_psc_alpha, odes_hh_iaf_psc_alpha, threshold_body_hh_iaf_psc_alpha, start, stop, step)
-    #test_range_for_parameter('iaf_cond_alpha_mc', default_values_iaf_cond_alpha_mc, odes_iaf_cond_alpha_mc, threshold_body_iaf_cond_alpha_mc, start, stop, step)
+    test_range_for_parameter('iaf_cond_alpha', default_values_iaf_cond_alpha, odes_iaf_cond_alpha, threshold_body_iaf_cond_alpha, start, stop, step)
+    test_range_for_parameter('aeif_cond_alpha', default_values_aeif_cond_alpha, odes_aeif_cond_alpha, threshold_body_aeif_cond_alpha, 0.01, stop, step)
+    test_range_for_parameter('hh_iaf_psc_alpha', default_values_hh_iaf_psc_alpha, odes_hh_iaf_psc_alpha, threshold_body_hh_iaf_psc_alpha, start, stop, step)
+    test_range_for_parameter('iaf_cond_alpha_mc', default_values_iaf_cond_alpha_mc, odes_iaf_cond_alpha_mc, threshold_body_iaf_cond_alpha_mc, start, stop, step)
     test_range_for_parameter('izhikevich', default_values_izhikevich, odes_izhikevich, threshold_body_izhikevich, 50., 85., 0.1)
+    test_range_for_parameter('iaf_psc_alpha', default_values_iaf_psc_alpha, odes_iaf_psc_alpha, threshold_body_iaf_psc_alpha, start, stop, step)
