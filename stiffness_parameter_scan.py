@@ -211,9 +211,9 @@ if __name__ == "__main__":
     stop = 0.4
     step = 0.005
 
-    test_range_for_parameter('iaf_cond_alpha', default_values_iaf_cond_alpha, odes_iaf_cond_alpha, threshold_body_iaf_cond_alpha, start, stop, step)
-    test_range_for_parameter('aeif_cond_alpha', default_values_aeif_cond_alpha, odes_aeif_cond_alpha, threshold_body_aeif_cond_alpha, 0.01, stop, step)
-    test_range_for_parameter('hh_iaf_psc_alpha', default_values_hh_iaf_psc_alpha, odes_hh_iaf_psc_alpha, threshold_body_hh_iaf_psc_alpha, start, stop, step)
-    test_range_for_parameter('iaf_cond_alpha_mc', default_values_iaf_cond_alpha_mc, odes_iaf_cond_alpha_mc, threshold_body_iaf_cond_alpha_mc, start, stop, step)
-    test_range_for_parameter('izhikevich', default_values_izhikevich, odes_izhikevich, threshold_body_izhikevich, 50., 85., 0.1)
-    test_range_for_parameter('iaf_psc_alpha', default_values_iaf_psc_alpha, odes_iaf_psc_alpha, threshold_body_iaf_psc_alpha, start, stop, step)
+    #test_range_for_parameter('iaf_cond_alpha', default_values_iaf_cond_alpha, odes_iaf_cond_alpha, threshold_body_iaf_cond_alpha, start, stop, step)
+    #test_range_for_parameter('aeif_cond_alpha', default_values_aeif_cond_alpha, odes_aeif_cond_alpha, threshold_body_aeif_cond_alpha, 0.01, stop, step)
+    #test_range_for_parameter('hh_iaf_psc_alpha', default_values_hh_iaf_psc_alpha, odes_hh_iaf_psc_alpha, threshold_body_hh_iaf_psc_alpha, start, stop, step)
+    #test_range_for_parameter('iaf_cond_alpha_mc', default_values_iaf_cond_alpha_mc, odes_iaf_cond_alpha_mc, threshold_body_iaf_cond_alpha_mc, start, stop, step)
+    test_range_for_parameter('izhikevich', default_values_izhikevich, odes_izhikevich, threshold_body_izhikevich, 50., 85., 0.05)
+    #test_range_for_parameter('iaf_psc_alpha', default_values_iaf_psc_alpha, odes_iaf_psc_alpha, threshold_body_iaf_psc_alpha, start, stop, step)
