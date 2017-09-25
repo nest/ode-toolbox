@@ -74,24 +74,21 @@ class OdeAnalyzer(object):
     @staticmethod
     def is_linear_constant_coefficient_ode(ode_var, ode_rhs, shape_vars, shape_definitions, function_vars,
                                            function_definitions):
+        local_symbols = {}
         for shape, shape_definition in zip(shape_vars, shape_definitions):
-            exec ("{} = parse_expr(\"{}\")".format(shape, shape_definition))
-
+            local_symbols[shape] = parse_expr(shape_definition)
         for function_var, function_definition in zip(function_vars, function_definitions):
-            exec ("{} = parse_expr(\"{}\", local_dict=locals())".format(function_var, function_definition))
+            local_symbols[function_var] = parse_expr(function_definition, local_dict = local_symbols)
 
         # ode functions are defined in the local scope. it must be passed explicitly into the parse_exp,
         # otherwise, all functions in the ode would not be recognized as `complex` defined through the rhs symbols
         ode_var = parse_expr(ode_var)
-        ode_rhs = parse_expr(ode_rhs, local_dict=locals())
+        ode_rhs = parse_expr(ode_rhs, local_dict=local_symbols)
 
         dvar = diff(ode_rhs, ode_var)
         dtdvar = diff(dvar, Symbol("t"))
 
-        if simplify(dtdvar) == simplify(0):
-            return True
-        else:
-            return False
+        return simplify(dtdvar) == simplify(0):
 
     @staticmethod
     def compute_solution(input_json):
