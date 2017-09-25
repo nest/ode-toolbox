@@ -273,26 +273,34 @@ class ShapeODE(object):
     of the ODE system, the right handsides of the ODE systems
     and the initial value of the function.
 
+    Equations are of the form I''' = a*I'' + b*I' + c*I
+
     Example:
     ========
 
-    shape_alpha = ShapeODE("shape_alpha",  "shape_alpha",
-    [-1/tau**2 * shape_alpha -2/tau * shape_alpha'],[0, e/tau])
+    ShapeODE("shape_alpha",   # name/variable
+             "-1/tau**2 * shape_alpha -2/tau * shape_alpha'", rhs of ODE
+             ["0", "e/tau"]) # initial values
 
     Canonical calculation of the properties, `order`, `name`,
     `initial_values` and the system of ODEs in matrix form are made.
     """
-    def __init__(self, name, ode_sys_var, ode_sys_rhs, initial_values):
+    def __init__(self, name, ode_sys_rhs, initial_values):
 
         self.name = parse_expr(name)
-
-        self.ode_sys_var = [symbols(i) for i in ode_sys_var]
-        self.ode_sys_rhs = [parse_expr(i) for i in ode_sys_rhs]
         self.order = len(initial_values)
         self.initial_values = [parse_expr(i) for i in initial_values]
 
+        self.ode_sys_vars = [symbols(name+"d"*i) for i in range(self.order) ]
+        self.ode_sys_rhs = parse_expr(ode_sys_rhs.replace("'", "d"))
+
+        print self.ode_sys_vars
+        print self.ode_sys_rhs
+
         self.matrix = zeros(self.order)
 
-        for i, rhs in enumerate(self.ode_sys_rhs):
-            for j, var in enumerate(self.ode_sys_var):
-                self.matrix[i, j] = diff(rhs, var)
+        derivative_factors = []
+        for ode_sys_var in self.ode_sys_vars:
+            derivative_factors.append(diff(self.ode_sys_rhs, ode_sys_var))
+
+        print "derivative_factors:", derivative_factors
