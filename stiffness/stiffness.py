@@ -1,4 +1,4 @@
-import Numeric
+import numpy
 import jinja2
 from math import *
 import pygsl.odeiv as odeiv
@@ -436,7 +436,7 @@ def step(t, y, params):
     :return: Updated state vector stored in `f`
     """
     global step_function_implementation
-    f = Numeric.zeros((dimension,), Numeric.Float)
+    f = numpy.zeros((dimension,), numpy.float)
     exec(step_function_implementation)
     return f
 
@@ -448,8 +448,8 @@ def jacobian(t, y, params):
     :param _: another prescribed parameters which are not used here
     :return: dfdy that contains the jacobian matrix with respect to y`dfdt` is not computed now.
     """
-    dfdy = Numeric.zeros((dimension, dimension), Numeric.Float)
-    dfdt = Numeric.zeros((dimension,))
+    dfdy = numpy.zeros((dimension, dimension), numpy.float)
+    dfdt = numpy.zeros((dimension,))
 
     # since the expression is put into a lambda function being evaluated it cannot access function's parameter
     # therefore, add the `y` variable to the globals manually
