@@ -1,140 +1,163 @@
-from math import *
-from sympy import *
+
+import json
+
+#from math import *
+from sympy import diff, exp, Matrix, simplify, sqrt, Symbol, sympify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.matrices import zeros
 
-from shapes import ShapeFunction, ShapeODE
 
-h = symbols("__h")
+class Propagator(object):
+    """Class to store components of an exact propagation step.
 
+    For any given linear constant coefficient ODE with an
+    inhomogeneous part wich is a sum of shapes that satisfy a linear
+    homogeneous ODE (i.e. instances of class `Shape`).
 
-class PropagatorCalculator(object):
-    global h
+    The basic idea is to reformulate the ODE or systems of ODEs as the
+    ODE y' = Ay and to calculate A and then exp(Ah) to give an
+    evolution of the system for a given timestep `h`.
 
-    @staticmethod
-    def ode_to_prop_matrices(shapes, ode_var_str, ode_rhs_str, function_vars, function_definitions):
+    Example:
+    ========
+    shape_alpha = ShapeFunction("shape_alpha", "e / tau * t * exp(-t / tau)")
+    shape_exp = ShapeFunction("shape_exp", "exp(-t/tau)")
+    shape_sin = ShapeFunction("shape_sinb", "sin(t)")
+    shapes = [shape_alpha, shape_exp, shape_sin]
+
+    ode_symbol = "V_m"
+    ode_definition = "-1/Tau * V_m-1/C * (shape_alpha + shape_exp + shape_sin + currents + I_E)"
+    prop_matrices, const_input, step_const = otpm.ode_to_prop_matrices(ode_symbol, ode_definition, shapes)
+
+    """
+
+    def __init__(self, ode_symbol, ode_definition, shapes):
+
+        self.ode_symbol = parse_expr(ode_symbol)
+        self.ode_definition = parse_expr(ode_definition)
+        self.propagator_matrices = []
+        self.step_constant = Symbol("")
+
+        constant_input, step_constant = self.compute_propagator_matrices(shapes)
+        self.compute_propagation_step(shapes, constant_input, step_constant)
+
+    
+    def compute_propagator_matrices(self, shapes):
+        """Compute the propagator matrices using the given shapes.
+
+        For a differential equation
+        
+            V'= 1/Tau * V + 1/C * shape
+        
+        the factor of the ode symbol (`ode_symbol_factor`) would be
+        `1/Tau`, the factor of the shape (`shape_factor`) `1/C`. As we
+        process a list of shape, we get a list of `shape_factor`s.
+
+        The shape factors in the ODE and the derivative factors of the
+        shape are used to set up the propagator matrices.
+
+        For shapes that satisfy a homogeneous linear ODE of order 1 or
+        2, we create an lower triangular matrices as this allows a
+        more efficient specification of the update step in
+        compute_update_step().
+
+        For shapes that satisfy a homogeneous linear ODE of an order
+        larger than 2, we calculate A by choosing the state variables
+        canonically as y_0 = shape^(n), ..., y_{n-1} = shape, y_n = V
         """
-        The function `ode_to_prop_matrices` calculates a so called proagator
-        for any given linear constant coefficient ODE with an inhomogeneous part
-        wich is a sum of `shapes` (instaces of the class `ShapeFunction` or
-        `ShapeODE`; they satisfy a linear homogeneous ODE).
-        The idea is to reformulate the ODE or systems of ODEs as the ODE
-        y'=Ay and to calculate A and then exp(Ah) to give an evolution of
-        the system for a given timestep `h`.
-
-        Example:
-        ========
-        shape_alpha = ShapeFunction("shape_alpha", "e / tau * t * exp(-t / tau)")
-        shape_exp = ShapeFunction("shape_exp", "exp(-t/tau)")
-        shape_sin = ShapeFunction("shape_sinb", "sin(t)")
-        shapes = [shape_alpha, shape_exp, shape_sin]
-
-        ode_var = "V_m"
-        ode_rhs = "-1/Tau * V_m-1/C * (shape_alpha + shape_exp + shape_sin + currents + I_E)"
-        prop_matrices, const_input, step_const = otpm.ode_to_prop_matrices(shapes, ode_var, ode_rhs)
-        """
-        for function_var, function_definition in zip(function_vars, function_definitions):
-            exec("{0} = parse_expr(\"{1}\")".format(function_var, function_definition))
-        # ode functions are defined in the local scope. it must be passed explicitly into the parse_exp,
-        # otherwise, all functions in the ode would not be recognized as `complex` symbols
-        ode_rhs = parse_expr(ode_rhs_str, local_dict=locals())
-        ode_var = parse_expr(ode_var_str)
-
-        # For V'= 1/Tau * V + 1/C * shape `ode_var_factor` is `1/Tau`
-        # The `shape_factor` here is `1/C` this will be a list `shape_factors`
-        # as different shapes will have different `shape_factors` and a sum of
-        # multiple different shapes is possible.
-        ode_var_factor = diff(ode_rhs, ode_var)
+        
+        # Initialize the factor in front of the ode symbol, an empty
+        # list to hold the factors for the shapes and a symbol to
+        # represent the time step.
+        ode_symbol_factor = diff(self.ode_definition, self.ode_symbol)
         shape_factors = []
-        # This is a list of different propagator matrices for different shapes.
-        # These will be combined to give a complete step.
-        prop_matrices = []
-
+        h = Symbol("__h")
+        
         for shape in shapes:
-
-            shape_factor = diff(ode_rhs, shape.name)
-
-            if isinstance(shape, ShapeFunction):
-                # For shapes that satisfy a homogeneous linear ODE of order 1 or
-                # 2 we calculate a upper triangular matrix to make calculations more
-                # efficient.
-                if shape.order == 1:
-                    A = Matrix([[shape.derivative_factors[0], 0             ],
-                                [shape_factor,                ode_var_factor]])
-                elif shape.order == 2:
-                    solutionpq = -shape.derivative_factors[1]/2 + sqrt(shape.derivative_factors[1]**2 / 4 + shape.derivative_factors[0])
-                    A = Matrix([[shape.derivative_factors[1]+solutionpq, 0,            0             ],
-                                [1,                                      -solutionpq,  0             ],
-                                [0,                                     shape_factor, ode_var_factor]])
-                # For shapes that satisfy a homogeneous linear ODE of order larger than
-                # 2 we calculate A by choosing the state variables canonicaly as
-                # y_0=I^(n),..., y_{n-1}=I, y_n=V
-                else:
-                    A = zeros(shape.order+1)
-                    A[shape.order, shape.order] = ode_var_factor
-                    A[shape.order, shape.order - 1] = shape_factor
-                    for j in range(0, shape.order):
-                        A[0, j] = shape.derivative_factors[shape.order - j - 1]
-                    for i in range(1, shape.order):
-                        A[i, i - 1] = 1
-
-            if isinstance(shape, ShapeODE):
-
+    
+            shape_factor = diff(self.ode_definition, shape.symbol)
+    
+            if shape.order == 1:
+                A = Matrix([[shape.derivative_factors[0], 0],
+                            [shape_factor, ode_symbol_factor]])
+            elif shape.order == 2:
+                solutionpq = -shape.derivative_factors[1] / 2 + \
+                             sqrt(shape.derivative_factors[1]**2 / 4 + \
+                                  shape.derivative_factors[0])
+                A = Matrix([[shape.derivative_factors[1]+solutionpq, 0, 0 ],
+                            [1, -solutionpq, 0 ],
+                            [0, shape_factor, ode_symbol_factor]])
+            else:
                 A = zeros(shape.order + 1)
-                A[:shape.order, :shape.order] = shape.matrix
-                A[shape.order, shape.order] = ode_var_factor
+                A[shape.order, shape.order] = ode_symbol_factor
                 A[shape.order, shape.order - 1] = shape_factor
-
+                for j in range(0, shape.order):
+                    A[0, j] = shape.derivative_factors[shape.order - j - 1]
+                for i in range(1, shape.order):
+                    A[i, i - 1] = 1
+    
             shape_factors.append(shape_factor)
-            # Calculate the mat
-            prop_matrices.append(simplify(exp(A * h)))
 
-        step_const = -1/ode_var_factor * (1 - exp(h * ode_var_factor))
-
-        const_input = ode_rhs - ode_var_factor * ode_var
+            self.propagator_matrices.append(simplify(exp(A * h)))
+    
+        step_constant = -1/ode_symbol_factor * (1 - exp(h * ode_symbol_factor))
+        
+        constant_input = self.ode_definition - ode_symbol_factor * self.ode_symbol
         for shape_factor, shape in zip(shape_factors, shapes):
-            const_input -= shape_factor * shape.name
+            constant_input -= shape_factor * shape.symbol
+        
+        return simplify(constant_input), simplify(step_constant)
 
-        return prop_matrices, simplify(const_input), simplify(step_const)
 
-    @staticmethod
-    def constant_input(step_const, ode_var_str):
-        return "__ode_var_factor * " + ode_var_str + " + __const_input * (" + str(step_const) + ")"
+    def compute_propagation_step(self, shapes, constant_input, step_constant):
+        """Compute a calculation specification for the update step.
 
-    @staticmethod
-    def prop_matrix_to_prop_step(prop_matrices, const_input, step_const, shapes, ode_var_str):
-        p_order_order = prop_matrices[0][shapes[0].order, shapes[0].order]
-        ode_var = parse_expr(ode_var_str)
-        ode_var_factor = {"__ode_var_factor": str(p_order_order)}
-        const_input = {"__const_input": str(const_input)}
+        """
+        
+        ode_symbol_factor_h = self.propagator_matrices[0][shapes[0].order, shapes[0].order]
+        constant_term = "(" + str(ode_symbol_factor_h) + ") * " + str(self.ode_symbol) + \
+                        "+ (" + str(constant_input) + ") * (" + str(step_constant) + ")"
 
-        propagator_elements = []
-        ode_var_update_instructions = [ode_var_str + " = " + str(PropagatorCalculator.constant_input(step_const, ode_var_str))]
-        for p, shape in zip(prop_matrices, shapes):
+        self.propagator = {}
+        self.ode_updates = [str(self.ode_symbol) + " = " + constant_term]
+        for p, shape in zip(self.propagator_matrices, shapes):
             P = zeros(shape.order + 1, shape.order + 1)
             for i in range(shape.order + 1):
                 for j in range(shape.order + 1):
                     if simplify(p[i, j]) != sympify(0):
-                        P[i, j] = parse_expr("__P_{}__{}_{}".format(shape.name, i, j))
-                        propagator_elements.append({"__P_{}__{}_{}".format(shape.name, i, j): str(p[i, j])})
-
+                        symbol_p_i_j = "__P_{}__{}_{}".format(shape.symbol, i, j)
+                        P[i, j] = parse_expr(symbol_p_i_j)
+                        self.propagator[symbol_p_i_j] = str(p[i, j])
+    
             y = zeros(shape.order + 1, 1)
             for i in range(shape.order):
-                y[i] = parse_expr(shape.additional_shape_state_variables()[i])
-            y[shape.order] = ode_var
-
+                y[i] = shape.state_variables[i]
+            y[shape.order] = self.ode_symbol
+    
             P[shape.order, shape.order] = 0
             z = P * y
+    
+            self.ode_updates.append(str(self.ode_symbol) + " += " + str(z[shape.order]))
+    
+            shape.state_updates = P[:shape.order, :shape.order] * y[:shape.order, 0]
 
-            ode_var_update_instructions.append(ode_var_str + " += " + str(z[shape.order]))
 
-            shape_state_vector_as_expr = zeros(shape.order, 1)
-            for idx in range(len(shape.additional_shape_state_variables())):
-                shape_state_vector_as_expr[idx, 0] = Symbol(shape.additional_shape_state_variables()[idx])
+def compute_exact_solution(ode_symbol, ode_definition, shapes):
 
-            shape_state_updates = P[:shape.order, :shape.order] * shape_state_vector_as_expr
-            for idx in range(0, shape_state_updates.rows):
-                shape.add_update_to_shape_state_variable(shape_state_vector_as_expr[idx], shape_state_updates[idx])
+    propagator = Propagator(ode_symbol, ode_definition, shapes)
+    
+    json_data = {
+        "solver": "exact",
+        "ode_updates": propagator.ode_updates,
+        "propagator": propagator.propagator,
+        "shape_initial_values": [],
+        "shape_state_updates": [],
+        "shape_state_variables": [],
+    }
 
-        return propagator_elements, ode_var_factor, const_input, ode_var_update_instructions
+    for shape in shapes:
+        json_data["shape_initial_values"].append([str(x) for x in shape.initial_values])
+        json_data["shape_state_updates"].append([str(x) for x in shape.state_updates])
+        json_data["shape_state_variables"].append([str(x) for x in shape.state_variables])
 
+    return json.dumps(json_data, indent=2)
