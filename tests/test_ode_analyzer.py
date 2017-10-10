@@ -1,7 +1,7 @@
 import unittest
 
 import json
-from prop_matrix import PropagatorCalculator
+from exact import PropagatorCalculator
 from shapes import ShapeFunction
 from OdeAnalyzer import OdeAnalyzer
 from OdeAnalyzer import SolverInput

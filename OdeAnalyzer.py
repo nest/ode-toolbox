@@ -8,7 +8,7 @@ import json
 from sympy import diff, simplify, Symbol, sympify
 from sympy.parsing.sympy_parser import parse_expr
 
-from prop_matrix import compute_exact_solution
+from exact import compute_exact_solution
 from numeric import compute_numeric_solution
 from shapes import shape_from_function, shape_from_ode
 
