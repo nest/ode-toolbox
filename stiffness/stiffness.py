@@ -2,13 +2,13 @@ import numpy
 import jinja2
 from math import *
 import pygsl.odeiv as odeiv
-from sympy.parsing.sympy_parser import parse_expr # this module is used in the generated code
+from sympy.parsing.sympy_parser import parse_expr  # this module is used in the generated code
 from sympy import *
 import re
 import numpy as np  # this module is used in the generated code
 import numpy.random
 
-# for the testing purpose fix the seed to 42 in order to make results reproducable
+# for the testing purpose fix the seed to 42 in order to make results reproducible
 numpy.random.seed(42)
 
 # the following variables must be defined globally since they are accessed from the step, jacobian, threshold and

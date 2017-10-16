@@ -31,8 +31,10 @@ from sympy import det, diff, Symbol, sympify, simplify
 from sympy.matrices import zeros
 from types import IntType
 
+
 def is_sympy_type(var):
     return isinstance(var, tuple(sympy.core.all_classes))
+
 
 class Shape(object):
     """Canonical representation of a postsynaptic shape.

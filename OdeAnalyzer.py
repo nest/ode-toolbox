@@ -2,32 +2,44 @@
 
 from __future__ import print_function
 
-import datetime, sys, os
+import datetime
 import json
+import os
+import sys
 
-from sympy import diff, simplify, Symbol, sympify
+from sympy import diff, simplify
 from sympy.parsing.sympy_parser import parse_expr
 
-from prop_matrix import compute_exact_solution
 from numeric import compute_numeric_solution
+from prop_matrix import compute_exact_solution
 from shapes import shape_from_function, shape_from_ode
 
 
 def ode_is_lin_const_coeff(ode_symbol, ode_definition, shapes):
     """
+    :param ode_symbol string encoding the LHS
+    :param ode_definition string encoding RHS
+    :param shapes A list with `Shape`-obejects
+    :return true iff the ode definition is a linear and constant coefficient ODE
     """
 
-    shape_symbols = {}
-    for shape in shapes:
-        shape_symbols[shape.symbol] = parse_expr(shape.ode_definition)
-
     ode_symbol_sp = parse_expr(ode_symbol)
-    ode_definition_sp = parse_expr(ode_definition, local_dict=shape_symbols)
+    ode_definition_sp = parse_expr(ode_definition)
 
+    # check linearity
+    ddvar = diff(diff(ode_definition_sp, ode_symbol_sp), ode_symbol_sp)
+
+    if simplify(ddvar) != 0:
+        return False
+
+    # check coefficients
     dvar = diff(ode_definition_sp, ode_symbol_sp)
-    dtdvar = diff(dvar, Symbol("t"))
 
-    return simplify(dtdvar) == sympify(0)
+    for shape in shapes:
+        for symbol in dvar.free_symbols:
+            if str(shape.symbol) == str(symbol):
+                return False
+    return True
 
 
 exitcodes = {
@@ -39,18 +51,21 @@ exitcodes = {
 }
 
 
-if __name__ == "__main__":
-    
+def main(args):
+    """
+    The main entry point. The main function expects a userdefined path a file passed throug the `sys.arv`
+    :return: Stores its results in file with .json extension
+    """
     print("Reading input file...")
 
-    num_args = len(sys.argv)
-    if num_args != 2:
+    num_args = len(args)
+    if num_args != 1:
         print("Wrong number of arguments (%d given, one expected)" % num_args)
         print("Usage: ode_analyzer <json_file>")
         print("Aborting.")
-        sys.exit(exitcodes["wrong_num_args"])        
+        sys.exit(exitcodes["wrong_num_args"])
 
-    fname = sys.argv[1]
+    fname = args[0]
 
     if not os.path.isfile(fname):
         print("The file '%s' does not exist." % fname)
@@ -113,12 +128,14 @@ if __name__ == "__main__":
             result = compute_exact_solution(ode["symbol"], ode["definition"], shapes)
         else:
             print(": numerical")
-            result = compute_numerical_solution(ode["symbol"], ode["definition"], shapes)
-            #TODO: run the stiffness tester
+            result = compute_numeric_solution(shapes)
+            # TODO: run the stiffness tester
 
     print(result)
-            
+
     print("Writing output...")
+    # TODO: hm, the naming scheme seems to me kind of arbitrary. why date? why not something
+    # more reliable or more informative (e.g. with millisecond)?
     date = datetime.datetime.today().strftime('%Y%m%d')
     fname = "result-%s.json" % date
     print("  filename: %s" % fname)
@@ -126,3 +143,7 @@ if __name__ == "__main__":
         outfile.write(result)
 
     print("Done.")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
