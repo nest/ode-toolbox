@@ -132,6 +132,11 @@ def main(args):
             # TODO: run the stiffness tester
 
     print(result)
+    return result
+
+
+if __name__ == "__main__":
+    result = main(sys.argv[1:])
 
     print("Writing output...")
     # TODO: hm, the naming scheme seems to me kind of arbitrary. why date? why not something
@@ -143,7 +148,3 @@ def main(args):
         outfile.write(result)
 
     print("Done.")
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

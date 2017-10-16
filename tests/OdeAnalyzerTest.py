@@ -1,20 +1,12 @@
-import glob
+import json
 import unittest
 
-import os
-from pandas import json
-
-from prop_matrix import Propagator
-from shapes import *
 import OdeAnalyzer
+from prop_matrix import Propagator
+from shapes import shape_from_function
 
 
 class TestSolutionComputation(unittest.TestCase):
-
-    def setUp(self):
-        files = glob.glob('*.json')
-        for f in files:
-            os.remove(f)
 
     def test_linearity_checker(self):
         shape_inh = shape_from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
@@ -51,19 +43,15 @@ class TestSolutionComputation(unittest.TestCase):
         self.assertTrue(len(propagator.ode_updates) > 0)
 
     def test_iaf_psc_alpha(self):
-        OdeAnalyzer.main(["test/iaf_psc_alpha.json"])
-        files = glob.glob('*.json')
-        self.assertTrue(len(files) == 1)
-        result = json.load(open(files[0]))
+        result = OdeAnalyzer.main(["iaf_psc_alpha.json"])
+        result = json.loads(result)
 
         self.assertEqual("exact", result["solver"])
         self.assertTrue(len(result["propagator"]) > 0)
 
     def test_iaf_cond_alpha(self):
-        OdeAnalyzer.main(["test/iaf_cond_alpha.json"])
-        files = glob.glob('*.json')
-        self.assertTrue(len(files) == 1)
-        result = json.load(open(files[0]))
+        result = OdeAnalyzer.main(["iaf_cond_alpha.json"])
+        result = json.loads(result)
 
         self.assertEqual("numeric", result["solver"])
         self.assertTrue(len(result["shape_initial_values"]) == 4)

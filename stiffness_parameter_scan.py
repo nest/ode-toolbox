@@ -1,4 +1,4 @@
-from stiffness import check_ode_system_for_stiffness
+from ode.stiffness import check_ode_system_for_stiffness
 
 ########################################################################################################################
 # iaf_cond_alpha
