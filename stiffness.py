@@ -13,17 +13,27 @@ numpy.random.seed(42)
 
 # the following variables must be defined globally since they are accessed from the step, jacobian, threshold and
 # these functions are called from the framework and cannot take these variables as parameters
-state_variables = []
-ode_definitions = []
-function_variables = []
-function_variable_definitions = []
 step_function_implementation = None
-dimension = 0
 
 
-def check_ode_system_for_stiffness(odes_and_function_variables, default_values, threshold_body):
+def compute_initial_state_vector(state_start_values, dimension):
     """
-    Performs the test of the ODE system defined in `odes_and_function_variables`. The idea is not
+    Computes an numpy vector start values for the ode system.
+    :param state_start_values:
+    :param dimension: The size of the ode system
+    :return: Numpy-Vector with `dimension` elements
+    """
+    y = numpy.zeros(dimension, numpy.float)
+    for state_start_variable in state_start_values:
+        matcher = re.compile(r".*(\d)+$")
+        oder_order_number = int(matcher.match(state_start_variable).groups(0)[0])
+        y[oder_order_number] = eval(state_start_values[state_start_variable])
+    return y
+
+
+def check_ode_system_for_stiffness(json_input):
+    """
+    Performs the test of the ODE system defined in `json_input`. The idea is not
     to compare if the given implicit method or the explicit method is better suited for this small
     simulation but to check for tendencies of stiffness. If we find that the average step size of
     the implicit evolution method is alot larger than the average step size of the explicit method
@@ -33,37 +43,17 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     this analysis depends significantly on the size of parameters that are assigned for an ODE system
     If these are changed significantly in magnitude the result of the analysis is also changed significantly.
     
-    :param odes_and_function_variables: A list with ode and function definitions
-    :param default_values: a list with variable declarations together with their start values. It must contain to special
-                          lists: 'initial_values' and 'start_values' with floating point values. Length of these lists 
-                          equals the number of ODEs
-     
-    :param threshold_body: defines a boolean expression that becomes true if when of membrane potential crosses a 
-                           threshold.
+    :param json_input: A list with ode, shape odes and parameters
     """
-    global state_variables
-    global ode_definitions
-    global function_variables
-    global function_variable_definitions
+    ode_definitions, initial_values, state_start_values = extract_model_data(json_input)
 
-    # reset global variables that can have values from a previous function run
-    function_variables = []
-    function_variable_definitions = []
-    state_variables = []
-    ode_definitions = []
-
-    parse_input_parameters(odes_and_function_variables)
-    # `default_values` contains a series of variables from the differential equations declaration separated by the
+    # `parameters` contains a series of variables from the differential equations declaration separated by the
     # newline they are defined in the global scope so that different functions can access them either
-    for default_value in default_values:
-        exec (default_value) in globals()
+    for variable in json_input["parameters"]: # TODO: put my into a local dictionary?
+        exec ("{} = {}".format(variable, json_input["parameters"][variable])) in globals()
 
-    global dimension
-    dimension = len(ode_definitions)
-
-    # print("#### SUMMARY ####")
-    prepare_jacobian_matrix()
-    prepare_step_function()
+    prepare_jacobian_matrix(ode_definitions)
+    prepare_step_function(ode_definitions)
 
     # define simulation time in seconds and milliseconds
     sim_time = 20.  # in ms
@@ -77,9 +67,8 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     
     # calculate the amount of simulation slots
     simulation_slots = int(round(sim_time / slot_width))
-    # print("#### END ####")
+    dimension = len(ode_definitions)
 
-    # print("Starts stiffness test for the ODE system...")
     # our aim is not to compare to evolution methods but to find tendancies of stiffness for the system
     # therefore we use one implicit evolution method, here the bulirsh stoer method and one explicit method
     imp_solver = odeiv.step_bsimp
@@ -91,14 +80,10 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
         step,
         jacobian,
         [gen_inh] * dimension,
-        start_values,    # this variable was be added in `exec (default_value) in globals()`
-        initial_values,  # this variable was be added in `exec (default_value) in globals()`
-        threshold_body)
+        compute_initial_state_vector(state_start_values, dimension),
+        initial_values,
+        None)
 
-    # `default_values` contains a series of variables from the differential equations declaration separated by the
-    # newline they are defined in the global scope so that different functions can access them either
-    for default_value in default_values:
-        exec (default_value) in globals()
     # the explicit evolution method is a runge kutta 4
     exp_solver = odeiv.step_rk4
     # print ("######### {} #########".format(exp_solver.__name__))
@@ -109,9 +94,9 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
         step,
         jacobian,
         [gen_inh] * dimension,
-        start_values,    # this variable was be added in `exec (default_value) in globals()`
-        initial_values,  # this variable was be added in `exec (default_value) in globals()`
-        threshold_body)
+        compute_initial_state_vector(state_start_values, dimension),
+        initial_values,
+        None)
 
     # print ("######### results #######")
     # print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
@@ -120,52 +105,77 @@ def check_ode_system_for_stiffness(odes_and_function_variables, default_values, 
     return draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
-def parse_input_parameters(odes_and_function_variables):
-    """    
-    :param odes_and_function_variables: A list with ode and function definitions 
-    :return: Initializes global variables:`state_variables`, `ode_definitions`, `function_variables`, 
-            `function_variable_definitions` 
+def extract_model_data(json_input):
     """
-    global state_variables
-    global ode_definitions
-    global function_variables
-    global function_variable_definitions
-    for entry in odes_and_function_variables:
-        if entry.startswith("function"):
-            # e.g. 'function a = b'
-            # extract assignment
-            assig = entry[len("function"):]
-            variable = assig.split("=")[0].strip()
-            defining_expression = assig.split("=")[1].strip()
-            function_variables.append(variable)
-            function_variable_definitions.append(defining_expression)
+    :param json_input: A JSON object that encodes ode system.
+    :return: ode_definitions, initial_values maps from state variables (in terms of `y`) to corresponding definitions.
+    """
+    ode_definitions = {}
+    initial_values = {}
+    state_start_values = {}
 
-        else:
-            lhs = entry.split("=")[0].strip()
-            lhs = lhs.replace('f', 'y')
-            rhs = entry.split("=")[1].strip()
+    # odes are stored in shapes and
+    for shape in json_input["shapes"]:
+        shape_name = shape["symbol"]
+        max_order = len(shape["initial_values"])
+        for order in range(0, len(shape["initial_values"]) - 1):
+            ode_definitions[shape_name + "__d" * (order - 1)] = shape_name + "__d" * (order - 1)
+            initial_values[shape_name + "__d" * order] = shape["initial_values"][order]
+        initial_values[shape_name + "__d" * (max_order - 1)] = shape["initial_values"][(max_order - 1)]
+        ode_definitions[shape_name + "__d" * (max_order - 1)] = shape["definition"].replace("'", "__d")
 
-            state_variables.append(lhs)
-            ode_definitions.append(rhs)
+    # we omit initial values for odes since they cannot be connected to buffers
+    for ode in json_input["odes"]:
+        ode_lhs = ode["symbol"]
+        max_order = len(ode["initial_values"])
+        for order in range(0, len(ode["initial_values"]) - 1):
+            ode_definitions[ode_lhs + "__d" * (order - 1)] = ode_lhs + "__d" * (order - 1)
+            state_start_values[ode_lhs + "__d" * (order - 1)] = ode["initial_values"][order]
+        state_start_values[ode_lhs + "__d" * (max_order - 1)] = ode["initial_values"][(max_order - 1)]
+        ode_definitions[ode_lhs + "__d" * (max_order - 1)] = ode["definition"].replace("'", "__d")
+
+    # for the interaction with GSL we assume that all state variables(keys in ode_definitions, initial_values)
+    # correspond to an `y_N` entry, where `N` is an appropriate number.
+
+    # compute unique mapping of state variables to corresponding `y__N` variables
+    state_variables = sorted(ode_definitions.iteritems())
+
+    state_variable_to_y = {}
+    for i, state_variable in enumerate(state_variables):
+        state_variable_to_y[state_variable[0]] = "y__" + str(i)
+
+    # Replace all occurrences of state variables in all ode definitions through corresponding `y__N`
+    for state_variable_to_map in state_variable_to_y:
+        for state_variable in ode_definitions:
+            ode_definition = ode_definitions[state_variable]
+            matcher = re.compile(r"\b(" + state_variable_to_map + r")\b")
+            ode_definitions[state_variable] = matcher.sub(state_variable_to_y[state_variable_to_map], ode_definition)
+
+    ode_definitions_tmp = {}
+    initial_values_tmp = {}
+    state_start_values_tmp = {}
+    for state_variable_to_map in state_variable_to_y:
+        ode_definitions_tmp[state_variable_to_y[state_variable_to_map]] = ode_definitions[state_variable_to_map]
+
+        # TODO: initial values must be of the same size as the ode_definitions
+        if state_variable_to_map in initial_values:
+            initial_values_tmp[state_variable_to_y[state_variable_to_map]] = initial_values[state_variable_to_map]
+
+        if state_variable_to_map in state_start_values:
+            state_start_values_tmp[state_variable_to_y[state_variable_to_map]] = state_start_values[state_variable_to_map]
 
 
-def prepare_jacobian_matrix():
+    return ode_definitions_tmp, initial_values_tmp, state_start_values_tmp
+
+
+# TODO: refactor me
+def prepare_jacobian_matrix(ode_definitions):
     """
     Compute the jacobian matrix for the current ODE system.
-    :param: global state_variables List of state variables which are passed as global variables
-    :param: global ode_definitions List of  ode definitions for every state variable from `state_variables` which are 
-                                   passed as global variables
-    :param: global function_variables List of state variables which are passed as global variables
-    :param: global function_variable_definitions List of  ode definitions for every state variable from 
-                                                 `function_variables` which are passed as global variables
-
+    :param: ode_definitions Map of ode LHSs and definitions
     :return: jacobian_matrix Stores the entries of the jacobian matrix as list of lists. Every entry of the matrix is
                              an expression that can evaluated in the `jacobian` function.
     """
-    global state_variables
-    global ode_definitions
-    global function_variables
-    global function_variable_definitions
 
     # defines the implementation of the jacobian matrix computation as an jinja2 template
     # Logic:
@@ -176,12 +186,9 @@ def prepare_jacobian_matrix():
     #     `state_variables`
     #     repeat this procedure for every ODE from `ode_definitions`
     jacobian_function_body = (
-        "{% for var, defining_expr in function_variables %}\n"
-        "{{var}} = parse_expr('{{defining_expr}}', local_dict=locals())\n"
-        "{% endfor %}\n"
         "state_variable_expr = []\n"
         "right_hand_sides_expr = []\n"
-        "{% for state_var, defining_expr in odes %}\n"
+        "{% for state_var, defining_expr in odes.iteritems() %}\n"
         "state_variable_expr.append(parse_expr('{{state_var}}', local_dict=locals()))\n"
         "right_hand_sides_expr.append(parse_expr('{{defining_expr}}', local_dict=locals()))\n"
         "{% endfor %}\n"
@@ -192,12 +199,12 @@ def prepare_jacobian_matrix():
         "        result_matrix_str += str(diff(rhs, state_variable)) + ' '\n"
         "        row.append(replace_state_variables_through_array_access(str(diff(rhs, state_variable))))\n"
         "    result_matrix_str = result_matrix_str + '\\n'\n"
-        "    result_matrix.append(row)\n" )
+        "    result_matrix.append(row)\n")
+    # map state variables to a
     # create jinja2 template
     jacobian_function_implementation = jinja2.Template(jacobian_function_body)
     jacobian_function_implementation = jacobian_function_implementation.render(
-        odes=zip(state_variables, ode_definitions),
-        function_variables=zip(function_variables, function_variable_definitions))
+        odes=ode_definitions)
 
     # print "jacobian function implementation:"
     # print jacobian_function_implementation
@@ -223,62 +230,45 @@ def calculate_jacobian(jacobian_function_implementation):
     exec(jacobian_function_implementation)
     # print("\nCalculated jacobian matrix: ")
     # `result_matrix_str` is calculated as a part of the `jacobian_function_implementation`
-    # print("\n" + result_matrix_str)
+    print("\n" + result_matrix_str)
     return result_matrix
 
 
-def prepare_step_function():
+def prepare_step_function(ode_definitions):
     """
     Create the implementation of the  step function used in the GSL framework to compute one integration step.
-    :param: global state_variables List of state variables which are passed as global variables
-    :param: global ode_definitions List of  ode definitions for every state variable from `state_variables` which are 
-                                   passed as global variables
-    :param: global function_variables List of state variables which are passed as global variables
-    :param: global function_variable_definitions List of  ode definitions for every state variable from 
-                                                 `function_variables` which are passed as global variables
+    :param: ode_definitions Map of ode LHSs and definitions
 
     :return: step_function_implementation Stores a compiled Python-code that performs one integration step. 
     """
-    global state_variables
-    global ode_definitions
-    global function_variables
-    global function_variable_definitions
-
     # The input provided as the fucntion parameters is not valid Python/GSL code. Convert all references of f_n and y_n
     # to f[n] and y[n]
-    for idx in range(0, len(ode_definitions)):
-        ode_definitions[idx] = replace_state_variables_through_array_access(ode_definitions[idx])
-    for idx in range(0, len(function_variable_definitions)):
-        function_variable_definitions[idx] = replace_state_variables_through_array_access(
-            function_variable_definitions[idx])
+    ode_definitions_tmp = {}
+    for state_variable in ode_definitions:
+        ode_definitions_tmp[replace_state_variables_through_array_access(state_variable.replace("y", "f"))] = \
+            replace_state_variables_through_array_access(ode_definitions[state_variable])
 
     # defines the implementation of the jacobian matrix computation as an jinja2 template
-    # Logic:
     global step_function_implementation
     step_function_body = (
-        "{% for var, defining_expr in function_variables %}\n"
-        "{{var}} = {{defining_expr}}\n"
-        "{% endfor %}\n"
-        "{% for ode_var, ode in odes %}\n"
+        "{% for ode_var, ode in odes.iteritems() %}\n"
         "{{ode_var}} = {{ode}}\n"
         "{% endfor %}\n")
     step_function_implementation = jinja2.Template(step_function_body)
-    step_function_implementation = step_function_implementation.render(
-        odes=zip(state_variables_to_f(state_variables), ode_definitions),
-        function_variables=zip(function_variables, function_variable_definitions))
+    step_function_implementation = step_function_implementation.render(odes=ode_definitions_tmp)
     # print "step function implementation:"
-    # print step_function_implementation
+    print(step_function_implementation)
     # compile the code to boost the performance
     step_function_implementation = compile(step_function_implementation, '<string>', 'exec')
 
-
+# TODO remove me
 def replace_state_variables_through_array_access(definition):
     """
     Convert all references of f_n and y_n in `definition` to f[n] and y[n]
-    :param definition: String to convert 
+    :param definition: String to convert
     :return: Converted string
     """
-    match_f_or_y = re.compile(r"\b(y|f)_(\d)+\b")
+    match_f_or_y = re.compile(r"\b(y|f)__(\d)+\b")
     result = match_f_or_y.sub(r"\1[\2]", definition)
     return result
 
@@ -375,7 +365,7 @@ def evaluate_integrator(h,
             step_counter += 1
             s_min_old = s_min
             s_min = min(s_min, t - t_old)
-            # print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
+            print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
             if s_min < 0.000000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
                                    "in order to support reasonable simulation", s_min)
@@ -388,12 +378,15 @@ def evaluate_integrator(h,
 
         # print "End while loop"
 
-        if threshold is not None and threshold(y, threshold_body):
+        if y[0] >= V_th:
             # print("The predefined threshold is crossed. Terminate the evaluation procedure.")
             break
 
         for idx, initial_value in enumerate(initial_values):
-            y[idx] += initial_value * spikes[idx][time_slice]
+            matcher = re.compile(r".*(\d)+$")
+            oder_order_number = int(matcher.match(initial_value).groups(0)[0])
+            y[oder_order_number] += eval(initial_values[initial_value]) * spikes[idx][time_slice]
+
     step_average = (t -sum_last_steps) / step_counter
     return s_min_old, step_average
 
@@ -435,6 +428,7 @@ def step(t, y, params):
     :param _: Prescribed GSL parameters which are  not used in this step function.
     :return: Updated state vector stored in `f`
     """
+    dimension = len(y)
     global step_function_implementation
     f = numpy.zeros((dimension,), numpy.float)
     exec(step_function_implementation)
@@ -444,10 +438,12 @@ def step(t, y, params):
 def jacobian(t, y, params):
     """
     Callback function that computes the jacobian matrix for the current state vector `y`.
+    :param t: another prescribed parameters which are not used here
     :param y: represents the current state vector of the ODE system as updated through the GSL integrator.
-    :param _: another prescribed parameters which are not used here
-    :return: dfdy that contains the jacobian matrix with respect to y`dfdt` is not computed now.
+    :param params: another prescribed parameters which are not used here
+    :return: dfdy that contains the jacobian matrix with respect to y`dfdt` is not computed and set to zero matrix now.
     """
+    dimension = len(y)
     dfdy = numpy.zeros((dimension, dimension), numpy.float)
     dfdt = numpy.zeros((dimension,))
 
@@ -460,7 +456,7 @@ def jacobian(t, y, params):
     for row in range(0, dimension):
         for col in range(0, dimension):
             # wrap the expression to a lambda function for the improved performance
-            tmp = eval("lambda: " + jacobian_matrix[row][col], g)
+            tmp = eval("lambda: " + jacobian_matrix[row][col], g)  # TODO get rid of globals
             dfdy[row, col] = tmp()
 
     return dfdy, dfdt
@@ -475,5 +471,6 @@ def threshold(y, threshold_body):
     """
     # threshold is defined in terms of state variables. replace them through array accesses to `y` with corresponding
     # indices.
-    threshold_body = replace_state_variables_through_array_access(threshold_body)
-    return eval(threshold_body)
+    None
+    #threshold_body = replace_state_variables_through_array_access(threshold_body)
+    #return eval(threshold_body)
