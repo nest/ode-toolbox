@@ -1,0 +1,50 @@
+{
+  "parameters": {
+    "g_L": "30.",
+    "C_m": "281.0",
+    "E_ex": "0",
+    "E_in": "-85.0",
+    "E_L": "-70.0",
+    "tau_syn_ex": "0.05",
+    "tau_syn_in": "2.0",
+    "I_e": "0",
+    "I_stim": "0",
+    "V_peak": "0",
+    "tau_w": "144.",
+    "Delta_T": "2.0",
+    "a": "4.",
+    "V_th": "-50.4"
+  },
+
+  "shapes": [
+    {
+      "type": "ode",
+      "symbol": "g_in",
+      "definition": "(-1)/(tau_syn_in)**(2)*g_in+(-2)/tau_syn_in*g_in'",
+      "initial_values": ["0",  "e / tau_syn_in"]
+    },
+    {
+      "type": "ode",
+      "symbol": "g_ex",
+      "definition": "(-1)/(tau_syn_ex)**(2)*g_ex+(-2)/tau_syn_ex*g_ex'",
+      "initial_values": ["0",  "e / tau_syn_ex"]
+    }
+  ],
+
+  "odes": [
+    {
+      "symbol": "V_m",
+      "definition": "( -g_L*( V_m - E_L ) + (g_L*Delta_T*exp((V_m-V_th)/Delta_T)) - g_ex * ( V_m - E_ex ) - g_in * ( V_m - E_in ) - w + I_e + I_stim ) / C_m",
+      "initial_values": ["E_L"],
+      "upper_bound": "V_peak"
+    },
+
+    {
+      "symbol": "w",
+      "definition": "(a*(V_m - E_L) - w)/tau_w",
+      "initial_values": ["0"]
+
+    }
+
+  ]
+}

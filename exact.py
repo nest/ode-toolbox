@@ -1,7 +1,5 @@
-
 import json
 
-#from math import *
 from sympy import diff, exp, Matrix, simplify, sqrt, Symbol, sympify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.matrices import zeros
@@ -37,11 +35,10 @@ class Propagator(object):
         self.ode_definition = parse_expr(ode_definition)
         self.propagator_matrices = []
         self.step_constant = Symbol("")
-
+        # TODO JME: how can we do both methods `private`?
         constant_input, step_constant = self.compute_propagator_matrices(shapes)
         self.compute_propagation_step(shapes, constant_input, step_constant)
 
-    
     def compute_propagator_matrices(self, shapes):
         """Compute the propagator matrices using the given shapes.
 
@@ -105,9 +102,9 @@ class Propagator(object):
         constant_input = self.ode_definition - ode_symbol_factor * self.ode_symbol
         for shape_factor, shape in zip(shape_factors, shapes):
             constant_input -= shape_factor * shape.symbol
-        
+        # TODO JME: why do we return these values but store propagator matricies? either both, or non of them should
+        # stored in class fields
         return simplify(constant_input), simplify(step_constant)
-
 
     def compute_propagation_step(self, shapes, constant_input, step_constant):
         """Compute a calculation specification for the update step.
@@ -118,6 +115,7 @@ class Propagator(object):
         constant_term = "(" + str(ode_symbol_factor_h) + ") * " + str(self.ode_symbol) + \
                         "+ (" + str(constant_input) + ") * (" + str(step_constant) + ")"
 
+        # TODO JME instance attributes are defined outside of the __init__. It is a code smell.
         self.propagator = {}
         self.ode_updates = [str(self.ode_symbol) + " = " + constant_term]
         for p, shape in zip(self.propagator_matrices, shapes):
@@ -160,4 +158,4 @@ def compute_exact_solution(ode_symbol, ode_definition, shapes):
         json_data["shape_state_updates"].append([str(x) for x in shape.state_updates])
         json_data["shape_state_variables"].append([str(x) for x in shape.state_variables])
 
-    return json.dumps(json_data, indent=2)
+    return json_data
