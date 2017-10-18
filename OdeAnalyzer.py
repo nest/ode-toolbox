@@ -85,7 +85,7 @@ def main(args):
 
     print("Validating JSON...")
 
-    for key in ["odes", "parameters", "shapes"]:
+    for key in ["odes", "shapes"]:
         if not input.has_key(key):
             print("The key '%s' is not contained in the input file." % key)
             print("Please consult the file doc/example.json for help.")
@@ -121,6 +121,7 @@ def main(args):
         print(prefix + "linear constant coefficient ODE.")
 
     print("Generating solvers...")
+
     for ode in input["odes"]:
         print("  " + ode["symbol"], end="")
         if ode["is_linear_constant_coefficient"]:
@@ -129,26 +130,35 @@ def main(args):
         else:
             print(": numerical")
             result = compute_numeric_solution(shapes)
-            try:
-                import pygsl
-                from stiffness import check_ode_system_for_stiffness
-                # prepare the original JSON for the testing. E.g. all shapes must be an ode with initial values
-                ode_shapes = []
-                for shape in shapes:
-                    ode_shape = {"type": "ode",
-                                 "symbol": str(shape.symbol),
-                                 "initial_values": [str(x) for x in shape.initial_values],
-                                 "definition": str(shape.ode_definition)}
+            if "parameters" in input:
+                try:
+                    import pygsl
+                    from stiffness import check_ode_system_for_stiffness
+                    # prepare the original JSON for the testing. E.g. all shapes must be an ode with initial values
+                    ode_shapes = []
+                    for shape in shapes:
+                        ode_shape = {"type": "ode",
+                                     "symbol": str(shape.symbol),
+                                     "initial_values": [str(x) for x in shape.initial_values],
+                                     "definition": str(shape.ode_definition)}
 
-                    ode_shapes.append(ode_shape)
-                input["shapes"] = ode_shapes
-                solver_type = check_ode_system_for_stiffness(input)
-                print(solver_type)
-            except ImportError:
-                print("Please, install PyGSL in order to enable checking of the stiffness.")
+                        ode_shapes.append(ode_shape)
+                    input["shapes"] = ode_shapes
+                    solver_type = check_ode_system_for_stiffness(input)
+                    print("  numerical")
+                    if solver_type == "implicit":
+                        print("  the ODE system is stiff")
+                    else:
+                        print("  the ODE system is non-stiff")
 
-    print(result)
-    return result
+                    result["evaluator"] = solver_type
+                except ImportError:
+                    result["evaluator"] = "skipped"
+                    print("Please, install PyGSL in order to enable checking of the stiffness.")
+            else:
+                print("Please, provide `parameters` entry in the JSON to enable the stiffness check.")
+                result["evaluator"] = "skipped"
+    return json.dumps(result, indent=2)
 
 
 if __name__ == "__main__":

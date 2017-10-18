@@ -52,7 +52,7 @@ class TestSolutionComputation(unittest.TestCase):
     def test_iaf_cond_alpha(self):
         result = OdeAnalyzer.main(["iaf_cond_alpha.json"])
         result = json.loads(result)
-        print(result)
+
         self.assertEqual("numeric", result["solver"])
         self.assertTrue(len(result["shape_initial_values"]) == 4)
         self.assertTrue(len(result["shape_ode_definitions"]) == 2)

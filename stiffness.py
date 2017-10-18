@@ -36,11 +36,12 @@ def check_ode_system_for_stiffness(json_input):
     step_function_implementation = None
     jacobian_matrix = None
 
-    ode_definitions, initial_values, state_start_values = extract_model_data(json_input)
+    ode_definitions, initial_values, state_start_values, thresholds \
+        = prepare_for_evaluate_integrator(json_input)
 
     # `parameters` contains a series of variables from the differential equations declaration separated by the
     # newline they are defined in the global scope so that different functions can access them either
-    for variable in json_input["parameters"]: # TODO: put my into a local dictionary?
+    for variable in json_input["parameters"]:
         exec ("{} = {}".format(variable, json_input["parameters"][variable])) in globals()
 
     prepare_jacobian_matrix(ode_definitions)
@@ -73,7 +74,7 @@ def check_ode_system_for_stiffness(json_input):
         [gen_inh] * dimension,
         compute_initial_state_vector(state_start_values, dimension),
         initial_values,
-        None)
+        thresholds)
 
     # the explicit evolution method is a runge kutta 4
     exp_solver = odeiv.step_rk4
@@ -87,23 +88,26 @@ def check_ode_system_for_stiffness(json_input):
         [gen_inh] * dimension,
         compute_initial_state_vector(state_start_values, dimension),
         initial_values,
-        None)
+        thresholds)
 
     # print ("######### results #######")
-    print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
-    print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
+    # print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
+    # print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
     # print ("########## end ##########")
     return draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
-def extract_model_data(json_input):
+def prepare_for_evaluate_integrator(json_input):
     """
     :param json_input: A JSON object that encodes ode system.
-    :return: ode_definitions, initial_values maps from state variables (in terms of `y`) to corresponding definitions.
+    :return: `ode_definitions`, `initial_values`, `state_start_values` which store a representation of the ODE system
+             that can be propagated by the GSL. `thresholds` which stores a list with thresholds that can be evaulated
+             in the `evaluate_integrator` method
     """
     ode_definitions = {}
     initial_values = {}
     state_start_values = {}
+    thresholds = []
 
     # odes are stored in shapes and
     for shape in json_input["shapes"]:
@@ -125,6 +129,11 @@ def extract_model_data(json_input):
         state_start_values[ode_lhs + "__d" * (max_order - 1)] = ode["initial_values"][(max_order - 1)]
         ode_definitions[ode_lhs + "__d" * (max_order - 1)] = ode["definition"].replace("'", "__d")
 
+        if "upper_bound" in ode:
+            thresholds.append(ode["symbol"] + " > " + ode["upper_bound"])
+        if "lower_bound" in ode:
+            thresholds.append(ode["symbol"] + " < " + ode["upper_bound"])
+
     # for the interaction with GSL we assume that all state variables(keys in ode_definitions, initial_values)
     # correspond to an `y_N` entry, where `N` is an appropriate number.
 
@@ -135,30 +144,34 @@ def extract_model_data(json_input):
     for i, state_variable in enumerate(state_variables):
         state_variable_to_y[state_variable[0]] = "y__" + str(i)
 
+    thresholds_tmp = []
     # Replace all occurrences of state variables in all ode definitions through corresponding `y__N`
     for state_variable_to_map in state_variable_to_y:
         for state_variable in ode_definitions:
             ode_definition = ode_definitions[state_variable]
             matcher = re.compile(r"\b(" + state_variable_to_map + r")\b")
             ode_definitions[state_variable] = matcher.sub(state_variable_to_y[state_variable_to_map], ode_definition)
+        for threshold in thresholds:
+            threshold = matcher.sub(state_variable_to_y[state_variable_to_map], threshold)
+            threshold = replace_state_variables_through_array_access(threshold)
+            thresholds_tmp.append(threshold)
 
     ode_definitions_tmp = {}
     initial_values_tmp = {}
     state_start_values_tmp = {}
+
     for state_variable_to_map in state_variable_to_y:
         ode_definitions_tmp[state_variable_to_y[state_variable_to_map]] = ode_definitions[state_variable_to_map]
 
-        # TODO: initial values must be of the same size as the ode_definitions
         if state_variable_to_map in initial_values:
             initial_values_tmp[state_variable_to_y[state_variable_to_map]] = initial_values[state_variable_to_map]
 
         if state_variable_to_map in state_start_values:
             state_start_values_tmp[state_variable_to_y[state_variable_to_map]] = state_start_values[state_variable_to_map]
 
-    return ode_definitions_tmp, initial_values_tmp, state_start_values_tmp
+    return ode_definitions_tmp, initial_values_tmp, state_start_values_tmp, thresholds_tmp
 
 
-# TODO: refactor me
 def prepare_jacobian_matrix(ode_definitions):
     """
     Compute the jacobian matrix for the current ODE system.
@@ -318,7 +331,7 @@ def evaluate_integrator(h,
                         spikes,
                         y,
                         initial_values,
-                        threshold_body):
+                        thresholds):
     """
     This function computes the average step size and the minimal step size that a given 
     integration method from GSL uses to evolve a certain system of ODEs during a certain
@@ -364,10 +377,14 @@ def evaluate_integrator(h,
             s_min = s_min_old
 
         # print "End while loop"
+        threshold_crossed = False
+        for threshold in thresholds:
+            if eval(threshold):
+                threshold_crossed = True
+                break  # break inner loop
 
-        #if y[0] >= V_th:
-        #    print("The predefined threshold is crossed. Terminate the evaluation procedure.")
-        #    break
+        if threshold_crossed:  # break outer loop
+            break
 
         for idx, initial_value in enumerate(initial_values):
             matcher = re.compile(r".*(\d)+$")
@@ -459,21 +476,7 @@ def jacobian(t, y, params):
     for row in range(0, dimension):
         for col in range(0, dimension):
             # wrap the expression to a lambda function for the improved performance
-            tmp = eval("lambda: " + jacobian_matrix[row][col], g)  # TODO get rid of globals
+            tmp = eval("lambda: " + jacobian_matrix[row][col], g)
             dfdy[row, col] = tmp()
 
     return dfdy, dfdt
-
-
-def threshold(y, threshold_body):
-    """
-    :param y: represents the current state vector as updates through GSL.
-    Evaluates the user defined threshold expression. 
-    :param threshold_body: A python boolean expression that implements the threshold check.
-    :return: true iff. the state vector `y` (or any entry) ceosses the threshold
-    """
-    # threshold is defined in terms of state variables. replace them through array accesses to `y` with corresponding
-    # indices.
-    None
-    #threshold_body = replace_state_variables_through_array_access(threshold_body)
-    #return eval(threshold_body)

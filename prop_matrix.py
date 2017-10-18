@@ -158,4 +158,4 @@ def compute_exact_solution(ode_symbol, ode_definition, shapes):
         json_data["shape_state_updates"].append([str(x) for x in shape.state_updates])
         json_data["shape_state_variables"].append([str(x) for x in shape.state_variables])
 
-    return json.dumps(json_data, indent=2)
+    return json_data

@@ -36,10 +36,7 @@
       "symbol": "V_m",
       "definition": "( -g_L*( V_m - E_L ) + (g_L*Delta_T*exp((V_m-V_th)/Delta_T)) - g_ex * ( V_m - E_ex ) - g_in * ( V_m - E_in ) - w + I_e + I_stim ) / C_m",
       "initial_values": ["E_L"],
-      "threshold": {
-        "bound": "upper",
-        "condition": "V_peak"
-      }
+      "upper_bound": "V_peak"
     },
 
     {
