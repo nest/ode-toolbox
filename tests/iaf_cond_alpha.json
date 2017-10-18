@@ -16,7 +16,8 @@
     {
       "symbol": "V_m",
       "definition": "(-(g_L*(V_m-E_L))-(g_ex*(V_m-E_ex))-(g_in*(V_m-E_in))+I_stim+I_e)/C_m",
-      "initial_values": ["E_L"]
+      "initial_values": ["E_L"],
+      "upper_bound": "V_th"
     }
   ],
 
