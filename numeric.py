@@ -16,3 +16,4 @@ def compute_numeric_solution(shapes):
         json_data["shape_state_variables"].extend([str(x) for x in shape.state_variables])
         
     return json.dumps(json_data, indent=2)
+

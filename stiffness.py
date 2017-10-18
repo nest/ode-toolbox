@@ -14,21 +14,7 @@ numpy.random.seed(42)
 # the following variables must be defined globally since they are accessed from the step, jacobian, threshold and
 # these functions are called from the framework and cannot take these variables as parameters
 step_function_implementation = None
-
-
-def compute_initial_state_vector(state_start_values, dimension):
-    """
-    Computes an numpy vector start values for the ode system.
-    :param state_start_values:
-    :param dimension: The size of the ode system
-    :return: Numpy-Vector with `dimension` elements
-    """
-    y = numpy.zeros(dimension, numpy.float)
-    for state_start_variable in state_start_values:
-        matcher = re.compile(r".*(\d)+$")
-        oder_order_number = int(matcher.match(state_start_variable).groups(0)[0])
-        y[oder_order_number] = eval(state_start_values[state_start_variable])
-    return y
+jacobian_matrix = None
 
 
 def check_ode_system_for_stiffness(json_input):
@@ -45,6 +31,11 @@ def check_ode_system_for_stiffness(json_input):
     
     :param json_input: A list with ode, shape odes and parameters
     """
+    global step_function_implementation
+    global jacobian_matrix
+    step_function_implementation = None
+    jacobian_matrix = None
+
     ode_definitions, initial_values, state_start_values = extract_model_data(json_input)
 
     # `parameters` contains a series of variables from the differential equations declaration separated by the
@@ -99,8 +90,8 @@ def check_ode_system_for_stiffness(json_input):
         None)
 
     # print ("######### results #######")
-    # print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
-    # print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
+    print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
+    print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
     # print ("########## end ##########")
     return draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
@@ -164,7 +155,6 @@ def extract_model_data(json_input):
         if state_variable_to_map in state_start_values:
             state_start_values_tmp[state_variable_to_y[state_variable_to_map]] = state_start_values[state_variable_to_map]
 
-
     return ode_definitions_tmp, initial_values_tmp, state_start_values_tmp
 
 
@@ -203,8 +193,7 @@ def prepare_jacobian_matrix(ode_definitions):
     # map state variables to a
     # create jinja2 template
     jacobian_function_implementation = jinja2.Template(jacobian_function_body)
-    jacobian_function_implementation = jacobian_function_implementation.render(
-        odes=ode_definitions)
+    jacobian_function_implementation = jacobian_function_implementation.render(odes=ode_definitions)
 
     # print "jacobian function implementation:"
     # print jacobian_function_implementation
@@ -230,7 +219,7 @@ def calculate_jacobian(jacobian_function_implementation):
     exec(jacobian_function_implementation)
     # print("\nCalculated jacobian matrix: ")
     # `result_matrix_str` is calculated as a part of the `jacobian_function_implementation`
-    print("\n" + result_matrix_str)
+    # print("\n" + result_matrix_str)
     return result_matrix
 
 
@@ -257,14 +246,14 @@ def prepare_step_function(ode_definitions):
     step_function_implementation = jinja2.Template(step_function_body)
     step_function_implementation = step_function_implementation.render(odes=ode_definitions_tmp)
     # print "step function implementation:"
-    print(step_function_implementation)
+    #print(step_function_implementation)
     # compile the code to boost the performance
     step_function_implementation = compile(step_function_implementation, '<string>', 'exec')
 
-# TODO remove me
+
 def replace_state_variables_through_array_access(definition):
     """
-    Convert all references of f_n and y_n in `definition` to f[n] and y[n]
+    Convert all references of y_n in `definition` to y[n]
     :param definition: String to convert
     :return: Converted string
     """
@@ -319,8 +308,6 @@ def generate_spikes(sim_time_in_sec, slot_width_in_sec):
         t = list(filter(lambda x: slot * slot_width_in_sec <= x < (slot + 1) * slot_width_in_sec, spikes))
         spikes_per_slot[slot] = len(t)
     return spikes_per_slot
-    # spike_train = [0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0]
-    # return spike_train * time_slots
 
 
 def evaluate_integrator(h,
@@ -365,7 +352,7 @@ def evaluate_integrator(h,
             step_counter += 1
             s_min_old = s_min
             s_min = min(s_min, t - t_old)
-            print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
+            # print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
             if s_min < 0.000000005:
                 raise Exception("Check your ODE system. The integrator step becomes to small "
                                    "in order to support reasonable simulation", s_min)
@@ -378,16 +365,16 @@ def evaluate_integrator(h,
 
         # print "End while loop"
 
-        if y[0] >= V_th:
-            # print("The predefined threshold is crossed. Terminate the evaluation procedure.")
-            break
+        #if y[0] >= V_th:
+        #    print("The predefined threshold is crossed. Terminate the evaluation procedure.")
+        #    break
 
         for idx, initial_value in enumerate(initial_values):
             matcher = re.compile(r".*(\d)+$")
             oder_order_number = int(matcher.match(initial_value).groups(0)[0])
             y[oder_order_number] += eval(initial_values[initial_value]) * spikes[idx][time_slice]
 
-    step_average = (t -sum_last_steps) / step_counter
+    step_average = (t - sum_last_steps) / step_counter
     return s_min_old, step_average
 
 
@@ -420,6 +407,7 @@ def draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp
     else:
         None  # This case cannot happen.
 
+
 def step(t, y, params):
     """
     The GSL callback function that computes of integration step.
@@ -433,6 +421,21 @@ def step(t, y, params):
     f = numpy.zeros((dimension,), numpy.float)
     exec(step_function_implementation)
     return f
+
+
+def compute_initial_state_vector(state_start_values, dimension):
+    """
+    Computes an numpy vector start values for the ode system.
+    :param state_start_values:
+    :param dimension: The size of the ode system
+    :return: Numpy-Vector with `dimension` elements
+    """
+    y = numpy.zeros(dimension, numpy.float)
+    for state_start_variable in state_start_values:
+        matcher = re.compile(r".*(\d)+$")
+        oder_order_number = int(matcher.match(state_start_variable).groups(0)[0])
+        y[oder_order_number] = eval(state_start_values[state_start_variable])
+    return y
 
 
 def jacobian(t, y, params):

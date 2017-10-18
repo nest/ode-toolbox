@@ -129,7 +129,10 @@ def main(args):
         else:
             print(": numerical")
             result = compute_numeric_solution(shapes)
-            # TODO: run the stiffness tester
+            ######################
+            # take json and replace shape functions trough corresponding ODEs and initial values
+            input[shapes]
+            ######################
 
     print(result)
     return result
