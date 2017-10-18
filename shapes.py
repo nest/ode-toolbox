@@ -31,8 +31,10 @@ from sympy import det, diff, Symbol, sympify, simplify
 from sympy.matrices import zeros
 from types import IntType
 
+
 def is_sympy_type(var):
     return isinstance(var, tuple(sympy.core.all_classes))
+
 
 class Shape(object):
     """Canonical representation of a postsynaptic shape.
@@ -104,14 +106,14 @@ class Shape(object):
         self.state_variables = []
         for i in range(self.order):
             if i > 0:
-                self.state_variables.insert(0, Symbol("{}__{}".format(str(symbol), i)))
+                self.state_variables.insert(0, Symbol("{}{}".format(str(symbol), "__d" * i)))
             else:
                 self.state_variables.insert(0, symbol)
                 
         # Compute the definition of the ODE the shape satisfies
         rhs = ["{} * {}".format(simplify(derivative_factors[0]), symbol)]
         for k in range(1, order):
-            rhs.append("{} * {}__{}".format(simplify(derivative_factors[k]), symbol, str(k)))
+            rhs.append("{} * {}{}".format(simplify(derivative_factors[k]), symbol, "__d" * i))
         self.ode_definition = " + ".join(rhs)
 
 
