@@ -129,6 +129,23 @@ def main(args):
         else:
             print(": numerical")
             result = compute_numeric_solution(shapes)
+            try:
+                import pygsl
+                from stiffness import check_ode_system_for_stiffness
+                # prepare the original JSON for the testing. E.g. all shapes must be an ode with initial values
+                ode_shapes = []
+                for shape in shapes:
+                    ode_shape = {"type": "ode",
+                                 "symbol": str(shape.symbol),
+                                 "initial_values": [str(x) for x in shape.initial_values],
+                                 "definition": str(shape.ode_definition)}
+
+                    ode_shapes.append(ode_shape)
+                input["shapes"] = ode_shapes
+                solver_type = check_ode_system_for_stiffness(input)
+                print(solver_type)
+            except ImportError:
+                print("Please, install PyGSL in order to enable checking of the stiffness.")
 
     print(result)
     return result
