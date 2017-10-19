@@ -58,6 +58,15 @@ class TestSolutionComputation(unittest.TestCase):
         self.assertTrue(len(result["shape_ode_definitions"]) == 2)
         self.assertTrue(len(result["shape_state_variables"]) == 4)
 
+    def test_iaf_cond_alpha(self):
+        result = ode_analyzer.main(["iaf_cond_alpha_mixed.json"])
+        result = json.loads(result)
+
+        self.assertEqual("numeric", result["solver"])
+        self.assertTrue(len(result["shape_initial_values"]) == 4)
+        self.assertTrue(len(result["shape_ode_definitions"]) == 2)
+        self.assertTrue(len(result["shape_state_variables"]) == 4)
+
 
 if __name__ == '__main__':
     unittest.main()
