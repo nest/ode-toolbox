@@ -49,6 +49,13 @@ class TestSolutionComputation(unittest.TestCase):
         self.assertEqual("exact", result["solver"])
         self.assertTrue(len(result["propagator"]) > 0)
 
+    def test_iaf_psc_alpha_mixed(self):
+        result = ode_analyzer.main(["iaf_psc_alpha_mixed.json"])
+        result = json.loads(result)
+
+        self.assertEqual("exact", result["solver"])
+        self.assertTrue(len(result["propagator"]) > 0)
+
     def test_iaf_cond_alpha(self):
         result = ode_analyzer.main(["iaf_cond_alpha.json"])
         result = json.loads(result)
