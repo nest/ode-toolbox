@@ -1,4 +1,4 @@
-`# ODE Toolbox - a framework for automatic solver selection for systems of differential equations 
+# ODE Toolbox - a framework for automatic solver selection for systems of differential equations 
 
 ## Prerequisites 
 * ode-toolbox requires `sympy` in the version of at least
@@ -12,8 +12,12 @@ python ode_analyzer.py iaf_cond_alpha.json
 ```
 `ode_analyzer.py` stores output in an JSON-file named `result-$date$.json` where `$date$` correspond to the current date.
 ## Input
-
-
+Input for `ode_analyzer.py` JSON files are composed of two lists of dictionaries `shapes` and `odes` and a dictionary `parameters`. `shapes` and `odes` must be stated at any call of the `ode_analyzer.py`. `parameters` dictionary is stated only if a stiffness test should be performed.
+### shapes
+The shapes section defines two shapes, one of which is specified as a function of time ( g_in , lines 10-14), the other as an ODE with initial conditions
+### odes
+### parameters
+Model parameters and their default values are given in the `parameters` dictionary. This dictionary maps default values to parameter names and has to contain an entry for each free variable occurring in the equations of the `odes` or `shapes`.
 ## Output
 
 ## Example
