@@ -11,7 +11,7 @@ from sympy import diff, simplify
 from sympy.parsing.sympy_parser import parse_expr
 
 from numeric import compute_numeric_solution
-from prop_matrix import compute_exact_solution
+from prop_matrix import compute_analytical_solution
 from shapes import shape_from_function, shape_from_ode
 
 
@@ -125,8 +125,8 @@ def main(args):
     for ode in input["odes"]:
         print("  " + ode["symbol"], end="")
         if ode["is_linear_constant_coefficient"]:
-            print(": exact")
-            result = compute_exact_solution(ode["symbol"], ode["definition"], shapes)
+            print(": analytical")
+            result = compute_analytical_solution(ode["symbol"], ode["definition"], shapes)
         else:
             print(": numerical")
             result = compute_numeric_solution(shapes)

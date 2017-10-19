@@ -46,20 +46,20 @@ class TestSolutionComputation(unittest.TestCase):
         result = ode_analyzer.main(["iaf_psc_alpha.json"])
         result = json.loads(result)
 
-        self.assertEqual("exact", result["solver"])
+        self.assertEqual("analytical", result["solver"])
         self.assertTrue(len(result["propagator"]) > 0)
 
     def test_iaf_psc_alpha_mixed(self):
         result = ode_analyzer.main(["iaf_psc_alpha_mixed.json"])
         result = json.loads(result)
 
-        self.assertEqual("exact", result["solver"])
+        self.assertEqual("analytical", result["solver"])
         self.assertTrue(len(result["propagator"]) > 0)
 
     def test_iaf_cond_alpha(self):
         result = ode_analyzer.main(["iaf_cond_alpha.json"])
         result = json.loads(result)
-
+        print json.dumps(result, indent=2)
         self.assertEqual("numeric", result["solver"])
         self.assertTrue(len(result["shape_initial_values"]) == 4)
         self.assertTrue(len(result["shape_ode_definitions"]) == 2)

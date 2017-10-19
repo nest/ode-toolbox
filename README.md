@@ -33,10 +33,19 @@ Odes-list contains a dictionaries each of which specify an ODE with initial valu
 Model parameters and their values are given in the `parameters` dictionary. This dictionary maps default values to parameter names and has to contain an entry for each free variable occurring in the equations of the `odes` or `shapes`. Every dictionary entry hat the name of the free variable as its key and a valid Python-expression as its value. I.e. `variable_name: expression`.
 
 ## Output
+The analysis output is stored as JSON in file `result-$date$.json` where `$date$` correspond to the current date.
+
+* `solver`: states which integration scheme was selected. Possible values are `analytical` or `numerical `.
+* `ode_updates`: contains a list of Python statements for updating the ODE.
+* `state_shape_variables`: is a list of the names of the shapes and their derivatives up to the order of the ODE they satisfy minus one.
+* `shape_initial_values`: are the initial values of the differential equations the shapes satisfy.
+* `shape_state_updates`: contains a list of instructions to be applied to shape_state_variables in every update step if the ODE is solved analytically.
+* `propagator`: contains a list of all non-zero entries of all propagator matrices numbered according to the order in which they should be executed if the ODE is solved analytically..
+* `ode_system_type`: states if the current ode system with provided parameters is a stiff and non-stiff problem. Possible values `stiff`, `non-stiff`, `skipped` (if due to missing `PyGSL` or `parameters` the test was not performed)
 
 ## Examples
-
-The following example shows an input model that corresponds to a integrate-and-fire neuron with an alpha shaped postsynaptic response. The model ODEs can be solved analytically.
+### Analytically solvable current-based model
+The following example shows an input model that corresponds to a current-based integrate-and-fire neuron with an alpha shaped postsynaptic response. The model ODEs can be solved analytically.
 ```
 {
   "shapes": [
@@ -63,6 +72,64 @@ The following example shows an input model that corresponds to a integrate-and-f
 }
 
 ```
+Output:
+```
+{
+  "ode_updates": [
+    "V_abs = (exp(-__h/Tau)) * V_abs+ ((I_e + currents)/C_m) * (Tau - Tau*exp(-__h/Tau))", 
+    "V_abs += I_shape_in*__P_I_shape_in__2_1 + I_shape_in__d*__P_I_shape_in__2_0", 
+    "V_abs += I_shape_ex*__P_I_shape_ex__2_1 + I_shape_ex__d*__P_I_shape_ex__2_0"
+  ], 
+  "solver": "analytical", 
+  "shape_initial_values": [
+    [
+      "0", 
+      "e/tau_syn_in"
+    ], 
+    [
+      "0", 
+      "e/tau_syn_ex"
+    ]
+  ], 
+  "shape_state_updates": [
+    [
+      "I_shape_in__d*__P_I_shape_in__0_0", 
+      "I_shape_in*__P_I_shape_in__1_1 + I_shape_in__d*__P_I_shape_in__1_0"
+    ], 
+    [
+      "I_shape_ex__d*__P_I_shape_ex__0_0", 
+      "I_shape_ex*__P_I_shape_ex__1_1 + I_shape_ex__d*__P_I_shape_ex__1_0"
+    ]
+  ], 
+  "shape_state_variables": [
+    [
+      "I_shape_in__d", 
+      "I_shape_in"
+    ], 
+    [
+      "I_shape_ex__d", 
+      "I_shape_ex"
+    ]
+  ], 
+  "propagator": {
+    "__P_I_shape_in__1_1": "exp(-__h/tau_syn_in)", 
+    "__P_I_shape_in__1_0": "__h*exp(-__h/tau_syn_in)", 
+    "__P_I_shape_in__0_0": "exp(-__h/tau_syn_in)", 
+    "__P_I_shape_ex__2_2": "exp(-__h/Tau)", 
+    "__P_I_shape_ex__2_0": "Tau*tau_syn_ex*(Tau*tau_syn_ex*exp(2*__h/tau_syn_ex) - Tau*tau_syn_ex*exp(__h*(Tau + tau_syn_ex)/(Tau*tau_syn_ex)) - __h*(Tau - tau_syn_ex)*exp(__h*(Tau + tau_syn_ex)/(Tau*tau_syn_ex)))*exp(-__h*(2*Tau + tau_syn_ex)/(Tau*tau_syn_ex))/(C_m*(Tau - tau_syn_ex)**2)", 
+    "__P_I_shape_ex__2_1": "Tau*tau_syn_ex*(-exp(__h/Tau) + exp(__h/tau_syn_ex))*exp(-__h*(Tau + tau_syn_ex)/(Tau*tau_syn_ex))/(C_m*(Tau - tau_syn_ex))", 
+    "__P_I_shape_in__2_0": "Tau*tau_syn_in*(Tau*tau_syn_in*exp(2*__h/tau_syn_in) - Tau*tau_syn_in*exp(__h*(Tau + tau_syn_in)/(Tau*tau_syn_in)) - __h*(Tau - tau_syn_in)*exp(__h*(Tau + tau_syn_in)/(Tau*tau_syn_in)))*exp(-__h*(2*Tau + tau_syn_in)/(Tau*tau_syn_in))/(C_m*(Tau - tau_syn_in)**2)", 
+    "__P_I_shape_in__2_1": "Tau*tau_syn_in*(-exp(__h/Tau) + exp(__h/tau_syn_in))*exp(-__h*(Tau + tau_syn_in)/(Tau*tau_syn_in))/(C_m*(Tau - tau_syn_in))", 
+    "__P_I_shape_in__2_2": "exp(-__h/Tau)", 
+    "__P_I_shape_ex__1_1": "exp(-__h/tau_syn_ex)", 
+    "__P_I_shape_ex__0_0": "exp(-__h/tau_syn_ex)", 
+    "__P_I_shape_ex__1_0": "__h*exp(-__h/tau_syn_ex)"
+  }
+}
+```
+
+### Conductance-based model
+The following examples shows an input model that corresponds to a conductance-based integrate-and-fire neuron with an alpha shaped postsynaptic response. This example provides also a `parameters` dictionary for the stiffness testing.
 
 ```
 {
@@ -96,12 +163,35 @@ The following example shows an input model that corresponds to a integrate-and-f
     "E_ex": "0",
     "E_in": "-85.0",
     "E_L": "-70.0",
-    "tau_syn_ex": "0.2",
+    "tau_syn_ex": "0.02",
     "tau_syn_in": "2.0",
     "I_e": "0",
     "I_stim": "0"
   }
 }
 
+```
 
+Output:
+```
+{
+  "shape_state_variables": [
+    "g_in__d", 
+    "g_in", 
+    "g_ex__d", 
+    "g_ex"
+  ], 
+  "shape_initial_values": [
+    "0", 
+    "e/tau_syn_in", 
+    "0", 
+    "e/tau_syn_ex"
+  ], 
+  "ode_system_type": "stiff", 
+  "shape_ode_definitions": [
+    "-1/tau_syn_in**2 * g_in + -2/tau_syn_in * g_in__d", 
+    "-1/tau_syn_ex**2 * g_ex + -2/tau_syn_ex * g_ex__d"
+  ], 
+  "solver": "numeric"
+}
 ```
