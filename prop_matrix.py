@@ -140,12 +140,12 @@ class Propagator(object):
             shape.state_updates = P[:shape.order, :shape.order] * y[:shape.order, 0]
 
 
-def compute_exact_solution(ode_symbol, ode_definition, shapes):
+def compute_analytical_solution(ode_symbol, ode_definition, shapes):
 
     propagator = Propagator(ode_symbol, ode_definition, shapes)
     
     json_data = {
-        "solver": "exact",
+        "solver": "analytical",
         "ode_updates": propagator.ode_updates,
         "propagator": propagator.propagator,
         "shape_initial_values": [],
