@@ -6,9 +6,10 @@
       "definition": "(e/tau_syn_in)*t*exp((-1)/tau_syn_in*t)"
     },
     {
-      "type": "function",
+      "type": "ode",
       "symbol": "g_ex",
-      "definition": "(e/tau_syn_ex)*t*exp((-1)/tau_syn_ex*t)"
+      "definition": "(-1)/(tau_syn_ex)**(2)*g_ex+(-2)/tau_syn_ex*g_ex'",
+      "initial_values": ["0",  "e / tau_syn_ex"]
     }
   ],
 

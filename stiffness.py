@@ -150,8 +150,12 @@ def prepare_for_evaluate_integrator(json_input):
         for state_variable in ode_definitions:
             ode_definition = ode_definitions[state_variable]
             matcher = re.compile(r"\b(" + state_variable_to_map + r")\b")
+
             ode_definitions[state_variable] = matcher.sub(state_variable_to_y[state_variable_to_map], ode_definition)
-        for threshold in thresholds:
+
+    for threshold in thresholds:
+        for state_variable_to_map in state_variable_to_y:
+            matcher = re.compile(r"\b(" + state_variable_to_map + r")\b")
             threshold = matcher.sub(state_variable_to_y[state_variable_to_map], threshold)
             threshold = replace_state_variables_through_array_access(threshold)
             thresholds_tmp.append(threshold)
