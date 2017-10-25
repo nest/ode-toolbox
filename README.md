@@ -4,6 +4,17 @@
 * ode-toolbox requires `sympy` in the version of at least `1.1.1` (`pip install sympy` installs a satisfying version)
 * For the stiffness testing, an installation of `PyGSL` is necessary (http://pygsl.sourceforge.net/). If `PyGSL` is not installed then the stiffness testing is omitted but the remainder of the analysis framework is still working.
 
+## Installation
+
+```Python
+python setup.py install
+```
+
+### Testing
+```Python
+python setup.py test
+```
+
 ## Usage of the analysis framework
 The `ode-toolbox` can be used either as a normal python module (cf.  tests in `tests` to see the API) or as command line application. The input for `ode-toolbox` is stored in `json`-files (file format will be explained in the next section). The entry point for the analysis is `ode_analyzer.py`, The script expects the name of a JSON file as its only command line argument:
 
