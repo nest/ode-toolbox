@@ -166,7 +166,7 @@ def compute_analytical_solution(ode_symbol, ode_definition, shapes):
 
     propagator = Propagator(ode_symbol, ode_definition, shapes)
     
-    json_data = {
+    data = {
         "solver": "analytical",
         "ode_updates": propagator.ode_updates,
         "propagator": propagator.propagator,
@@ -176,8 +176,8 @@ def compute_analytical_solution(ode_symbol, ode_definition, shapes):
     }
 
     for shape in shapes:
-        json_data["shape_initial_values"].append([str(x) for x in shape.initial_values])
-        json_data["shape_state_updates"].append([str(x) for x in shape.state_updates])
-        json_data["shape_state_variables"].append([str(x) for x in shape.state_variables])
+        data["shape_initial_values"].append([str(x) for x in shape.initial_values])
+        data["shape_state_updates"].append([str(x) for x in shape.state_updates])
+        data["shape_state_variables"].append([str(x) for x in shape.state_variables])
 
-    return json_data
+    return data

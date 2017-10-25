@@ -21,7 +21,7 @@
 
 def compute_numeric_solution(shapes):
 
-    json_data = {
+    data = {
         "solver": "numeric",
         "shape_initial_values": [],
         "shape_ode_definitions": [],
@@ -29,9 +29,8 @@ def compute_numeric_solution(shapes):
     }
 
     for shape in shapes:
-        json_data["shape_initial_values"].extend([str(x) for x in shape.initial_values])
-        json_data["shape_ode_definitions"].append(str(shape.ode_definition))
-        json_data["shape_state_variables"].extend([str(x) for x in shape.state_variables])
+        data["shape_initial_values"].extend([str(x) for x in shape.initial_values])
+        data["shape_ode_definitions"].append(str(shape.ode_definition))
+        data["shape_state_variables"].extend([str(x) for x in shape.state_variables])
         
-    return json_data
-
+    return data
