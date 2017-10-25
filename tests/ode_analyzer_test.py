@@ -2,7 +2,7 @@ import json
 import unittest
 
 import ode_analyzer
-from prop_matrix import Propagator
+from analytic import Propagator
 from shapes import shape_from_function
 
 

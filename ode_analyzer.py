@@ -10,8 +10,8 @@ import sys
 from sympy import diff, simplify
 from sympy.parsing.sympy_parser import parse_expr
 
+from analytic import compute_analytical_solution
 from numeric import compute_numeric_solution
-from prop_matrix import compute_analytical_solution
 from shapes import shape_from_function, shape_from_ode
 
 
