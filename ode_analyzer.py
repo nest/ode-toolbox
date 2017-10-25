@@ -128,7 +128,7 @@ def main(args):
             print(": analytical")
             result = compute_analytical_solution(ode["symbol"], ode["definition"], shapes)
         else:
-            print(": numerical")
+            print(": numerical ", end="")
             result = compute_numeric_solution(shapes)
             if "parameters" in input:
                 try:
@@ -145,11 +145,10 @@ def main(args):
                         ode_shapes.append(ode_shape)
                     input["shapes"] = ode_shapes
                     solver_type = check_ode_system_for_stiffness(input)
-                    print("  numerical")
                     if solver_type == "implicit":
-                        print("  the ODE system is stiff")
+                        print("implicit scheme")
                     else:
-                        print("  the ODE system is non-stiff")
+                        print("explicit scheme")
 
                     result["evaluator"] = solver_type
                 except ImportError:
