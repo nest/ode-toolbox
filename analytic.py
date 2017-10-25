@@ -1,3 +1,24 @@
+#
+# analytic.py
+#
+# This file is part of the NEST ODE toolbox.
+#
+# Copyright (C) 2017 The NEST Initiative
+#
+# The NEST ODE toolbox is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 2 of
+# the License, or (at your option) any later version.
+#
+# The NEST ODE toolbox is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 import json
 
 from sympy import diff, exp, Matrix, simplify, sqrt, Symbol, sympify
@@ -102,8 +123,9 @@ class Propagator(object):
         constant_input = self.ode_definition - ode_symbol_factor * self.ode_symbol
         for shape_factor, shape in zip(shape_factors, shapes):
             constant_input -= shape_factor * shape.symbol
-        # TODO JME: why do we return these values but store propagator matricies? either both, or non of them should
-        # stored in class fields
+        # TODO JME: why do we return these values but store propagator
+        # matricies? either both, or non of them should stored in
+        # class fields
         return simplify(constant_input), simplify(step_constant)
 
     def compute_propagation_step(self, shapes, constant_input, step_constant):
