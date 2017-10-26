@@ -17,6 +17,7 @@
       "symbol": "V_abs",
       "definition": "(-1)/Tau*V_abs+1/C_m*(I_shape_in+I_shape_ex+I_e+currents)"
     }
-  ]
+  ],
 
+  "parameters": {}
 }
