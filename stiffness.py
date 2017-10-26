@@ -19,15 +19,33 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import print_function
+
 import numpy
 import jinja2
 from math import *
-import pygsl.odeiv as odeiv
 from sympy.parsing.sympy_parser import parse_expr  # this module is used in the generated code
 from sympy import *
 import re
-import numpy as np  # this module is used in the generated code
 import numpy.random
+
+# The change of stderr is a hack to silence PyGSL's error printing,
+# which often gives false hints on what is actually going on.
+import sys, os
+oldstderr = sys.stderr
+sys.stderr = open(os.devnull, 'w')
+
+try:
+    import pygsl.odeiv as odeiv
+except ImportError as ie:
+    sys.stderr.close()
+    sys.stderr = oldstderr
+    print("Warning: PyGSL is not available. The stiffness test will be skipped.")
+    print("Warning: " + ie.message, end="\n\n\n")
+    raise
+
+sys.stderr.close()
+sys.stderr = oldstderr
 
 # for the testing purpose fix the seed to 42 in order to make results reproducible
 numpy.random.seed(42)
@@ -434,7 +452,7 @@ def draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp
     :param step_average_exp:
     """
     # check minimal step lengths as used by GSL integration method
-    machine_precision = np.finfo(float).eps
+    machine_precision = numpy.finfo(float).eps
     if step_min_imp > 10. * machine_precision and step_min_exp < 10. * machine_precision:
         return "implicit"
     elif step_min_imp < 10. * machine_precision and step_min_exp > 10. * machine_precision:
