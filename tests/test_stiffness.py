@@ -33,7 +33,8 @@ def open_json(fname):
         indict = json.load(infile)
     return indict
 
-
+@unittest.skipIf(not odetoolbox.HAVE_STIFFNESS,
+                 "Stiffness tests not supported on this system")
 class TestStiffnessChecker(unittest.TestCase):
 
     def test_iaf_cond_alpha_stiff(self):
