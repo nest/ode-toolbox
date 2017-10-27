@@ -86,7 +86,7 @@ def analysis(indict):
 
     print("Validating input...")
     for key in ["odes", "parameters", "shapes"]:
-        if not indict.has_key(key):
+        if key not in indict:
             raise MalformedInput("The key '%s' is not contained in the input." % key)
 
     print("Analyzing shapes...")

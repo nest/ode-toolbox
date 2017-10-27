@@ -88,7 +88,7 @@ class Shape(object):
         assert type(symbol) is Symbol, "symbol is not a SymPy symbol: '%r'" % symbol
         self.symbol = symbol
         
-        assert type(order) is type(int), "order is not an integer: '%d'" % order
+        assert type(order) is int, "order is not an integer: '%d'" % order
         self.order = order
 
         assert len(initial_values) == order, "length of initial_values != order"
