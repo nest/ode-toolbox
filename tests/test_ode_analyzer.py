@@ -92,7 +92,10 @@ class TestSolutionComputation(unittest.TestCase):
         indict = open_json("iaf_cond_alpha.json")
         result = odetoolbox.analysis(indict)
 
-        self.assertEqual("numeric-explicit", result["solver"])
+        solver = result["solver"].split("-")
+        self.assertEqual("numeric", solver[0])
+        if odetoolbox.HAVE_STIFFNESS:
+            self.assertEqual("explicit", solver[1])
         self.assertTrue(len(result["shape_initial_values"]) == 4)
         self.assertTrue(len(result["shape_ode_definitions"]) == 2)
         self.assertTrue(len(result["shape_state_variables"]) == 4)
@@ -102,7 +105,10 @@ class TestSolutionComputation(unittest.TestCase):
         indict = open_json("iaf_cond_alpha_mixed.json")
         result = odetoolbox.analysis(indict)
 
-        self.assertEqual("numeric-explicit", result["solver"])
+        solver = result["solver"].split("-")
+        self.assertEqual("numeric", solver[0])
+        if odetoolbox.HAVE_STIFFNESS:
+            self.assertEqual("explicit", solver[1])
         self.assertTrue(len(result["shape_initial_values"]) == 4)
         self.assertTrue(len(result["shape_ode_definitions"]) == 2)
         self.assertTrue(len(result["shape_state_variables"]) == 4)
