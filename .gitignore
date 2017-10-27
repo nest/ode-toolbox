@@ -1,2 +1,7 @@
 *.pyc
+.cache
+.eggs
 .idea
+build
+dist
+odetoolbox.egg-info
