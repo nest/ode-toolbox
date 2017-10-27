@@ -1,5 +1,7 @@
 # NEST ODE toolbox 
 
+[![Build Status](https://travis-ci.org/nest/ode-toolbox.svg?branch=master)](https://travis-ci.org/nest/ode-toolbox)
+
 The NEST ODE toolbox is a framework for the automatic symbolic
 analysis of the differential equations used for modeling spiking
 neuron models.
@@ -12,6 +14,8 @@ an an installation of `PyGSL` (http://pygsl.sourceforge.net/). If
 `PyGSL` is not installed, the test for stiffness is skipped during the
 analysis of the equations (the remaining analysis is still performed).
 
+For details, see the file [requirements.txt](requirements.txt).
+
 ### Installation
 
 To install the framework, use the following commands in a terminal:
@@ -20,11 +24,20 @@ To install the framework, use the following commands in a terminal:
 python setup.py install
 ```
 
+If you want to install the ODE toolbox into your home directory, add
+the option `--user` to the above call.
+
 ### Testing
+
+To run the unit and integration tests that come with the ODE toolbox,
+you can run the following command:
 
 ```bash
 python setup.py test
 ```
+
+Please note that this requires the [pytest](https://docs.pytest.org)
+package to be installed.
 
 ## Usage of the analysis framework
 
