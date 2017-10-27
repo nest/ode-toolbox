@@ -2,16 +2,22 @@
 
 [![Build Status](https://travis-ci.org/nest/ode-toolbox.svg?branch=master)](https://travis-ci.org/nest/ode-toolbox)
 
-The NEST ODE toolbox is a framework for the automatic symbolic
-analysis of the differential equations used for modeling spiking
-neuron models.
+The ODE toolbox is a framework for the automatic symbolic analysis of
+the differential equations used for modeling spiking neuron models.
+
+**Disclaimer:** Although the toolbox ist hosted under the roof of the
+NEST Initiative, it is completely independent of any specific
+simulator. It was, however, initially developed in the context of
+the [NESTML](https://github.com/nest/nestml) project, in which the
+main focus was on the class of neurons presently available in
+the [NEST](https://github.com/nest/nest-simulator) simulator.
 
 ### Prerequisites
 
 The `ode-toolbox` requires `SymPy` in a version >= 1.1.1, which can be
 installed using `pip install sympy`. The stiffness tester depends on
-an an installation of `PyGSL` (http://pygsl.sourceforge.net/). If
-`PyGSL` is not installed, the test for stiffness is skipped during the
+an an installation of [PyGSL](http://pygsl.sourceforge.net/). If PyGSL
+is not installed, the test for stiffness is skipped during the
 analysis of the equations (the remaining analysis is still performed).
 
 For details, see the file [requirements.txt](requirements.txt).
@@ -20,7 +26,7 @@ For details, see the file [requirements.txt](requirements.txt).
 
 To install the framework, use the following commands in a terminal:
 
-```bash
+```
 python setup.py install
 ```
 
@@ -32,7 +38,7 @@ the option `--user` to the above call.
 To run the unit and integration tests that come with the ODE toolbox,
 you can run the following command:
 
-```bash
+```
 python setup.py test
 ```
 
@@ -42,20 +48,14 @@ package to be installed.
 ## Usage of the analysis framework
 
 The `ode-toolbox` can be used in two ways:
-1. as a Python module. See `tests/test_ode_analyzer.py` for examples of
-the usage.
-2. or as command line application. The input for
-`ode-toolbox` is stored in `json`-files (file format will be explained
-in the next section). The entry point for the analysis is
-`ode_analyzer.py`, The script expects the name of a JSON file as its
-only command line argument:
-
+1. as a Python module. See [the tests](tests/test_ode_analyzer.py) for
+examples of the exact usage of the functions.
+2. as command line application. In this case, the input is stored in a
+`json` file, whose file format will be explained in the next
+section. The command line invocation in this case looks like this:
 ```
-python ode_analyzer.py iaf_cond_alpha.json
+ode_analyzer.py <json_file>
 ```
-
-`ode_analyzer.py` stores output in an JSON-file named
-`result-$date$.json` where `$date$` correspond to the current date.
 
 ### Input
 
