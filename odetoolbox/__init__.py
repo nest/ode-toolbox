@@ -24,12 +24,12 @@ from __future__ import print_function
 from sympy import diff, simplify
 from sympy.parsing.sympy_parser import parse_expr
 
-import .analytic
-import .numeric
-import .shapes
+from . import analytic
+from . import numeric
+from . import shapes
 
 try:
-    import .stiffness
+    from . import stiffness
     HAVE_STIFFNESS = True
 except:
     HAVE_STIFFNESS = False
