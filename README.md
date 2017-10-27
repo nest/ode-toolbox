@@ -5,9 +5,11 @@
 The ODE toolbox is a framework for the automatic symbolic analysis of
 the differential equations used for modeling spiking neuron models.
 
-**Disclaimer:** Although the toolbox ist hosted under the roof of the
-NEST Initiative, it is completely independent of any specific
-simulator. It was, however, initially developed in the context of
+**Disclaimer:** Although the toolbox is hosted under
+the [GitHub account](https://github.com/nest/) of
+the [NEST Initiative](http://www.nest-initiative.org/), it is
+completely independent of any specific simulator. It was, however,
+initially developed in the context of
 the [NESTML](https://github.com/nest/nestml) project, in which the
 main focus was on the class of neurons presently available in
 the [NEST](https://github.com/nest/nest-simulator) simulator.
@@ -71,19 +73,19 @@ Odes-list contains dictionaries each of which specifies an ODE with
 initial values. Every dictionary has the following keys:
 
 * `symbol`: The unambiguous name of the shape
-* `definition`: An arbitrary Python-expression with free variables (an
-  arbitrary valid Python-variable name, e.g. `V_m`),
-  derivative-variables (an arbitrary valid Python-variable name with a
+* `definition`: An arbitrary Python expression with free variables (an
+  arbitrary valid Python variable name, e.g. `V_m`),
+  derivative-variables (an arbitrary valid Python variable name with a
   postfix of a sequence of '-characters, e.g. `g_in'''`) and functions
   from the `math`-package. The definition of a `function` must depend
   on `t`-variable.
 * `upper_bound`: defines an optional condition as a valid boolean
-  Python-expression for the maximal value of the
+  Python expression for the maximal value of the
   `symbol`-variable. This bound is used in the stiffness test.
 * `lower_bound`: defines an optional condition as a valid boolean
-  Python-expression for the minimal value of `symbol`-variable. This
+  Python expression for the minimal value of `symbol`-variable. This
   bound is used in the stiffness test.
-* `initial_values`: A list with Python-expressions which define an
+* `initial_values`: A list with Python expressions which define an
   initial value for every order of the shape-ODE. The length of this
   list defines the order of the corresponding ODE. `initial_values`
   must be stated only for the `ode`-shape.
@@ -94,7 +96,7 @@ Model parameters and their values are given in the `parameters`
 dictionary. This dictionary maps default values to parameter names and
 has to contain an entry for each free variable occurring in the
 equations of the `odes` or `shapes`. Every dictionary entry hat the
-name of the free variable as its key and a valid Python-expression as
+name of the free variable as its key and a valid Python expression as
 its value. I.e. `variable_name: expression`.
 
 #### `shapes`
@@ -104,27 +106,31 @@ function of time (by referencing a predefined variable `t`) or as an
 ODE with initial conditions. Every shape is a dictionary with the
 following keys:
 
-* `type`: determines whether the current shape is a function
-  (`function`) or an ODE with initial conditions (`ode`)
+* `type`: determines whether the shape is given as a function of time
+  (`function`) or as an ODE with initial conditions (`ode`)
 * `symbol`: The unambiguous name of the shape
-* `definition`: An arbitrary Python-expression with free variables (an
-  arbitrary valid Python-variable name, e.g. `V_m`),
-  derivative-variables (an arbitrary valid Python-variable name with a
+* `definition`: An arbitrary Python expression with free variables (an
+  arbitrary valid Python variable name, e.g. `V_m`),
+  derivative-variables (an arbitrary valid Python variable name with a
   postfix of a sequence of '-characters, e.g. `g_in'''`) and functions
   from the `math`-package. The definition of a `function` must depend
   on `t`-variable.
-* `initial_values`: A list with Python-expressions which define an
+* `initial_values`: A list with Python expressions which define an
   initial value for every order of the shape-ODE. The length of this
   list defines the order of the corresponding ODE. `initial_values`
   must be stated only for the `ode`-shape.
 
 ### Output
 
-The analysis output is stored as JSON in file `result-$date$.json`
-where `$date$` correspond to the current date.
+The analysis output is returned in the form of a Python dictionary. If
+the input was given as JSON in a file `input.json`, the output is
+stored in a file `input_reault.json` in the current working directory.
 
 * `solver`: states which integration scheme was selected. Possible
   values are `analytical` or `numerical `.
+  * if the stiffness tester was run (i.e. if PyGSL is available), this
+    field also contains either `explicit` of `implicit` after a dash
+    (`-`).
 * `ode_updates`: contains a list of Python statements for updating the
   ODE.
 * `state_shape_variables`: is a list of the names of the shapes and
@@ -179,7 +185,7 @@ postsynaptic response. The model ODEs can be solved analytically.
 
 Output:
 
-```
+```Python
 {
   "ode_updates": [
     "V_abs = (exp(-__h/Tau)) * V_abs+ ((I_e + currents)/C_m) * (Tau - Tau*exp(-__h/Tau))", 
@@ -241,7 +247,7 @@ conductance-based integrate-and-fire neuron with an alpha-shaped
 postsynaptic response. This example provides also a `parameters`
 dictionary for the stiffness testing.
 
-```
+```Python
 {
   "shapes": [
     {
@@ -284,7 +290,7 @@ dictionary for the stiffness testing.
 
 Output:
 
-```
+```Python
 {
   "shape_state_variables": [
     "g_in__d", 
