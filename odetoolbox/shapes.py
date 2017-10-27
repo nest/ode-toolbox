@@ -29,7 +29,6 @@ import sympy
 from sympy.parsing.sympy_parser import parse_expr
 from sympy import det, diff, Symbol, sympify, simplify
 from sympy.matrices import zeros
-from types import IntType
 
 
 def is_sympy_type(var):
@@ -89,7 +88,7 @@ class Shape(object):
         assert type(symbol) is Symbol, "symbol is not a SymPy symbol: '%r'" % symbol
         self.symbol = symbol
         
-        assert type(order) is IntType, "order is not an integer: '%d'" % order
+        assert type(order) is type(int), "order is not an integer: '%d'" % order
         self.order = order
 
         assert len(initial_values) == order, "length of initial_values != order"

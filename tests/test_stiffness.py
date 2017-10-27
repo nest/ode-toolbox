@@ -24,8 +24,12 @@ import os
 import unittest
 
 from .context import odetoolbox
-from odetoolbox.stiffness import check_ode_system_for_stiffness
 
+try:
+    from odetoolbox.stiffness import check_ode_system_for_stiffness
+    HAVE_STIFFNESS = True
+except:
+    HAVE_STIFFNESS = False
 
 def open_json(fname):
     absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
@@ -33,7 +37,7 @@ def open_json(fname):
         indict = json.load(infile)
     return indict
 
-@unittest.skipIf(not odetoolbox.HAVE_STIFFNESS,
+@unittest.skipIf(not HAVE_STIFFNESS,
                  "Stiffness tests not supported on this system")
 class TestStiffnessChecker(unittest.TestCase):
 
