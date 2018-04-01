@@ -1,0 +1,19 @@
+{
+  "shapes": [],
+  "odes": [
+    {
+      "symbol": "V",
+      "definition": "V - V*V*V/3 - W + I",
+      "initial_values": ["0"]
+    },
+    {
+      "symbol": "W",
+      "definition": "0.08*(V + 0.7 - 0.8*W)",
+      "initial_values": ["0"]
+    }
+  ],
+
+  "parameters": {
+    "I": "140.0"
+  }
+}
