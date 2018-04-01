@@ -103,6 +103,10 @@ def analysis(indict):
             print()
             raise ShapeNotLinHom("The shape does not obey a linear homogeneous ODE.")
 
+    if len(indict["odes"]) == 0:
+        print("Only shapes provided. Return ODE representation with IV.")
+        return compute_numeric_solution(shapes)
+
     print("Analyzing ODEs...")
     for ode in indict["odes"]:
         print("  " + ode["symbol"], end="")
