@@ -133,7 +133,7 @@ stored in a file `input_reault.json` in the current working directory.
     (`-`).
 * `ode_updates`: contains a list of Python statements for updating the
   ODE.
-* `state_shape_variables`: is a list of the names of the shapes and
+* `shape_state_variables`: is a list of the names of the shapes and
   their derivatives up to the order of the ODE they satisfy minus one.
 * `shape_initial_values`: are the initial values of the differential
   equations the shapes satisfy.
