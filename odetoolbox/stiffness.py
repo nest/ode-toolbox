@@ -108,30 +108,30 @@ def check_ode_system_for_stiffness(json_input):
     # therefore we use one implicit evolution method, here the bulirsh stoer method and one explicit method
     imp_solver = odeiv.step_bsimp
     # print ("######### {} #########".format(imp_solver.__name__))
-    step_min_imp, step_average_imp = evaluate_integrator(
-        slot_width,
-        simulation_slots,
-        imp_solver,
-        step,
-        jacobian,
-        [gen_inh] * dimension,
-        compute_initial_state_vector(state_start_values, dimension),
-        initial_values,
-        thresholds)
+    step_min_imp, step_average_imp, runtime_imp = evaluate_integrator(
+        h=slot_width,
+        simulation_slices=simulation_slots,
+        integrator=imp_solver,
+        step_function=step,
+        jacobian=jacobian,
+        spikes=[gen_inh] * dimension,
+        y=compute_initial_state_vector(state_start_values, dimension),
+        initial_values=initial_values,
+        thresholds=thresholds)
 
     # the explicit evolution method is a runge kutta 4
     exp_solver = odeiv.step_rk4
     # print ("######### {} #########".format(exp_solver.__name__))
-    step_min_exp, step_average_exp = evaluate_integrator(
-        slot_width,
-        simulation_slots,
-        exp_solver,
-        step,
-        jacobian,
-        [gen_inh] * dimension,
-        compute_initial_state_vector(state_start_values, dimension),
-        initial_values,
-        thresholds)
+    step_min_exp, step_average_exp, runtime_exp = evaluate_integrator(
+        h=slot_width,
+        simulation_slices=simulation_slots,
+        integrator=exp_solver,
+        step_function=step,
+        jacobian=jacobian,
+        spikes=[gen_inh] * dimension,
+        y=compute_initial_state_vector(state_start_values, dimension),
+        initial_values=initial_values,
+        thresholds=thresholds)
 
     # print ("######### results #######")
     # print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
