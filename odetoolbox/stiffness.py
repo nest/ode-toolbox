@@ -27,6 +27,7 @@ from math import *
 from sympy import *
 import re
 import numpy.random
+import time
 
 # The change of stderr is a hack to silence PyGSL's error printing,
 # which often gives false hints on what is actually going on.
@@ -136,6 +137,8 @@ def check_ode_system_for_stiffness(json_input):
     # print "min_{}: {} min_{}: {}".format(imp_solver.__name__, step_min_imp, exp_solver.__name__, step_min_exp)
     # print "avg_{}: {} avg_{}: {}".format(imp_solver.__name__, step_average_imp, exp_solver.__name__, step_average_exp)
     # print ("########## end ##########")
+
+    print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
     return draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
@@ -406,6 +409,7 @@ def evaluate_integrator(h,
     step_counter = 0
     sum_last_steps = 0
     s_min_old = 0
+    runtime = 0.0
 
     for time_slice in range(simulation_slices):
         t_new = t + h
@@ -415,7 +419,9 @@ def evaluate_integrator(h,
         while t < t_new:
             counter_while_loop += 1
             t_old = t
+            time_start = time.time()
             t, h_, y = evolve.apply(t, t_new, h, y)  # h_ is NOT the reached step size but the suggested next step size!
+            runtime += time.time() - time_start
             step_counter += 1
             s_min_old = s_min
             s_min = min(s_min, t - t_old)
@@ -451,7 +457,7 @@ def evaluate_integrator(h,
             y[oder_order_number] += eval(initial_values[initial_value], parameters_with_locals) * spikes[idx][time_slice]
 
     step_average = (t - sum_last_steps) / step_counter
-    return s_min_old, step_average
+    return s_min_old, step_average, runtime
 
 
 def draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp):
