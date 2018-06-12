@@ -23,40 +23,44 @@ import json
 import os
 import unittest
 
-from .context import odetoolbox
-
 try:
+    from .context import odetoolbox
     from odetoolbox.stiffness import check_ode_system_for_stiffness
     HAVE_STIFFNESS = True
-except:
+except ImportError:
     HAVE_STIFFNESS = False
 
-def open_json(fname):
-    absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
-    with open(absfname) as infile:
+
+def open_json(filename):
+    absolute_filename = os.path.join(os.path.abspath(os.path.dirname(__file__)), filename)
+    with open(absolute_filename) as infile:
         indict = json.load(infile)
     return indict
+
 
 @unittest.skipIf(not HAVE_STIFFNESS,
                  "Stiffness tests not supported on this system")
 class TestStiffnessChecker(unittest.TestCase):
-
-    def test_iaf_cond_alpha_stiff(self):
-        indict = open_json("iaf_cond_alpha_odes_stiff.json")
-        result = check_ode_system_for_stiffness(indict)
-        self.assertEquals("implicit", result)
-
 
     def test_iaf_cond_alpha_odes(self):
         indict = open_json("iaf_cond_alpha_odes.json")
         result = check_ode_system_for_stiffness(indict)
         self.assertEquals("explicit", result)
 
-            
+    def test_iaf_cond_alpha_odes_stiff(self):
+        indict = open_json("iaf_cond_alpha_odes_stiff.json")
+        result = check_ode_system_for_stiffness(indict)
+        self.assertEquals("implicit", result)
+
     def test_iaf_cond_alpha_odes_threshold(self):
         indict = open_json("iaf_cond_alpha_odes_threshold.json")
         result = check_ode_system_for_stiffness(indict)
         self.assertEquals("explicit", result)
+
+    def test_fitzhugh_nagumo(self):
+        indict = open_json("fitzhugh_nagumo.json")
+        result = check_ode_system_for_stiffness(indict)
+        self.assertEquals("implicit", result)
 
 
 if __name__ == '__main__':
