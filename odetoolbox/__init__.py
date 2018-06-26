@@ -112,7 +112,7 @@ def analysis(indict):
         print("  " + ode["symbol"], end="")
         lin_const_coeff = ode_is_lin_const_coeff(ode["symbol"], ode["definition"], shapes)
         ode["is_linear_constant_coefficient"] = lin_const_coeff
-        prefix = " is a " if lin_const_coeff else " is no "
+        prefix = " is a " if lin_const_coeff else " is not a "
         print(prefix + "linear constant coefficient ODE.")
 
     print("Generating solvers...")
@@ -126,18 +126,28 @@ def analysis(indict):
             print(": numerical ", end="")
             output = compute_numeric_solution(shapes)
             if HAVE_STIFFNESS:
-                from odetoolbox.stiffness import check_ode_system_for_stiffness
-                ode_shapes = []
+
+                # TODO: check what happens/has to happen for shapes
+                # that already have a definition of either type
+                # `function` or `ode`.
+
+                indict["shapes"] = []
                 for shape in shapes:
                     ode_shape = {"type": "ode",
                                  "symbol": str(shape.symbol),
                                  "initial_values": [str(x) for x in shape.initial_values],
                                  "definition": str(shape.ode_definition)}
-                    ode_shapes.append(ode_shape)
-                indict["shapes"] = ode_shapes
-                solver_type = check_ode_system_for_stiffness(indict)
+                    indict["shapes"].append(ode_shape)
+
+                tester = stiffness.StiffnessTester(indict)
+
+                # TODO: Check whether we need to run this with
+                # arguments different from the defaults.
+                solver_type = tester.check_stiffness()
+
                 output["solver"] += "-" + solver_type
                 print(solver_type + " scheme")
+
             else:
                 print("(stiffness test skipped, PyGSL not available)")
 
