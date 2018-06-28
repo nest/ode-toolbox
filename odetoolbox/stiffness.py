@@ -166,9 +166,9 @@ class StiffnessTester(object):
 
         self.ode_rhs = [self.ode_definitions[k] for k in sorted(self.ode_definitions.keys())]
 
-#        print("I==> Step update rules:")
-#        for i, rule in enumerate(sorted(ode_definitions.keys())):
-#            print("    ", rule, "=", ode_rhs[i])
+#        print("\nI==> Step update rules:")
+#        for i, rule in enumerate(sorted(self.ode_definitions.keys())):
+#            print("    ", rule, "=", self.ode_rhs[i])
 
 
     def _prepare_jacobian_matrix(self):
@@ -194,7 +194,7 @@ class StiffnessTester(object):
             for rhs in ode_defs
         ]
 
-#        print("I==> Jacobian matrix: ")
+#        print("\nI==> Jacobian matrix: ")
 #        print("    ", self.jacobian_matrix)
 
 
@@ -265,19 +265,19 @@ class StiffnessTester(object):
         return [spikes_per_slot] * len(self.ode_definitions)
 
 
-    def evaluate_integrator_imp(self, sim_resolution, accuracy, spike_rate, sim_time):
+    def evaluate_integrator_imp(self, sim_resolution, accuracy, spike_rate, sim_time, raise_errors=True):
 
         integrator = odeiv.step_bsimp     # Bulirsh-Stoer
-        return self.evaluate_integrator(sim_resolution, integrator, accuracy, spike_rate, sim_time)
+        return self.evaluate_integrator(sim_resolution, integrator, accuracy, spike_rate, sim_time, raise_errors)
 
 
-    def evaluate_integrator_exp(self, sim_resolution, accuracy, spike_rate, sim_time):
+    def evaluate_integrator_exp(self, sim_resolution, accuracy, spike_rate, sim_time, raise_errors=True):
 
         integrator = odeiv.step_rk4       # Runge Kutta 4
-        return self.evaluate_integrator(sim_resolution, integrator, accuracy, spike_rate, sim_time)
+        return self.evaluate_integrator(sim_resolution, integrator, accuracy, spike_rate, sim_time, raise_errors)
 
 
-    def evaluate_integrator(self, h, integrator, accuracy, spike_rate, sim_time):
+    def evaluate_integrator(self, h, integrator, accuracy, spike_rate, sim_time, raise_errors=True):
         """
         This function computes the average step size and the minimal step size that a given
         integration method from GSL uses to evolve a certain system of ODEs during a certain
@@ -303,6 +303,7 @@ class StiffnessTester(object):
         sum_last_steps = 0
         s_min_old = 0
         runtime = 0.0
+        s_min_lower_bound = 5e-09
 
         for time_slice in range(simulation_slices):
             t_new = t + h
@@ -318,15 +319,19 @@ class StiffnessTester(object):
                     t, h_, y = evolve.apply(t, t_new, h, y)
                 except Exception as e:
                     print("     ===> Failure of %s at t=%.2f with h=%.2f (y=%s)" % (gsl_stepper.name(), t, h, y))
-                    raise
+                    if raise_errors:
+			raise
                 runtime += time.time() - time_start
                 step_counter += 1
                 s_min_old = s_min
                 s_min = min(s_min, t - t_old)
                 # print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
-                if s_min < 0.000000005:
-                    raise Exception("Check your ODE system. The integrator step becomes "
-                                    "too small to support reasonable simulation", s_min)
+                if s_min < s_min_lower_bound:
+                    estr = "Integration step below %.e (s=%.f). Please check your ODE." % (s_min_lower_bound, s_min)
+                    if raise_errors:
+                        raise Exception(estr)
+                    else:
+                        print(estr)
             if counter_while_loop > 1:
                 step_counter -= 1
                 sum_last_steps += t_new - t_old
