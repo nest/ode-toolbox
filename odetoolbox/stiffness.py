@@ -47,14 +47,6 @@ except ImportError as ie:
     print("Warning: " + str(ie), end="\n\n\n")
     raise
 
-# TODO: I doubt that this is a good place for seeding, which should
-# probably be done somewhere below where the spike trains are
-# drawn. This also should use numpy.random.RandomState() in order to
-# not seed the whole of NumPy, when all we want is our individual RNG
-# to draw from.
-numpy.random.seed(42)
-
-
 
 class StiffnessTester(object):
 
@@ -291,6 +283,7 @@ class StiffnessTester(object):
         s_min = h  # the minimal step size cannot be larger than the maximal stepsize h
         simulation_slices = int(round(sim_time / h))
 
+        numpy.random.seed(42)
         spikes = self._generate_spikes(sim_time, h, spike_rate)
         y = self._compute_initial_state_vector()
 
