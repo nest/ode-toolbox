@@ -156,7 +156,7 @@ class StiffnessTester(object):
             if state_variable_to_map in state_start_values_tmp:
                 self.state_start_values[state_variable_to_y[state_variable_to_map]] = state_start_values_tmp[state_variable_to_map]
 
-        self.ode_rhs = [self.ode_definitions[k] for k in sorted(self.ode_definitions.keys())]
+        self.ode_rhs = [compile(self.ode_definitions[k], "<string>", "eval") for k in sorted(self.ode_definitions.keys())]
 
 #        print("\nI==> Step update rules:")
 #        for i, rule in enumerate(sorted(self.ode_definitions.keys())):
@@ -182,7 +182,7 @@ class StiffnessTester(object):
         ode_defs = [parse_expr(v, local_dict=self.parameters) for k,v in odes]
 
         self.jacobian_matrix = [
-            [str(sympy.diff(rhs, state_var)) for state_var in state_vars]
+            [compile(str(sympy.diff(rhs, state_var)), "<string>", "eval") for state_var in state_vars]
             for rhs in ode_defs
         ]
 
