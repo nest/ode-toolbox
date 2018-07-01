@@ -313,7 +313,7 @@ class StiffnessTester(object):
                 except Exception as e:
                     print("     ===> Failure of %s at t=%.2f with h=%.2f (y=%s)" % (gsl_stepper.name(), t, h, y))
                     if raise_errors:
-			raise
+                        raise
                 runtime += time.time() - time_start
                 step_counter += 1
                 s_min_old = s_min
