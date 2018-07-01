@@ -53,7 +53,6 @@ class StiffnessTester(object):
     def __init__(self, indict):
 
         self._read_input(indict)
-        self._prepare_jacobian_matrix()
 
 
     def _read_input(self, indict):
@@ -286,6 +285,8 @@ class StiffnessTester(object):
         numpy.random.seed(42)
         spikes = self._generate_spikes(sim_time, h, spike_rate)
         y = self._compute_initial_state_vector()
+
+        self._prepare_jacobian_matrix()
 
         gsl_stepper = integrator(len(y), self.step, self.jacobian)
         control = odeiv.control_y_new(gsl_stepper, accuracy, accuracy)
