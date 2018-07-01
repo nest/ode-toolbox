@@ -210,7 +210,7 @@ class StiffnessTester(object):
         step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator_exp(
             sim_resolution, accuracy, spike_rate, sim_time)
 
-        print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
+#        print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 
         return self.draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
@@ -292,6 +292,8 @@ class StiffnessTester(object):
         control = odeiv.control_y_new(gsl_stepper, accuracy, accuracy)
         evolve = odeiv.evolve(gsl_stepper, control, len(y))
 
+#        print(s_min, simulation_slices, integrator, self.step, self.jacobian, spikes, y, self.initial_values, self.thresholds)
+
         t = 0.0
         step_counter = 0
         sum_last_steps = 0
@@ -326,6 +328,7 @@ class StiffnessTester(object):
                         raise Exception(estr)
                     else:
                         print(estr)
+
             if counter_while_loop > 1:
                 step_counter -= 1
                 sum_last_steps += t_new - t_old
@@ -448,7 +451,7 @@ class StiffnessTester(object):
         local_parameters = self.parameters.copy()
         local_parameters.update({"y__%i"%i: y for i,y in enumerate(y)})
         try:
-            print("t =", str(t), end='\r')
+#            print("t =", str(t), end='\r')
             return [eval(ode, globals(), local_parameters) for ode in self.ode_rhs]
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
