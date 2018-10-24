@@ -41,8 +41,6 @@ from sympy.parsing.sympy_parser import parse_expr
 try:
     import pygsl.odeiv as odeiv
 except ImportError as ie:
-    sys.stderr.close()
-    sys.stderr = oldstderr
     print("Warning: PyGSL is not available. The stiffness test will be skipped.")
     print("Warning: " + str(ie), end="\n\n\n")
     raise
