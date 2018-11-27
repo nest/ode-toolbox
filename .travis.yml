@@ -12,6 +12,7 @@ before_install:
   - tar -xvzf gsl-2.5.tar.gz
   - cd gsl-2.5
   - ./configure && make && sudo make install
+  - cd ..
 
 install:
   - pip install -r requirements.txt
