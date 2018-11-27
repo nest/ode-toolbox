@@ -55,7 +55,7 @@ numpy.random.seed(42)
 # these functions are called from the framework and cannot take these variables as parameters
 step_function_implementation = None
 jacobian_matrix_implementation = None
-parameters = {}
+parameters = globals().copy()
 
 
 def check_ode_system_for_stiffness(json_input):
@@ -83,7 +83,6 @@ def check_ode_system_for_stiffness(json_input):
 
     # `parameters` contains a series of variables from the differential equations declaration separated by the
     # newline they are defined in the global scope so that different functions can access them either
-    parameters = {}
     for variable in json_input["parameters"]:
         parameters[variable] = float(json_input["parameters"][variable])
 
@@ -500,6 +499,7 @@ def step(t, y, params):
     :return: Updated state vector stored in `f`
     """
     global step_function_implementation
+    global parameters
     dimension = len(y)
     # f is used in the step_function_implementation. since it is a return value of this function, it is declared here
     # explicitly
