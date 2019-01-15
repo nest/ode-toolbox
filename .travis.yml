@@ -1,9 +1,18 @@
 language: python
 
+sudo: required
+
 python:
   - "2.7"
   - "3.5"
   - "3.6"
+
+before_install:
+  - wget http://ftp.wrz.de/pub/gnu/gsl/gsl-2.5.tar.gz
+  - tar -xvzf gsl-2.5.tar.gz
+  - cd gsl-2.5
+  - ./configure && make && sudo make install
+  - cd ..
 
 install:
   - pip install -r requirements.txt
