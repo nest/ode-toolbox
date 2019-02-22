@@ -122,18 +122,6 @@ class StiffnessTester(object):
 
                 ode_definitions_tmp[state_variable] = matcher.sub(state_variable_to_y[state_variable_to_map], ode_definition)
 
-# Something like this can replace the block above
-#        print("\n\n")
-#        pattern = re.compile('|'.join(state_variable_to_y.keys()))
-#        for sym, rhs in ode_definitions_tmp.iteritems():
-#            print(sym, "--", pattern.sub(lambda x: state_variable_to_y[x.group()], rhs))
-
-# Just a printout of the result created by the old solution
-#       print("\n\n")
-#        for k,v in ode_definitions_tmp.iteritems():
-#            print(k, "==", v)
-
-
         for threshold in thresholds_tmp:
             for state_variable_to_map in state_variable_to_y:
                 matcher = re.compile(r"\b(" + state_variable_to_map + r")\b")
@@ -154,10 +142,6 @@ class StiffnessTester(object):
                 self.state_start_values[state_variable_to_y[state_variable_to_map]] = state_start_values_tmp[state_variable_to_map]
 
         self.ode_rhs = [compile(self.ode_definitions[k], "<string>", "eval") for k in sorted(self.ode_definitions.keys())]
-
-#        print("\nI==> Step update rules:")
-#        for i, rule in enumerate(sorted(self.ode_definitions.keys())):
-#            print("    ", rule, "=", self.ode_rhs[i])
 
 
     def _prepare_jacobian_matrix(self):
@@ -183,9 +167,6 @@ class StiffnessTester(object):
             for rhs in ode_defs
         ]
 
-#        print("\nI==> Jacobian matrix: ")
-#        print("    ", self.jacobian_matrix)
-
 
     def check_stiffness(self, sim_resolution=0.1, sim_time=20.0, accuracy=1e-3, spike_rate=10.0*1000):
         """
@@ -208,7 +189,7 @@ class StiffnessTester(object):
         step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator_exp(
             sim_resolution, accuracy, spike_rate, sim_time)
 
-#        print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
+        #print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 
         return self.draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
@@ -290,8 +271,6 @@ class StiffnessTester(object):
         control = odeiv.control_y_new(gsl_stepper, accuracy, accuracy)
         evolve = odeiv.evolve(gsl_stepper, control, len(y))
 
-#        print(s_min, simulation_slices, integrator, self.step, self.jacobian, spikes, y, self.initial_values, self.thresholds)
-
         t = 0.0
         step_counter = 0
         sum_last_steps = 0
@@ -301,7 +280,6 @@ class StiffnessTester(object):
 
         for time_slice in range(simulation_slices):
             t_new = t + h
-            # print "Start while loop at slot " + str(time_slice)
             counter_while_loop = 0
             t_old = 0
             while t < t_new:
@@ -319,7 +297,6 @@ class StiffnessTester(object):
                 step_counter += 1
                 s_min_old = s_min
                 s_min = min(s_min, t - t_old)
-                # print str(time_slice) + ":   t=%.15f, current stepsize=%.15f y=" % (t, t - t_old), y
                 if s_min < s_min_lower_bound:
                     estr = "Integration step below %.e (s=%.f). Please check your ODE." % (s_min_lower_bound, s_min)
                     if raise_errors:
@@ -334,7 +311,6 @@ class StiffnessTester(object):
                 # the length of the remaining slot. Therefore we don't take the last step into account
                 s_min = s_min_old
 
-            # print "End while loop"
             threshold_crossed = False
             for threshold in self.thresholds:
                 local_parameters = self.parameters.copy()
@@ -372,7 +348,9 @@ class StiffnessTester(object):
         :param step_average_exp: data measured during solving
         """
         # check minimal step lengths as used by GSL integration method
+
         machine_precision = numpy.finfo(float).eps
+
         if step_min_imp > 10. * machine_precision and step_min_exp < 10. * machine_precision:
             return "implicit"
         elif step_min_imp < 10. * machine_precision and step_min_exp > 10. * machine_precision:
@@ -449,7 +427,6 @@ class StiffnessTester(object):
         local_parameters = self.parameters.copy()
         local_parameters.update({"y__%i"%i: y for i,y in enumerate(y)})
         try:
-#            print("t =", str(t), end='\r')
             return [eval(ode, globals(), local_parameters) for ode in self.ode_rhs]
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
