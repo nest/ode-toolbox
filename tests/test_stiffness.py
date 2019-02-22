@@ -64,7 +64,13 @@ class TestStiffnessChecker(unittest.TestCase):
     def test_fitzhugh_nagumo(self):
         indict = open_json("fitzhugh_nagumo.json")
         tester = StiffnessTester(indict)
-        result = tester.check_stiffness()
+        result = tester.check_stiffness(sim_resolution=0.05, accuracy=1e-5)
+        self.assertEquals("implicit", result)
+
+    def test_morris_lecar(self):
+        indict = open_json("morris_lecar.json")
+        tester = StiffnessTester(indict)
+        result = tester.check_stiffness(sim_resolution=0.2, accuracy=1e-5)
         self.assertEquals("implicit", result)
 
 
