@@ -93,6 +93,11 @@ class Propagator(object):
         shape_factors = []
         h = Symbol("__h")
         
+        if not shapes:
+            print("ERROR: no shapes given, unable to calculate the propagator matrix.")
+            import sys
+            sys.exit(1)
+
         for shape in shapes:
     
             shape_factor = diff(self.ode_definition, shape.symbol)
@@ -132,7 +137,7 @@ class Propagator(object):
         """Compute a calculation specification for the update step.
 
         """
-        
+
         ode_symbol_factor_h = self.propagator_matrices[0][shapes[0].order, shapes[0].order]
         constant_term = "(" + str(ode_symbol_factor_h) + ") * " + str(self.ode_symbol) + \
                         "+ (" + str(constant_input) + ") * (" + str(step_constant) + ")"
