@@ -121,7 +121,10 @@ def analysis(indict):
         print("  " + ode["symbol"], end="")
         if ode["is_linear_constant_coefficient"]:
             print(": analytical")
-            output = compute_analytical_solution(ode["symbol"], ode["definition"], shapes)
+            if "timestep_symbol_name" in indict.keys():
+                output = compute_analytical_solution(ode["symbol"], ode["definition"], shapes, timestep_symbol_name=indict["timestep_symbol_name"])
+            else:
+                output = compute_analytical_solution(ode["symbol"], ode["definition"], shapes)
         else:
             print(": numerical ", end="")
             output = compute_numeric_solution(shapes)
