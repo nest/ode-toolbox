@@ -67,7 +67,7 @@ class MalformedInput(Exception): pass
 class ShapeNotLinHom(Exception): pass
 
 
-def analysis(indict):
+def analysis(indict, enable_stiffness_check=True):
     """The main entry point of the analysis.
 
     This function expects a single dictionary with the keys `odes`,
@@ -128,7 +128,7 @@ def analysis(indict):
         else:
             print(": numerical ", end="")
             output = compute_numeric_solution(shapes)
-            if HAVE_STIFFNESS:
+            if HAVE_STIFFNESS and enable_stiffness_check:
 
                 # TODO: check what happens/has to happen for shapes
                 # that already have a definition of either type
