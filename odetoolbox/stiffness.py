@@ -77,7 +77,7 @@ class StiffnessTester(object):
         state_start_values_tmp = {}
         thresholds_tmp = []
 
-        self.parameters = {k:float(v) for k,v in indict["parameters"].iteritems()}
+        self.parameters = {k:float(v) for k,v in indict["parameters"].items()}
 
         for shape in indict["shapes"]:
             shape_name = shape["symbol"]
@@ -158,7 +158,7 @@ class StiffnessTester(object):
 
         """
 
-        odes = sorted(self.ode_definitions.iteritems())
+        odes = sorted(self.ode_definitions.items())
         state_vars = [parse_expr(k, local_dict=self.parameters) for k,v in odes]
         ode_defs = [parse_expr(v, local_dict=self.parameters) for k,v in odes]
 
@@ -431,6 +431,6 @@ class StiffnessTester(object):
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")
-            for k,v in local_parameters.iteritems():
+            for k,v in local_parameters.items():
                 print("    ", k, "=", v)
             raise
