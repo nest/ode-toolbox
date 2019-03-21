@@ -50,7 +50,7 @@ class Propagator(object):
 
     """
 
-    def __init__(self, ode_symbol, ode_definition, shapes):
+    def __init__(self, ode_symbol, ode_definition, shapes, timestep_symbol_name="__h"):
 
         self.ode_symbol = parse_expr(ode_symbol)
         self.ode_definition = parse_expr(ode_definition)
@@ -58,7 +58,7 @@ class Propagator(object):
         self.step_constant = Symbol("")
         self.propagator = None
         self.ode_updates = None
-        
+        self._timestep_symbol = Symbol(timestep_symbol_name)
         constant_input, step_constant = self._compute_propagator_matrices(shapes)
         self._compute_propagation_step(shapes, constant_input, step_constant)
 
@@ -85,18 +85,23 @@ class Propagator(object):
         larger than 2, we calculate A by choosing the state variables
         canonically as y_0 = shape^(n), ..., y_{n-1} = shape, y_n = V
         """
-        
+
         # Initialize the factor in front of the ode symbol, an empty
         # list to hold the factors for the shapes and a symbol to
         # represent the time step.
         ode_symbol_factor = diff(self.ode_definition, self.ode_symbol)
         shape_factors = []
-        h = Symbol("__h")
-        
+        h = self._timestep_symbol
+
+        if not shapes:
+            print("ERROR: no shapes given, unable to calculate the propagator matrix.")
+            import sys
+            sys.exit(1)
+
         for shape in shapes:
-    
+
             shape_factor = diff(self.ode_definition, shape.symbol)
-    
+
             if shape.order == 1:
                 A = Matrix([[shape.derivative_factors[0], 0],
                             [shape_factor, ode_symbol_factor]])
@@ -132,7 +137,7 @@ class Propagator(object):
         """Compute a calculation specification for the update step.
 
         """
-        
+
         ode_symbol_factor_h = self.propagator_matrices[0][shapes[0].order, shapes[0].order]
         constant_term = "(" + str(ode_symbol_factor_h) + ") * " + str(self.ode_symbol) + \
                         "+ (" + str(constant_input) + ") * (" + str(step_constant) + ")"
@@ -161,10 +166,10 @@ class Propagator(object):
             shape.state_updates = P[:shape.order, :shape.order] * y[:shape.order, 0]
 
 
-def compute_analytical_solution(ode_symbol, ode_definition, shapes):
+def compute_analytical_solution(ode_symbol, ode_definition, shapes, timestep_symbol_name="__h"):
 
-    propagator = Propagator(ode_symbol, ode_definition, shapes)
-    
+    propagator = Propagator(ode_symbol, ode_definition, shapes, timestep_symbol_name=timestep_symbol_name)
+
     data = {
         "solver": "analytical",
         "ode_updates": propagator.ode_updates,

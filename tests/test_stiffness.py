@@ -25,9 +25,10 @@ import unittest
 
 try:
     from .context import odetoolbox
-    from odetoolbox.stiffness import check_ode_system_for_stiffness
+    from odetoolbox.stiffness import StiffnessTester
     HAVE_STIFFNESS = True
 except ImportError:
+    print("No stiffness")
     HAVE_STIFFNESS = False
 
 
@@ -44,23 +45,33 @@ class TestStiffnessChecker(unittest.TestCase):
 
     def test_iaf_cond_alpha_odes(self):
         indict = open_json("iaf_cond_alpha_odes.json")
-        result = check_ode_system_for_stiffness(indict)
+        tester = StiffnessTester(indict)
+        result = tester.check_stiffness()
         self.assertEquals("explicit", result)
 
     def test_iaf_cond_alpha_odes_stiff(self):
         indict = open_json("iaf_cond_alpha_odes_stiff.json")
-        result = check_ode_system_for_stiffness(indict)
+        tester = StiffnessTester(indict)
+        result = tester.check_stiffness()
         self.assertEquals("implicit", result)
 
     def test_iaf_cond_alpha_odes_threshold(self):
         indict = open_json("iaf_cond_alpha_odes_threshold.json")
-        result = check_ode_system_for_stiffness(indict)
+        tester = StiffnessTester(indict)
+        result = tester.check_stiffness()
         self.assertEquals("explicit", result)
 
     def test_fitzhugh_nagumo(self):
         indict = open_json("fitzhugh_nagumo.json")
-        result = check_ode_system_for_stiffness(indict)
-        self.assertEquals("implicit", result)
+        tester = StiffnessTester(indict)
+        result = tester.check_stiffness(sim_resolution=0.05, accuracy=1e-5)
+        self.assertEquals("explicit", result)
+
+    def test_morris_lecar(self):
+        indict = open_json("morris_lecar.json")
+        tester = StiffnessTester(indict)
+        result = tester.check_stiffness(sim_resolution=0.2, accuracy=1e-5)
+        self.assertEquals("explicit", result)
 
 
 if __name__ == '__main__':
