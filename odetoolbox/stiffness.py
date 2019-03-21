@@ -19,9 +19,10 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-
 from __future__ import print_function
 
+from inspect import getmembers
+import math
 import numpy
 import numpy.random
 
@@ -31,7 +32,6 @@ import numpy.random
 # framework itself.
 numpy.seterr(all='raise')
 
-from math import *
 import re
 import time
 
@@ -49,7 +49,7 @@ except ImportError as ie:
 class StiffnessTester(object):
 
     def __init__(self, indict):
-
+        self.math_module_funcs = {k: v for k, v in getmembers(math) if not k[0] == "_"}
         self._read_input(indict)
 
 
@@ -226,7 +226,7 @@ class StiffnessTester(object):
         times = numpy.random.uniform(0, sim_time_in_sec, n_spikes)
         spikes = numpy.sort(times)
 
-        time_slots = int(ceil(sim_time_in_sec / sim_resolution_in_sec))
+        time_slots = int(math.ceil(sim_time_in_sec / sim_resolution_in_sec))
         spikes_per_slot = [0] * time_slots
         for slot in range(0, time_slots):
             t = list(filter(lambda x: slot * sim_resolution_in_sec <= x < (slot + 1) * sim_resolution_in_sec, spikes))
@@ -328,7 +328,8 @@ class StiffnessTester(object):
 
                 # TODO: Why is there no convolution here? Is it correct
                 # and meaningful to just sum up the number of spikes?
-                y[oder_order_number] += eval(self.initial_values[initial_value], globals(), self.parameters) * spikes[idx][time_slice]
+                _globals = self.math_module_funcs.copy()
+                y[oder_order_number] += eval(self.initial_values[initial_value], _globals, self.parameters) * spikes[idx][time_slice]
 
         step_average = (t - sum_last_steps) / step_counter
         return s_min_old, step_average, runtime
@@ -397,14 +398,15 @@ class StiffnessTester(object):
         dfdy = numpy.zeros((dimension, dimension), numpy.float)
         dfdt = numpy.zeros((dimension,))
 
+        _globals = self.math_module_funcs.copy()
+
         # evaluate every entry of the `jacobian_matrix` and store the
         # result in the corresponding entry of the `dfdy`
         for row in range(0, dimension):
             for col in range(0, dimension):
                 local_parameters = self.parameters.copy()
                 local_parameters.update({"y__%i"%i: y for i,y in enumerate(y)})
-                local_parameters["exp"] = exp # TODO: make all math functions available
-                dfdy[row, col] = eval(self.jacobian_matrix[row][col], local_parameters)
+                dfdy[row, col] = eval(self.jacobian_matrix[row][col], _globals, local_parameters)
 
         return dfdy, dfdt
 
@@ -423,11 +425,13 @@ class StiffnessTester(object):
         :return: Updated state vector
 
         """
-
         local_parameters = self.parameters.copy()
         local_parameters.update({"y__%i"%i: y for i,y in enumerate(y)})
+
+        _globals = self.math_module_funcs.copy()
+
         try:
-            return [eval(ode, globals(), local_parameters) for ode in self.ode_rhs]
+            return [eval(ode, _globals, local_parameters) for ode in self.ode_rhs]
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")
