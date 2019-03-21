@@ -313,9 +313,10 @@ class StiffnessTester(object):
 
             threshold_crossed = False
             for threshold in self.thresholds:
+                _globals = self.math_module_funcs.copy()
                 local_parameters = self.parameters.copy()
                 local_parameters.update({"y__%i"%i: y for i,y in enumerate(y)})
-                if eval(threshold, local_parameters):
+                if eval(threshold, _globals, local_parameters):
                     threshold_crossed = True
                     break  # break inner loop
 
@@ -370,6 +371,8 @@ class StiffnessTester(object):
         Computes an numpy vector start values for the ode system.
         :return: Numpy-Vector with `dimension` elements
         """
+        _globals = self.math_module_funcs.copy()
+
         y = numpy.zeros(len(self.ode_definitions), numpy.float)
         for state_start_variable in self.state_start_values:
             matcher = re.compile(r".*(\d)+$")
@@ -378,7 +381,7 @@ class StiffnessTester(object):
             local_parameters = locals().copy()
             local_parameters.update(self.parameters)
 
-            y[oder_order_number] = eval(self.state_start_values[state_start_variable], local_parameters)
+            y[oder_order_number] = eval(self.state_start_values[state_start_variable], _globals, local_parameters)
         return y
 
 
