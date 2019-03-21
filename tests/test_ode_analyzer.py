@@ -72,6 +72,14 @@ class TestSolutionComputation(unittest.TestCase):
         self.assertTrue(len(propagator.ode_updates) > 0)
 
 
+    def test_aeif_cond_alpha_implicit(self):
+        indict = open_json("aeif_cond_alpha_implicit.json")
+        result = odetoolbox.analysis(indict)
+
+        self.assertEqual("analytical", result["solver"])
+        self.assertTrue(len(result["propagator"]) > 0)
+
+
     def test_iaf_psc_alpha(self):
         indict = open_json("iaf_psc_alpha.json")
         result = odetoolbox.analysis(indict)
