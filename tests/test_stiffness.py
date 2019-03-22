@@ -47,31 +47,31 @@ class TestStiffnessChecker(unittest.TestCase):
         indict = open_json("iaf_cond_alpha_odes.json")
         tester = StiffnessTester(indict)
         result = tester.check_stiffness()
-        self.assertEquals("explicit", result)
+        self.assertEqual("explicit", result)
 
     def test_iaf_cond_alpha_odes_stiff(self):
         indict = open_json("iaf_cond_alpha_odes_stiff.json")
         tester = StiffnessTester(indict)
         result = tester.check_stiffness()
-        self.assertEquals("implicit", result)
+        self.assertEqual("implicit", result)
 
     def test_iaf_cond_alpha_odes_threshold(self):
         indict = open_json("iaf_cond_alpha_odes_threshold.json")
         tester = StiffnessTester(indict)
         result = tester.check_stiffness()
-        self.assertEquals("explicit", result)
+        self.assertEqual("explicit", result)
 
     def test_fitzhugh_nagumo(self):
         indict = open_json("fitzhugh_nagumo.json")
         tester = StiffnessTester(indict)
         result = tester.check_stiffness(sim_resolution=0.05, accuracy=1e-5)
-        self.assertEquals("explicit", result)
+        self.assertEqual("explicit", result)
 
     def test_morris_lecar(self):
         indict = open_json("morris_lecar.json")
         tester = StiffnessTester(indict)
         result = tester.check_stiffness(sim_resolution=0.2, accuracy=1e-5)
-        self.assertEquals("explicit", result)
+        self.assertEqual("explicit", result)
 
 
 if __name__ == '__main__':
