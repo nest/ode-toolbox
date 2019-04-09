@@ -124,6 +124,9 @@ class Propagator(object):
             shape_factors.append(shape_factor)
 
             self.propagator_matrices.append(simplify(exp(A * h)))
+            print("Shape " + str(shape.symbol))
+            print("  A matrix = " + str(A))
+            print("  propagator matrix = " + str(simplify(exp(A * h))))
     
         step_constant = -1/ode_symbol_factor * (1 - exp(h * ode_symbol_factor))
         
@@ -143,7 +146,10 @@ class Propagator(object):
                         "+ (" + str(constant_input) + ") * (" + str(step_constant) + ")"
 
         self.propagator = {}
-        self.ode_updates = [str(self.ode_symbol) + " = " + constant_term]
+        self.ode_updates = {}
+        self.ode_updates[str(self.ode_symbol)] = {}
+        self.ode_updates[str(self.ode_symbol)]["constant"] = constant_term
+
         for p, shape in zip(self.propagator_matrices, shapes):
             P = zeros(shape.order + 1, shape.order + 1)
             for i in range(shape.order + 1):
@@ -159,11 +165,18 @@ class Propagator(object):
             y[shape.order] = self.ode_symbol
     
             P[shape.order, shape.order] = 0
+            
+            print("Shape " + str(shape.symbol))
+            print("  y = " + str(y))
+            print("  P = " + str(P))
+            #import pdb;pdb.set_trace()
+            
             z = P * y
     
-            self.ode_updates.append(str(self.ode_symbol) + " += " + str(z[shape.order]))
+            if not z[shape.order] == 0.:
+                self.ode_updates[str(self.ode_symbol)][str(shape.symbol)] = str(z[shape.order])
     
-            shape.state_updates = P[:shape.order, :shape.order] * y[:shape.order, 0]
+            shape.state_updates = (P[:shape.order, :shape.order] * y[:shape.order, 0])
 
 
 def compute_analytical_solution(ode_symbol, ode_definition, shapes, timestep_symbol_name="__h"):

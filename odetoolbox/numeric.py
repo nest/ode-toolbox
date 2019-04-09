@@ -32,5 +32,5 @@ def compute_numeric_solution(shapes):
         data["shape_initial_values"].extend([str(x) for x in shape.initial_values])
         data["shape_ode_definitions"].append(str(shape.ode_definition))
         data["shape_state_variables"].extend([str(x) for x in shape.state_variables])
-        
+
     return data

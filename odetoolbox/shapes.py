@@ -105,9 +105,9 @@ class Shape(object):
         self.state_variables = []
         for i in range(self.order):
             if i > 0:
-                self.state_variables.insert(0, Symbol("{}{}".format(str(symbol), "__d" * i)))
+                self.state_variables.append(Symbol("{}{}".format(str(symbol), "__d" * i)))
             else:
-                self.state_variables.insert(0, symbol)
+                self.state_variables.append(symbol)
                 
         # Compute the definition of the ODE the shape satisfies
         rhs = ["{} * {}".format(simplify(derivative_factors[0]), symbol)]
