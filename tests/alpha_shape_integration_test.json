@@ -3,12 +3,12 @@
     {
       "type": "function",
       "symbol": "I_shape_in",
-      "definition": "(e/Tau_syn_in) * t * exp(-t/Tau_syn_in)"
+      "definition": "(e/tau_syn_in) * t * exp(-t/tau_syn_in)"
     },
     {
       "type": "function",
       "symbol": "I_shape_ex",
-      "definition": "(e/Tau_syn_ex) * t * exp(-t/Tau_syn_ex)"
+      "definition": "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)"
     }
   ],
 

@@ -45,7 +45,7 @@ class Shape(object):
     shape independently of the way imn which the user specified the
     shape. It assumes a differential equation of the general form
 
-        I''' = f0*I + f1*I' + f2*I''
+        I''' = f2*I + f1*I' + f0*I''
 
     In this example, the `symbol` of the ODE would be `I` (i.e. without
     any qualifiers), `order` would be 3, `derivative_factors` would be
@@ -103,7 +103,7 @@ class Shape(object):
 
         # Compute the state variables for ODE the shape satisfies
         self.state_variables = []
-        for i in range(self.order):
+        for i in range(self.order)[::-1]:
             if i > 0:
                 self.state_variables.append(Symbol("{}{}".format(str(symbol), "__d" * i)))
             else:
@@ -289,7 +289,7 @@ def shape_from_function(symbol, definition, **kwargs):
     # Calculate the initial values of the found ODE and simplify the
     # derivative factors before creating and returning the Shape
     # object.
-    initial_values = [x.subs(t, 0) for x in derivatives[:-1]]
+    initial_values = [x.subs(t, 0) for x in derivatives[:-1]][::-1]
     derivative_factors = [simplify(df) for df in derivative_factors]
     return Shape(symbol, order, initial_values, derivative_factors)
 
@@ -310,7 +310,7 @@ def shape_from_ode(symbol, definition, initial_values, **kwargs):
 
     ShapeODE("shape_alpha",
              "-1/tau**2 * shape_alpha -2/tau * shape_alpha'",
-             ["0", "e/tau"])
+             ["e/tau", "0"])
 
     Canonical calculation of the properties, `order`, `symbol`,
     `initial_values` and the system of ODEs in matrix form are made.

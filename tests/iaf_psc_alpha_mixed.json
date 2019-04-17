@@ -9,7 +9,7 @@
       "type": "ode",
       "symbol": "I_shape_ex",
       "definition": "(-1)/(tau_syn_ex)**(2)*I_shape_ex+(-2)/tau_syn_ex*I_shape_ex'",
-      "initial_values": ["0",  "e / tau_syn_ex"]
+      "initial_values": ["e / tau_syn_ex", "0"]
     }
   ],
 

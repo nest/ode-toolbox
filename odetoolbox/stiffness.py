@@ -84,9 +84,9 @@ class StiffnessTester(object):
             max_order = len(shape["initial_values"])
             for order in range(0, max_order - 1):
                 ode_definitions_tmp[shape_name + "__d" * (order - 1)] = shape_name + "__d" * (order - 1)
-                initial_values_tmp[shape_name + "__d" * order] = shape["initial_values"][order]
+                initial_values_tmp[shape_name + "__d" * order] = shape["initial_values"][::-1][order]
             ode_definitions_tmp[shape_name + "__d" * (max_order - 1)] = shape["definition"].replace("'", "__d")
-            initial_values_tmp[shape_name + "__d" * (max_order - 1)] = shape["initial_values"][(max_order - 1)]
+            initial_values_tmp[shape_name + "__d" * (max_order - 1)] = shape["initial_values"][::-1][(max_order - 1)]
 
         # we omit initial values for odes since they cannot be connected to buffers
         for ode in indict["odes"]:
