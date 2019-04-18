@@ -117,8 +117,9 @@ class TestSolutionComputation(unittest.TestCase):
         print(json.dumps(result,  indent=2))
         assert result["solver"] == "analytical"
         
-        N_shapes = len(result["shape_state_variables"])
-        
+        shape_names = result["shape_state_updates"].keys()
+        assert shape_names == result["shape_state_initial_values"].keys()
+        N_shapes = len(shape_names)
 
         h = 1E-3    # [s]
         T = 100E-3    # [s]
@@ -198,15 +199,21 @@ class TestSolutionComputation(unittest.TestCase):
         SHAPE_NAME_IDX = -1      # hard-coded index of shape variable name index; assumes that the order is [dy^n/dt^n, ..., dy/dn, y]
         ODE_INITIAL_VALUES = { "V_abs" : v_abs_init }
 
-        ### define the necessary sympy variables (for shapes)
+        ### define the necessary sympy variables
 
         Tau, Tau_syn_in, Tau_syn_ex, C_m,  I_e, currents = sympy.symbols("Tau Tau_syn_in Tau_syn_ex C_m  I_e currents")
-        for shape_idx in range(N_shapes):
-            for shape_variable_idx, (shape_variable_name, shape_initial_value, shape_state_update) in enumerate(zip(result["shape_state_variables"][shape_idx], result["shape_initial_values"][shape_idx], result["shape_state_updates"][shape_idx])):
-                print(" * Defining var: " + str(shape_variable_name + " = sympy.symbols(\"" + shape_variable_name + "\")"))
-                exec(shape_variable_name + " = sympy.symbols(\"" + shape_variable_name + "\")", globals())
 
-        N_shape_variables = np.sum([len(shape_state_variable_names) for shape_state_variable_names in result["shape_state_variables"]])
+
+        ### define the necessary sympy variables (for shapes)
+
+        for shape_name in shape_names:
+            shape_variables = result["shape_initial_values"][shape_name].keys()
+            assert shape_variables == result["shape_state_updates"][shape_name].keys()
+            for shape_variable in shape_variables:
+                shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
+                shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
+                print(" * Defining var: " + str(shape_variable + " = sympy.symbols(\"" + shape_variable + "\")"))
+                exec(shape_variable + " = sympy.symbols(\"" + shape_variable + "\")", globals())
 
 
         ### define the necessary sympy variables (for ODE)
@@ -227,30 +234,33 @@ class TestSolutionComputation(unittest.TestCase):
 
         ### define the necessary shape state variables
 
-        N_shape_variables = np.sum([len(shape_state_variable_names) for shape_state_variable_names in result["shape_state_variables"]])
-
         shape_state = {}
         shape_initial_values = {}
-        for shape_idx in range(N_shapes):
-            shape_name = result["shape_state_variables"][shape_idx][SHAPE_NAME_IDX]
+        for shape_name in shape_names:
             print("* Defining shape state variables for shape \'" + shape_name + "\'")
             shape_state[shape_name] = {}
             shape_initial_values[shape_name] = {}
             dim = len(result["shape_state_variables"])
             print("\t  dim = " + str(dim))
-            for shape_variable_idx, (shape_variable_name, shape_initial_value, shape_state_update) in enumerate(zip(result["shape_state_variables"][shape_idx], result["shape_initial_values"][shape_idx], result["shape_state_updates"][shape_idx])):
-                print("\t\t* Variable " + str(shape_variable_name))
-                print("\t\t  Update expression: " + shape_state_update)
-                print("\t\t  Initial value = " + str(shape_initial_value))
-                expr = sympify(eval(shape_initial_value.replace("__h", "h")))
+
+            shape_variables = result["shape_initial_values"][shape_name].keys()
+            assert shape_variables == result["shape_state_updates"][shape_name].keys()
+            for shape_variable in shape_variables:
+                shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
+                shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
+
+                print("\t\t* Variable " + str(shape_variable))
+                print("\t\t  Update expression: " + shape_variable_update_expr)
+                print("\t\t  Initial value = " + str(shape_variable_initial_value))
+                expr = sympify(eval(shape_variable_initial_value.replace("__h", "h")))
                 expr = expr.subs(Tau, tau)
                 expr = expr.subs(C_m, c_m)
                 expr = expr.subs(Tau_syn_in, tau_syn)
                 expr = expr.subs(Tau_syn_ex, tau_syn)
                 print("\t\t     = " + str(expr))
 
-                shape_state[shape_name][shape_variable_name] = np.zeros(N)
-                shape_initial_values[shape_name][shape_variable_name] = expr
+                shape_state[shape_name][shape_variable] = np.zeros(N)
+                shape_initial_values[shape_name][shape_variable] = expr
 
 
         ### add propagators to local scope
@@ -267,25 +277,29 @@ class TestSolutionComputation(unittest.TestCase):
             ### set spike stimulus if necessary
 
             if step - 1 == spike_time_idx:
-                for shape_idx in range(N_shapes):
-                    shape_name = result["shape_state_variables"][shape_idx][SHAPE_NAME_IDX]
-                    for shape_variable_idx, (shape_variable_name, shape_initial_value, shape_state_update) in enumerate(zip(result["shape_state_variables"][shape_idx], result["shape_initial_values"][shape_idx], result["shape_state_updates"][shape_idx])):
-                        shape_state[shape_name][shape_variable_name][step - 1] = shape_initial_values[shape_name][shape_variable_name]
+                for shape_name in shape_names:
+                    shape_variables = result["shape_initial_values"][shape_name].keys()
+                    assert shape_variables == result["shape_state_updates"][shape_name].keys()
+                    for shape_variable in shape_variables:
+                        shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
+                        shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
+                        shape_state[shape_name][shape_variable][step - 1] = shape_initial_values[shape_name][shape_variable]
 
 
             ### update the state of each shape using propagators
 
-            for shape_idx in range(N_shapes):
-                shape_name = result["shape_state_variables"][shape_idx][SHAPE_NAME_IDX]
-
+            for shape_name in shape_names:
                 if debug:
                     print("--> shape_name = " + shape_name)
 
-                for shape_variable_idx, (shape_variable_name, shape_initial_value, shape_state_update) in enumerate(zip(result["shape_state_variables"][shape_idx], result["shape_initial_values"][shape_idx], result["shape_state_updates"][shape_idx])):
+                for shape_variable in shape_variables:
+                    shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
+                    shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
+                    shape_state[shape_name][shape_variable][step - 1] = shape_initial_values[shape_name][shape_variable]
                     if debug:
-                        print("\t* shape_variable_name = " + shape_variable_name)
-                        print("\t* update expression = " + shape_state_update)
-                    expr = eval(shape_state_update)
+                        print("\t* shape_variable_name = " + shape_variable)
+                        print("\t* update expression = " + shape_variable_update_expr)
+                    expr = eval(shape_variable_update_expr)
                     for _shape_name, _shape in shape_state.items():
                         for _var_name, _var_val in _shape.items():
                             expr = expr.subs(_var_name, _var_val[step - 1])
@@ -293,7 +307,7 @@ class TestSolutionComputation(unittest.TestCase):
                     expr = expr.subs(Tau_syn_ex, tau_syn)
                     if debug:
                         print("\t* update expression evaluates to = " + str(expr))
-                    shape_state[shape_name][shape_variable_name][step] = expr
+                    shape_state[shape_name][shape_variable][step] = expr
 
 
             ### update the ODE state using propagators
