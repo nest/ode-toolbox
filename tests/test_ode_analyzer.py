@@ -25,7 +25,7 @@ import unittest
 
 from .context import odetoolbox
 from odetoolbox.analytic import Propagator
-from odetoolbox.shapes import shape_from_function
+from odetoolbox.shapes import Shape
 
 
 def open_json(fname):
@@ -38,8 +38,8 @@ def open_json(fname):
 class TestSolutionComputation(unittest.TestCase):
 
     def test_linearity_checker(self):
-        shape_inh = shape_from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
-        shape_exc = shape_from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
+        shape_inh = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
+        shape_exc = Shape.from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
         shapes = [shape_inh, shape_exc]
 
         ode_symbol = "V_m"
@@ -59,8 +59,8 @@ class TestSolutionComputation(unittest.TestCase):
 
 
     def test_propagator_matrix(self):
-        shape_inh = shape_from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
-        shape_exc = shape_from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
+        shape_inh = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
+        shape_exc = Shape.from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
         shapes = [shape_inh, shape_exc]
 
         ode_symbol = "V_m"

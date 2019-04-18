@@ -82,7 +82,7 @@ def analysis(indict, enable_stiffness_check=True):
 
     from odetoolbox.analytic import compute_analytical_solution
     from odetoolbox.numeric import compute_numeric_solution
-    from odetoolbox.shapes import shape_from_function, shape_from_ode
+    from odetoolbox.shapes import Shape
 
     print("Validating input...")
     for key in ["odes", "parameters", "shapes"]:
@@ -95,9 +95,9 @@ def analysis(indict, enable_stiffness_check=True):
         try:
             print("  " + shape["symbol"], end="")
             if shape["type"] == "ode":
-                shapes.append(shape_from_ode(**shape))
+                shapes.append(Shape.from_ode(**shape))
             else:
-                shapes.append(shape_from_function(**shape))
+                shapes.append(Shape.from_function(**shape))
             print(" is a linear homogeneous ODE")
         except Exception as e:
             print()

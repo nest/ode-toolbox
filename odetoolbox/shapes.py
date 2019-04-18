@@ -82,9 +82,7 @@ class Shape(object):
     """
 
     def __init__(self, symbol, order, initial_values, derivative_factors):
-
-        # Perform type and consistency checks and assign arguments to
-        # member variables.
+        """Perform type and consistency checks and assign arguments to member variables."""
         assert type(symbol) is Symbol, "symbol is not a SymPy symbol: '%r'" % symbol
         self.symbol = symbol
         
@@ -115,88 +113,90 @@ class Shape(object):
             rhs.append("{} * {}{}".format(simplify(derivative_factors[k]), symbol, "__d" * i))
         self.ode_definition = " + ".join(rhs)
 
+    @classmethod
+    def from_function(cls, symbol, definition, **kwargs):
+        """Create a Shape object given a function of time.
 
-def shape_from_function(symbol, definition, **kwargs):
-    """Create a Shape object given a function of time.
+        The goal of the algorithm is to calculate the factors of the ODE,
+        assuming they exist. It uses a matrix whose entries correspond to
+        the evaluation of derivatives of the shape function at certain
+        points `t` in time.
 
-    The goal of the algorithm is to calculate the factors of the ODE,
-    assuming they exist. It uses a matrix whose entries correspond to
-    the evaluation of derivatives of the shape function at certain
-    points `t` in time.
+        The idea is to create a system of equations by substituting
+        natural numbers into the homogeneous linear ODE with variable
+        derivative factors order many times for varying natural numbers
+        and solving for derivative factors. Once we have derivative
+        factors, the ODE is uniquely defined. This is assuming that shape
+        satisfies an ODE of this order, which we check after determining
+        the factors.
 
-    The idea is to create a system of equations by substituting
-    natural numbers into the homogeneous linear ODE with variable
-    derivative factors order many times for varying natural numbers
-    and solving for derivative factors. Once we have derivative
-    factors, the ODE is uniquely defined. This is assuming that shape
-    satisfies an ODE of this order, which we check after determining
-    the factors.
+        In the function, the symbol `t` is assumed to stand for the
+        current time.
 
-    In the function, the symbol `t` is assumed to stand for the
-    current time.
+        The algorithm used in this function is described in full detail
+        together with the mathematical foundations in the following
+        publication:
 
-    The algorithm used in this function is described in full detail
-    together with the mathematical foundations in the following
-    publication:
+            Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler,
+            Abigail Morrison (2018) Automatically selecting an optimal
+            integration scheme for systems of differential equations in
+            neuron models. Front. Neuroinf. doi:10.3389/fninf.2018.00050.
 
-        Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler,
-        Abigail Morrison (201Y) Automatically selecting an optimal
-        integration scheme for systems of differential equations in
-        neuron models. Front. Neuroinf. doi:10.3389/neuro.11.XXX.201Y.
+        Parameters
+        ----------
+        symbol : string
+            The symbol of the shape (e.g. "alpha", "I", "exp")
+        definition : string
+            The definition of the shape (e.g. "(e/tau_syn_in) * t *
+            exp(-t/tau_syn_in)")
 
-    Examples
-    --------
-    shape_from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
+        Returns
+        -------
+        shape : Shape
+            The canonical representation of the postsynaptic shape
 
-    Parameters
-    ----------
-    symbol : string
-        The symbol of the shape (e.g. "alpha", "I", "exp")
-    definition : string
-        The definition of the shape (e.g. "(e/tau_syn_in) * t *
-        exp(-t/tau_syn_in)")
+        Examples
+        --------
+        >>> Shape("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
+        """
 
-    Returns
-    -------
-    shape : Shape
-        The canonical representation of the postsynaptic shape
-    """
+        # Set variables for the limits of loops
+        max_t = 100
+        max_order = 10
 
-    # Set variables for the limits of loops
-    max_t = 100
-    max_order = 10
+        # Create a SymPy symbols the time (`t`)
+        t = Symbol("t")
 
-    # Create a SymPy symbols the time (`t`)
-    t = Symbol("t")
+        # The symbol and the definition of the shape function were given as
+        # strings. We have to transform them to SymPy symbols for using
+        # them in symbolic calculations.
+        symbol = parse_expr(symbol)
+        shape = parse_expr(definition)
 
-    # The symbol and the definition of the shape function were given as
-    # strings. We have to transform them to SymPy symbols for using
-    # them in symbolic calculations.
-    symbol = parse_expr(symbol)
-    shape = parse_expr(definition)
+        # `derivatives` is a list of all derivatives of `shape` up to the
+        # order we are checking, starting at 0.
+        derivatives = [shape, diff(shape, t)]
 
-    # `derivatives` is a list of all derivatives of `shape` up to the
-    # order we are checking, starting at 0.
-    derivatives = [shape, diff(shape, t)]
+        # We first check if `shape` satisfies satisfies a linear
+        # homogeneous ODE of order 1.
+        order = 1
 
-    # We first check if `shape` satisfies satisfies a linear
-    # homogeneous ODE of order 1.
-    order = 1
+        # To avoid a division by zero below, we have to find a `t` so that
+        # the shape function is not zero at this `t`.
+        t_val = None
+        for t_ in range(1, max_t):
+            if derivatives[0].subs(t, t_) != 0:
+                t_val = t_
+                break
 
-    # To avoid a division by zero below, we have to find a `t` so that
-    # the shape function is not zero at this `t`.
-    t_val = None
-    for t_ in range(1, max_t):
-        if derivatives[0].subs(t, t_) != 0:
-            t_val = t_
-            break
-
-    # It is very unlikely that the shape obeys a linear homogeneous
-    # ODE of order 1 and we still did not find a suitable
-    # `t_val`. This would mean that the function evaluates to zero at
-    # `t_` = 1, ..., `max_t`, which usually hints at an error in the
-    # specification of the function.
-    if t_val is not None:
+        if t_val is None:
+            # It is very unlikely that the shape obeys a linear homogeneous
+            # ODE of order 1 and we still did not find a suitable
+            # `t_val`. This would mean that the function evaluates to zero at
+            # `t_` = 1, ..., `max_t`, which usually hints at an error in the
+            # specification of the function.
+            msg = "Cannot find t for which shape function is unequal to zero"
+            raise Exception(msg)
 
         # `derivative_factors` contains the factor in front of the
         # derivative in the ODE that the shape function potentially
@@ -282,56 +282,65 @@ def shape_from_function(symbol, definition, **kwargs):
                     found_ode = True
                     break
         
-    if not found_ode:
-        msg = "Shape does not satisfy any ODE of order <= " % max_order
-        raise Exception(msg)
+        if not found_ode:
+            msg = "Shape does not satisfy any ODE of order <= " % max_order
+            raise Exception(msg)
 
-    # Calculate the initial values of the found ODE and simplify the
-    # derivative factors before creating and returning the Shape
-    # object.
-    initial_values = [x.subs(t, 0) for x in derivatives[:-1]][::-1]
-    derivative_factors = [simplify(df) for df in derivative_factors]
-    return Shape(symbol, order, initial_values, derivative_factors)
+        # Calculate the initial values of the found ODE and simplify the
+        # derivative factors before creating and returning the Shape
+        # object.
+        #initial_values = { str(symbol) + derivative_order * '\'' : x.subs(t, 0) for derivative_order, x in enumerate(derivatives[:-1]) }
+        initial_values = [x.subs(t, 0) for x in derivatives[:-1]][::-1]
+        derivative_factors = [simplify(df) for df in derivative_factors]
+        return cls(symbol, order, initial_values, derivative_factors)
 
+    @classmethod
+    def from_ode(cls, symbol, definition, initial_values, **kwargs):
+        """Create a Shape object given an ODE and initial values.
 
-def shape_from_ode(symbol, definition, initial_values, **kwargs):
-    """Create a Shape object given an ODE and initial values.
+        Provides a class 'ShapeODE'. An instance of `ShapeODE` is
+        defined with the symbol of the shape (i.e a function of `t`
+        that satisfies a certain ODE), the variables on the left hand side
+        of the ODE system, the right hand sides of the ODE systems
+        and the initial value of the function.
 
-    Provides a class 'ShapeODE'. An instance of `ShapeODE` is
-    defined with the symbol of the shape (i.e a function of `t`
-    that satisfies a certain ODE), the variables on the left handside
-    of the ODE system, the right handsides of the ODE systems
-    and the initial value of the function.
+        Equations are of the form I''' = a*I'' + b*I' + c*I
 
-    Equations are of the form I''' = a*I'' + b*I' + c*I
+        Canonical calculation of the properties, `order`, `symbol`,
+        `initial_values` and the system of ODEs in matrix form are made.
 
-    Example:
-    ========
+        Parameters
+        ----------
+        symbol : string
+            The symbol of the ODE
+        definition : string
+            The definition of the ODE
+        initial_values : dict
+            A dictionary mapping initial values to expressions. For example, XXX
 
-    ShapeODE("shape_alpha",
-             "-1/tau**2 * shape_alpha -2/tau * shape_alpha'",
-             ["e/tau", "0"])
+        Examples
+        --------
+        Shape.from_ode("shape_alpha",
+                       "-1/tau**2 * shape_alpha -2/tau * shape_alpha'",
+                       ["e/tau", "0"]) XXX
+        """
 
-    Canonical calculation of the properties, `order`, `symbol`,
-    `initial_values` and the system of ODEs in matrix form are made.
-    """
+        order = len(initial_values)
+        initial_values = [parse_expr(i) for i in initial_values]
+        derivatives = [Symbol(symbol+"__d"*i) for i in range(order) ]
+        definition = parse_expr(definition.replace("'", "__d"))
+        symbol = parse_expr(symbol)
 
-    order = len(initial_values)
-    initial_values = [parse_expr(i) for i in initial_values]
-    derivatives = [Symbol(symbol+"__d"*i) for i in range(order) ]
-    definition = parse_expr(definition.replace("'", "__d"))
-    symbol = parse_expr(symbol)
+        derivative_factors = []
+        for derivative in derivatives:
+            derivative_factors.append(diff(definition, derivative))
 
-    derivative_factors = []
-    for derivative in derivatives:
-        derivative_factors.append(diff(definition, derivative))
+        # check if the ODE is linear
+        diff_rhs_derivatives = definition
+        for derivative_factor, derivative in zip(derivative_factors, derivatives):
+            diff_rhs_derivatives -= derivative_factor * derivative
 
-    # check if the ODE is linear
-    diff_rhs_derivatives = definition
-    for derivative_factor, derivative in zip(derivative_factors, derivatives):
-        diff_rhs_derivatives -= derivative_factor * derivative
+        if simplify(diff_rhs_derivatives) != sympify(0):
+            raise Exception("Shape is not a linear homogeneous ODE")
 
-    if simplify(diff_rhs_derivatives) != sympify(0):
-        raise Exception("Shape is not a linear homogeneous ODE")
-
-    return Shape(symbol, order, initial_values, derivative_factors)
+        return cls(symbol, order, initial_values, derivative_factors)

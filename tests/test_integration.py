@@ -31,7 +31,6 @@ import matplotlib.pyplot as plt
 
 from .context import odetoolbox
 from odetoolbox.analytic import Propagator
-from odetoolbox.shapes import shape_from_function
 
 from math import e
 from sympy import exp, sympify
@@ -114,8 +113,8 @@ class TestSolutionComputation(unittest.TestCase):
         
         indict = open_json("iaf_psc_alpha.json")
         result = odetoolbox.analysis(indict)
-        print("Got result from ode-toolbox: " + str(result))
-
+        print("Got result from ode-toolbox: ")
+        print(json.dumps(result,  indent=2))
         assert result["solver"] == "analytical"
         
         N_shapes = len(result["shape_state_variables"])
