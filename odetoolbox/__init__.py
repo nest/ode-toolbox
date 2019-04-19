@@ -92,6 +92,7 @@ def analysis(indict, enable_stiffness_check=True):
     print("Analyzing shapes...")
     shapes = []
     for shape in indict["shapes"]:
+        Shape.from_function(**shape)
         try:
             print("  " + shape["symbol"], end="")
             if shape["type"] == "ode":

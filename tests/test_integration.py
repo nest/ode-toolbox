@@ -1,5 +1,5 @@
 #
-# test_ode_analyzer.py
+# test_integration.py
 #
 # This file is part of the NEST ODE toolbox.
 #
@@ -118,7 +118,7 @@ class TestSolutionComputation(unittest.TestCase):
         assert result["solver"] == "analytical"
         
         shape_names = result["shape_state_updates"].keys()
-        assert shape_names == result["shape_state_initial_values"].keys()
+        assert shape_names == result["shape_initial_values"].keys()
         N_shapes = len(shape_names)
 
         h = 1E-3    # [s]
@@ -207,13 +207,18 @@ class TestSolutionComputation(unittest.TestCase):
         ### define the necessary sympy variables (for shapes)
 
         for shape_name in shape_names:
+            print("* Defining variables for shape " + str(shape_name))
             shape_variables = result["shape_initial_values"][shape_name].keys()
-            assert shape_variables == result["shape_state_updates"][shape_name].keys()
+            #import pdb;pdb.set_trace()
+            #assert set(shape_variables) == set(map(lambda s: s.replace("__d", "'"), result["shape_state_updates"][shape_name].keys()))
+            assert set(shape_variables) == set(result["shape_state_updates"][shape_name].keys())
+            #import pdb;pdb.set_trace()
             for shape_variable in shape_variables:
+                shape_variable_code_name = shape_variable.replace("'", "__d")
                 shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
                 shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
-                print(" * Defining var: " + str(shape_variable + " = sympy.symbols(\"" + shape_variable + "\")"))
-                exec(shape_variable + " = sympy.symbols(\"" + shape_variable + "\")", globals())
+                print("\t * Defining var: " + str(shape_variable) + " = sympy.symbols(\"" + shape_variable_code_name + "\")")
+                exec(shape_variable_code_name + " = sympy.symbols(\"" + shape_variable_code_name + "\")", globals())
 
 
         ### define the necessary sympy variables (for ODE)
@@ -233,6 +238,8 @@ class TestSolutionComputation(unittest.TestCase):
 
 
         ### define the necessary shape state variables
+        
+        # state and initial values are stored here by their "code name", i.e. with "__d" instead of "'" for derivative; this is to make it proper Python syntax to e.g. put a derivative on the left-hand side of an assignment
 
         shape_state = {}
         shape_initial_values = {}
@@ -240,16 +247,17 @@ class TestSolutionComputation(unittest.TestCase):
             print("* Defining shape state variables for shape \'" + shape_name + "\'")
             shape_state[shape_name] = {}
             shape_initial_values[shape_name] = {}
-            dim = len(result["shape_state_variables"])
-            print("\t  dim = " + str(dim))
+            dim = len(result["shape_state_updates"])
+            print("\t  shape dim = " + str(dim))
 
             shape_variables = result["shape_initial_values"][shape_name].keys()
             assert shape_variables == result["shape_state_updates"][shape_name].keys()
             for shape_variable in shape_variables:
+                shape_variable_code_name = shape_variable.replace("'", "__d")
                 shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
                 shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
 
-                print("\t\t* Variable " + str(shape_variable))
+                print("\t\t* Variable " + str(shape_variable_code_name))
                 print("\t\t  Update expression: " + shape_variable_update_expr)
                 print("\t\t  Initial value = " + str(shape_variable_initial_value))
                 expr = sympify(eval(shape_variable_initial_value.replace("__h", "h")))
@@ -259,8 +267,8 @@ class TestSolutionComputation(unittest.TestCase):
                 expr = expr.subs(Tau_syn_ex, tau_syn)
                 print("\t\t     = " + str(expr))
 
-                shape_state[shape_name][shape_variable] = np.zeros(N)
-                shape_initial_values[shape_name][shape_variable] = expr
+                shape_state[shape_name][shape_variable_code_name] = np.zeros(N)
+                shape_initial_values[shape_name][shape_variable_code_name] = expr
 
 
         ### add propagators to local scope
@@ -281,9 +289,10 @@ class TestSolutionComputation(unittest.TestCase):
                     shape_variables = result["shape_initial_values"][shape_name].keys()
                     assert shape_variables == result["shape_state_updates"][shape_name].keys()
                     for shape_variable in shape_variables:
+                        shape_variable_code_name = shape_variable.replace("'", "__d")
                         shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
                         shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
-                        shape_state[shape_name][shape_variable][step - 1] = shape_initial_values[shape_name][shape_variable]
+                        shape_state[shape_name][shape_variable_code_name][step - 1] = shape_initial_values[shape_name][shape_variable_code_name]
 
 
             ### update the state of each shape using propagators
@@ -292,22 +301,28 @@ class TestSolutionComputation(unittest.TestCase):
                 if debug:
                     print("--> shape_name = " + shape_name)
 
+                shape_variables = result["shape_initial_values"][shape_name].keys()
                 for shape_variable in shape_variables:
+                    shape_variable_code_name = shape_variable.replace("'", "__d")
                     shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
                     shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
-                    shape_state[shape_name][shape_variable][step - 1] = shape_initial_values[shape_name][shape_variable]
                     if debug:
-                        print("\t* shape_variable_name = " + shape_variable)
+                        print("\t* shape_variable_name = " + shape_variable_code_name)
                         print("\t* update expression = " + shape_variable_update_expr)
+
+                    # replace symbolic variables with their values at the last step
                     expr = eval(shape_variable_update_expr)
                     for _shape_name, _shape in shape_state.items():
                         for _var_name, _var_val in _shape.items():
-                            expr = expr.subs(_var_name, _var_val[step - 1])
+                            _var_name_code_name = _var_name.replace("'", "__d")
+                            expr = expr.subs(_var_name, shape_state[_shape_name][_var_name_code_name][step - 1])  # _var_val [step - 1])
+                            print("\t\t* replacing variable " + _var_name + " with " + str(shape_state[_shape_name][_var_name_code_name][step - 1]))
+                            #import pdb;pdb.set_trace() 
                     expr = expr.subs(Tau_syn_in, tau_syn)
                     expr = expr.subs(Tau_syn_ex, tau_syn)
                     if debug:
                         print("\t* update expression evaluates to = " + str(expr))
-                    shape_state[shape_name][shape_variable][step] = expr
+                    shape_state[shape_name][shape_variable_code_name][step] = expr
 
 
             ### update the ODE state using propagators
@@ -358,7 +373,7 @@ class TestSolutionComputation(unittest.TestCase):
 
         #plt.show()
         print("Saving to...")
-        plt.savefig("/tmp/propagators.png", dpi=600)
+        plt.savefig("/tmp/remotefs2/propagators.png", dpi=600)
 
         # the two propagators should be very close...
         np.testing.assert_allclose(i_ex__[0, :], shape_state["I_shape_ex"]["I_shape_ex"], atol=1E-9, rtol=1E-9)

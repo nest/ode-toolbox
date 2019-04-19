@@ -105,13 +105,14 @@ class Propagator(object):
             if shape.order == 1:
                 A = Matrix([[shape.derivative_factors[0], 0],
                             [shape_factor, ode_symbol_factor]])
-            elif shape.order == 2:
+                '''elif shape.order == 2:
                 solutionpq = -shape.derivative_factors[1] / 2 + \
                              sqrt(shape.derivative_factors[1]**2 / 4 + \
                                   shape.derivative_factors[0])
                 A = Matrix([[shape.derivative_factors[1]+solutionpq, 0, 0 ],
                             [1, -solutionpq, 0 ],
                             [0, shape_factor, ode_symbol_factor]])
+                #A = Matrix([[shape.derivative_factors[1], shape.derivative_factors[0], 0], [1, 0, 0], [0, shape_factor, ode_symbol_factor]])'''
             else:
                 A = zeros(shape.order + 1)
                 A[shape.order, shape.order] = ode_symbol_factor
@@ -125,6 +126,7 @@ class Propagator(object):
 
             self.propagator_matrices.append(simplify(exp(A * h)))
             print("Shape " + str(shape.symbol))
+            print("  derivative factors = " + str(shape.derivative_factors))
             print("  A matrix = " + str(A))
             print("  propagator matrix = " + str(simplify(exp(A * h))))
     
@@ -169,14 +171,19 @@ class Propagator(object):
             print("Shape " + str(shape.symbol))
             print("  y = " + str(y))
             print("  P = " + str(P))
-            #import pdb;pdb.set_trace()
             
             z = P * y
     
             if not z[shape.order] == 0.:
                 self.ode_updates[str(self.ode_symbol)][str(shape.symbol)] = str(z[shape.order])
-    
-            shape.state_updates = (P[:shape.order, :shape.order] * y[:shape.order, 0])
+
+            #_state_updates_matrix = P[:shape.order, :shape.order] * y[:shape.order, 0]
+            _state_updates_matrix = P * y
+            shape.state_updates = {}
+            for i, variable_symbol in enumerate(y):
+                # N.B. variables in y are in the same order as elements of M
+                if variable_symbol in shape.state_variables:
+                    shape.state_updates[str(variable_symbol).replace("__d", "'")] = str(_state_updates_matrix[i])
 
 
 def compute_analytical_solution(ode_symbol, ode_definition, shapes, timestep_symbol_name="__h"):
@@ -187,14 +194,12 @@ def compute_analytical_solution(ode_symbol, ode_definition, shapes, timestep_sym
         "solver": "analytical",
         "ode_updates": propagator.ode_updates,
         "propagator": propagator.propagator,
-        "shape_initial_values": [],
-        "shape_state_updates": [],
-        "shape_state_variables": [],
+        "shape_initial_values": {},
+        "shape_state_updates": {},
     }
 
     for shape in shapes:
-        data["shape_initial_values"].append([str(x) for x in shape.initial_values])
-        data["shape_state_updates"].append([str(x) for x in shape.state_updates])
-        data["shape_state_variables"].append([str(x) for x in shape.state_variables])
+        data["shape_initial_values"][str(shape.symbol)] = {var_name : str(expr) for var_name, expr in shape.initial_values.items()}
+        data["shape_state_updates"][str(shape.symbol)] = {var_name : str(expr) for var_name, expr in shape.state_updates.items()}
 
     return data

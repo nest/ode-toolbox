@@ -41,43 +41,33 @@ class Shape(object):
     Description
     -----------
 
-    This class provides a canonical representation of a postsynaptic
-    shape independently of the way imn which the user specified the
-    shape. It assumes a differential equation of the general form
+    This class provides a canonical representation of a postsynaptic shape independently of the way in which the user specified the shape. It assumes a differential equation of the general form (where bracketed superscript :math:`\cdot^{(n)}` indicates the n-th derivative with respect to time):
 
-        I''' = f2*I + f1*I' + f0*I''
+    .. math::
 
-    In this example, the `symbol` of the ODE would be `I` (i.e. without
-    any qualifiers), `order` would be 3, `derivative_factors` would be
-    ["f0", "f1", "f2"]. The list `initial_values` can be chosen freely
-    depending on the situation at hand, but has to be specified
-    completely, i.e. using exactly three values for the example.
+        x^{(n)} = \sum_{i=0}^{n-1} f_i x^{(i)}
 
-    Please note that the derivatives in the ODE, the initial values
-    and the factors for the derivatives have to be in ascending order.
+    In the input and output, derivatives are indicated by adding one prime (single quotation mark) for each derivative order. For example, in the expression
+    
+    .. code::
 
-    Internally, the representation is based on the following
-    attributes:
+        I''' = f0 I + f1 I' + f2 I''
+
+    the `symbol` of the ODE would be `I` (i.e. without any qualifiers), `order` would be 3, and `derivative_factors` would be {"I" : "f0", "I'" : "f1", "I''" : f2 }
+
+    Internally, the representation is based on the following attributes:
 
     Attributes
     ----------
     symbol : SymPy expression
-        Symbolic name of the shape without additional qualifiers like
-        prime symbols or similar.
+        Symbolic name of the shape without additional qualifiers like prime symbols or similar.
     order : int
         Order of the ODE representing the shape.
-    initial_values : list of SymPy expressions
-        Initial values of the ODE representing the shape. The list
-        contains has to contain `order` many values, i.e. one for each
-        derivative that occurs in the ODE. The values have to be in
-        ascending order, i.e. iv_d0, iv_d1, ... for the derivatives
-        d0, d1, ...
+    initial_values : dict of SymPy expressions
+        Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings correspond to
+        the variable symbol values have to be in ascending order, i.e. iv_d0, iv_d1, ... for the derivatives d0, d1, ...
     derivative_factors : list of SymPy expressions
-        The factors for the derivatives that occur in the ODE. This
-        list has to contain `order` many values,   i.e. one for each
-        derivative that occurs in the ODE. The values have to be in
-        ascending order, i.e. a0df_d0, iv_d1, ... for the derivatives
-        d0, d1, ...
+        The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
 
     """
 
@@ -90,13 +80,13 @@ class Shape(object):
         self.order = order
 
         assert len(initial_values) == order, "length of initial_values != order"
-        for iv in initial_values:
-            assert is_sympy_type(iv), "initial value is not a SymPy symbol: '%r'" % iv
+        for iv_name, iv in initial_values.items():
+            assert is_sympy_type(iv), "initial value for %s is not a SymPy expression: '%r'" % (iv_name, iv)
         self.initial_values = initial_values
 
         assert len(derivative_factors) == order, "length of derivative_factors != order"
         for df in derivative_factors:
-            assert is_sympy_type(df), "derivative factor is not a SymPy symbol: '%r'" % iv
+            assert is_sympy_type(df), "derivative factor is not a SymPy expression: '%r'" % iv
         self.derivative_factors = derivative_factors
 
         # Compute the state variables for ODE the shape satisfies
@@ -289,8 +279,7 @@ class Shape(object):
         # Calculate the initial values of the found ODE and simplify the
         # derivative factors before creating and returning the Shape
         # object.
-        #initial_values = { str(symbol) + derivative_order * '\'' : x.subs(t, 0) for derivative_order, x in enumerate(derivatives[:-1]) }
-        initial_values = [x.subs(t, 0) for x in derivatives[:-1]][::-1]
+        initial_values = { str(symbol) + derivative_order * '\'' : x.subs(t, 0) for derivative_order, x in enumerate(derivatives[:-1]) }
         derivative_factors = [simplify(df) for df in derivative_factors]
         return cls(symbol, order, initial_values, derivative_factors)
 
