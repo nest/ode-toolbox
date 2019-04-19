@@ -64,11 +64,9 @@ class Shape(object):
     order : int
         Order of the ODE representing the shape.
     initial_values : dict of SymPy expressions
-        Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings correspond to
-        the variable symbol values have to be in ascending order, i.e. iv_d0, iv_d1, ... for the derivatives d0, d1, ...
+        Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings correspond to the variable symbol values have to be in ascending order, i.e. iv_d0, iv_d1, ... for the derivatives d0, d1, ...
     derivative_factors : list of SymPy expressions
         The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
-
     """
 
     def __init__(self, symbol, order, initial_values, derivative_factors):
@@ -91,12 +89,12 @@ class Shape(object):
 
         # Compute the state variables for ODE the shape satisfies
         self.state_variables = []
-        for i in range(self.order)[::-1]:
+        for i in range(self.order):
             if i > 0:
-                self.state_variables.append(Symbol("{}{}".format(str(symbol), "__d" * i)))
+                self.state_variables.insert(0, Symbol("{}{}".format(str(symbol), "__d" * i)))
             else:
-                self.state_variables.append(symbol)
-                
+                self.state_variables.insert(0, symbol)
+
         # Compute the definition of the ODE the shape satisfies
         rhs = ["{} * {}".format(simplify(derivative_factors[0]), symbol)]
         for k in range(1, order):

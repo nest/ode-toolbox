@@ -105,14 +105,13 @@ class Propagator(object):
             if shape.order == 1:
                 A = Matrix([[shape.derivative_factors[0], 0],
                             [shape_factor, ode_symbol_factor]])
-                '''elif shape.order == 2:
+            elif shape.order == 2:
                 solutionpq = -shape.derivative_factors[1] / 2 + \
                              sqrt(shape.derivative_factors[1]**2 / 4 + \
                                   shape.derivative_factors[0])
                 A = Matrix([[shape.derivative_factors[1]+solutionpq, 0, 0 ],
                             [1, -solutionpq, 0 ],
                             [0, shape_factor, ode_symbol_factor]])
-                #A = Matrix([[shape.derivative_factors[1], shape.derivative_factors[0], 0], [1, 0, 0], [0, shape_factor, ode_symbol_factor]])'''
             else:
                 A = zeros(shape.order + 1)
                 A[shape.order, shape.order] = ode_symbol_factor
@@ -121,17 +120,13 @@ class Propagator(object):
                     A[0, j] = shape.derivative_factors[shape.order - j - 1]
                 for i in range(1, shape.order):
                     A[i, i - 1] = 1
-    
+
             shape_factors.append(shape_factor)
 
             self.propagator_matrices.append(simplify(exp(A * h)))
-            print("Shape " + str(shape.symbol))
-            print("  derivative factors = " + str(shape.derivative_factors))
-            print("  A matrix = " + str(A))
-            print("  propagator matrix = " + str(simplify(exp(A * h))))
-    
+
         step_constant = -1/ode_symbol_factor * (1 - exp(h * ode_symbol_factor))
-        
+
         constant_input = self.ode_definition - ode_symbol_factor * self.ode_symbol
         for shape_factor, shape in zip(shape_factors, shapes):
             constant_input -= shape_factor * shape.symbol
