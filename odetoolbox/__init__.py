@@ -92,7 +92,6 @@ def analysis(indict, enable_stiffness_check=True):
     print("Analyzing shapes...")
     shapes = []
     for shape in indict["shapes"]:
-        Shape.from_function(**shape)
         try:
             print("  " + shape["symbol"], end="")
             if shape["type"] == "ode":
@@ -139,7 +138,7 @@ def analysis(indict, enable_stiffness_check=True):
                 for shape in shapes:
                     ode_shape = {"type": "ode",
                                  "symbol": str(shape.symbol),
-                                 "initial_values": [str(x) for x in shape.initial_values],
+                                 "initial_values": shape.initial_values,
                                  "definition": str(shape.ode_definition)}
                     indict["shapes"].append(ode_shape)
 
