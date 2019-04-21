@@ -10,8 +10,8 @@
       "symbol": "I_shape_ex",
       "definition": "(-1)/(tau_syn_ex)**(2)*I_shape_ex+(-2)/tau_syn_ex*I_shape_ex'",
       "initial_values": {
-        "I_shape_ex" : "e / tau_syn_ex",
-        "I_shape_ex'" : "0"
+        "I_shape_ex" : "0",
+        "I_shape_ex'" : "e / tau_syn_ex"
       }
     }
   ],
