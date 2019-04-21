@@ -83,7 +83,7 @@ class StiffnessTester(object):
         for shape in indict["shapes"]:
             shape_name = shape["symbol"]
             max_order = len(shape["initial_values"])
-            for order in range(0, max_order):
+            for order in range(max_order):
                 initial_values_tmp[shape_name + "__d" * order] = shape["initial_values"][shape_name + "'" * order]
                 if order < max_order - 1:
                     ode_definitions_tmp[shape_name + "__d" * (order - 1)] = shape_name + "__d" * (order - 1)
@@ -94,7 +94,7 @@ class StiffnessTester(object):
         # read ODEs
         for ode in indict["odes"]:
             max_order = len(ode["initial_values"])
-            for order in range(0, max_order):
+            for order in range(max_order):
                 state_initial_values_tmp[ode["symbol"] + "__d" * (order - 1)] = ode["initial_values"][ode["symbol"] + "'" * order]
                 if order < max_order - 1:
                     ode_definitions_tmp[ode["symbol"] + "__d" * (order - 1)] = ode["symbol"] + "__d" * (order - 1)
