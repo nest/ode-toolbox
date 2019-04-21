@@ -48,7 +48,7 @@ class Shape(object):
         x^{(n)} = \sum_{i=0}^{n-1} f_i x^{(i)}
 
     In the input and output, derivatives are indicated by adding one prime (single quotation mark) for each derivative order. For example, in the expression
-    
+
     .. code::
 
         I''' = f0 I + f1 I' + f2 I''
@@ -73,7 +73,7 @@ class Shape(object):
         """Perform type and consistency checks and assign arguments to member variables."""
         assert type(symbol) is Symbol, "symbol is not a SymPy symbol: '%r'" % symbol
         self.symbol = symbol
-        
+
         assert type(order) is int, "order is not an integer: '%d'" % order
         self.order = order
 

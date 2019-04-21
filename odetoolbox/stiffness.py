@@ -74,44 +74,44 @@ class StiffnessTester(object):
 
         ode_definitions_tmp = {}
         initial_values_tmp = {}
-        state_start_values_tmp = {}
+        state_initial_values_tmp = {}
         thresholds_tmp = []
 
         self.parameters = {k:float(v) for k,v in indict["parameters"].items()}
 
+        # read shapes
         for shape in indict["shapes"]:
             shape_name = shape["symbol"]
             max_order = len(shape["initial_values"])
-            for order in range(0, max_order - 1):
-                ode_definitions_tmp[shape_name + "__d" * (order - 1)] = shape_name + "__d" * (order - 1)
-                initial_values_tmp[shape_name + "__d" * order] = shape["initial_values"][::-1][order]
-            ode_definitions_tmp[shape_name + "__d" * (max_order - 1)] = shape["definition"].replace("'", "__d")
-            initial_values_tmp[shape_name + "__d" * (max_order - 1)] = shape["initial_values"][::-1][(max_order - 1)]
+            for order in range(0, max_order):
+                initial_values_tmp[shape_name + "__d" * order] = shape["initial_values"][shape_name + "'" * order]
+                if order < max_order - 1:
+                    ode_definitions_tmp[shape_name + "__d" * (order - 1)] = shape_name + "__d" * (order - 1)
+                else:
+                    assert(order == max_order - 1)
+                    ode_definitions_tmp[shape_name + "__d" * (max_order - 1)] = shape["definition"].replace("'", "__d")
 
-        # we omit initial values for odes since they cannot be connected to buffers
+        # read ODEs
         for ode in indict["odes"]:
-            ode_lhs = ode["symbol"]
             max_order = len(ode["initial_values"])
-            for order in range(0, len(ode["initial_values"]) - 1):
-                ode_definitions_tmp[ode_lhs + "__d" * (order - 1)] = ode_lhs + "__d" * (order - 1)
-                state_start_values_tmp[ode_lhs + "__d" * (order - 1)] = ode["initial_values"][order]
-            state_start_values_tmp[ode_lhs + "__d" * (max_order - 1)] = ode["initial_values"][(max_order - 1)]
-            ode_definitions_tmp[ode_lhs + "__d" * (max_order - 1)] = ode["definition"].replace("'", "__d")
+            for order in range(0, max_order):
+                state_initial_values_tmp[ode["symbol"] + "__d" * (order - 1)] = ode["initial_values"][ode["symbol"] + "'" * order]
+                if order < max_order - 1:
+                    ode_definitions_tmp[ode["symbol"] + "__d" * (order - 1)] = ode["symbol"] + "__d" * (order - 1)
+                else:
+                    assert(order == max_order - 1)
+                    ode_definitions_tmp[ode["symbol"] + "__d" * (max_order - 1)] = ode["definition"].replace("'", "__d")
 
             if "upper_bound" in ode:
                 thresholds_tmp.append(ode["symbol"] + " > " + ode["upper_bound"])
             if "lower_bound" in ode:
                 thresholds_tmp.append(ode["symbol"] + " < " + ode["upper_bound"])
 
-        # for the interaction with GSL we assume that all state variables
-        # (keys in ode_definitions_tmp and initial_values_tmp) correspond to an
-        # `y_N` entry, where `N` is counted up from 0 and corresponds to
-        # the index into a sorted array of the ODE symbols.
+        # for the interaction with GSL we assume that all state variables (keys in ode_definitions_tmp and initial_values_tmp) correspond to an `y_N` entry, where `N` is counted up from 0 and corresponds to the index into a sorted array of the ODE symbols.
 
         # compute unique mapping of state variables to corresponding `y__N` variables
         state_variables = sorted(ode_definitions_tmp.keys())
         state_variable_to_y = {s:"y__%i"%i for i,s in enumerate(state_variables)}
-
 
         self.thresholds = []
         # Replace all occurrences of state variables in all ode definitions through corresponding `y__N`
@@ -119,7 +119,6 @@ class StiffnessTester(object):
             for state_variable in ode_definitions_tmp:
                 ode_definition = ode_definitions_tmp[state_variable]
                 matcher = re.compile(r"\b(" + state_variable_to_map + r")\b")
-
                 ode_definitions_tmp[state_variable] = matcher.sub(state_variable_to_y[state_variable_to_map], ode_definition)
 
         for threshold in thresholds_tmp:
@@ -138,8 +137,8 @@ class StiffnessTester(object):
             if state_variable_to_map in initial_values_tmp:
                 self.initial_values[state_variable_to_y[state_variable_to_map]] = initial_values_tmp[state_variable_to_map]
 
-            if state_variable_to_map in state_start_values_tmp:
-                self.state_start_values[state_variable_to_y[state_variable_to_map]] = state_start_values_tmp[state_variable_to_map]
+            if state_variable_to_map in state_initial_values_tmp:
+                self.state_start_values[state_variable_to_y[state_variable_to_map]] = state_initial_values_tmp[state_variable_to_map]
 
         self.ode_rhs = [compile(self.ode_definitions[k], "<string>", "eval") for k in sorted(self.ode_definitions.keys())]
 

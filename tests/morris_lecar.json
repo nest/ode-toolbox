@@ -9,13 +9,13 @@
     {
       "symbol": "V",
       "definition": "I+2*W*(-0.7-V)+0.5*(-0.5-V)+1.1*(1/2*(1+(exp((V--0.1)/0.15)-exp(-(V--0.1)/0.15))/(exp((V--0.1)/0.15)+exp(-(V--0.1)/0.15))))*(1-V)",
-      "initial_values": ["1"]
+      "initial_values": {"V" : "1"}
 
     },
     {
       "symbol": "W",
       "definition": "epsilon*(exp((V-0.22)/2*0.3)+exp(-(V-0.22)/2*0.3))*(1/2*(1+(exp((V--0.12)/0.3)-exp(-(V--0.12)/0.3))/(exp((V--0.12)/0.3)+exp(-(V--0.12)/0.3)))-W)",
-      "initial_values": ["1"]
+      "initial_values": {"W" : "1"}
     }
     
   ]

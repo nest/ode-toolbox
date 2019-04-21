@@ -21,13 +21,16 @@
       "type": "ode",
       "symbol": "g_in",
       "definition": "-g_in/(tau_syn_in**2) - (2*g_in')/tau_syn_in",
-      "initial_values": ["e / tau_syn_in", "0"]
+      "initial_values": {
+        "g_in" : "0"
+        "g_in'" : "e / tau_syn_in",
+      }
     },
     {
       "type": "ode",
       "symbol": "g_ex",
       "definition": "-g_ex/tau_syn_ex",
-      "initial_values": ["1"]
+      "initial_values": {"g_ex" : "1"}
     }
   ],
 

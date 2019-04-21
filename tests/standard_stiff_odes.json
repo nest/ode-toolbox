@@ -4,12 +4,12 @@
     {
       "symbol": "y1",
       "definition": "a * y1",
-      "initial_values": ["1"]
+      "initial_values": {"y1" : "1"}
     },
     {
       "symbol": "y2",
       "definition": "-2 *y2 + y1",
-      "initial_values": ["1"]
+      "initial_values": {"y2" : "1"}
     }
   ],
 
