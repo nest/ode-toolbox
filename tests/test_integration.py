@@ -19,15 +19,17 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+INTEGRATION_TEST_DEBUG_PLOTS = False
+
 import json
 import os
 import unittest
 import sympy
 import numpy as np
-
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
+if INTEGRATION_TEST_DEBUG_PLOTS:
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import matplotlib.pyplot as plt
 
 from .context import odetoolbox
 from odetoolbox.analytic import Propagator
@@ -348,28 +350,29 @@ class TestSolutionComputation(unittest.TestCase):
                 ode_state[ode_variable_name][step] = expr
                 print("\t  expr evaluates to = " + str(expr))
 
-        fig, ax = plt.subplots(3, sharex=True)
-        ax[0].plot(1E3 * _sol_t, v_abs, label="V_abs (num)")
-        ax[0].plot(1E3 * t, ode_state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
+        if INTEGRATION_TEST_DEBUG_PLOTS:
+            fig, ax = plt.subplots(3, sharex=True)
+            ax[0].plot(1E3 * _sol_t, v_abs, label="V_abs (num)")
+            ax[0].plot(1E3 * t, ode_state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
 
-        ax[1].plot(1E3 * _sol_t, i_ex[0, :], linewidth=2, label="i_ex (num)")
-        ax[1].plot(1E3 * t, shape_state["I_shape_ex"]["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)")
-        ax[1].plot(1E3 * t, i_ex__[0, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
+            ax[1].plot(1E3 * _sol_t, i_ex[0, :], linewidth=2, label="i_ex (num)")
+            ax[1].plot(1E3 * t, shape_state["I_shape_ex"]["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)")
+            ax[1].plot(1E3 * t, i_ex__[0, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
 
-        ax[2].plot(1E3 * _sol_t, i_ex[1, :], linewidth=2, label="i_ex' (num)")
-        ax[2].plot(1E3 * t, shape_state["I_shape_ex"]["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)")
-        ax[2].plot(1E3 * t, i_ex__[1, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
+            ax[2].plot(1E3 * _sol_t, i_ex[1, :], linewidth=2, label="i_ex' (num)")
+            ax[2].plot(1E3 * t, shape_state["I_shape_ex"]["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)")
+            ax[2].plot(1E3 * t, i_ex__[1, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
 
-        for _ax in ax:
-            _ax.legend()
-            _ax.grid(True)
-            #_ax.set_xlim(49., 55.)
+            for _ax in ax:
+                _ax.legend()
+                _ax.grid(True)
+                #_ax.set_xlim(49., 55.)
 
-        ax[-1].set_xlabel("Time [ms]")
+            ax[-1].set_xlabel("Time [ms]")
 
-        #plt.show()
-        print("Saving to...")
-        plt.savefig("/tmp/remotefs2/propagators.png", dpi=600)
+            #plt.show()
+            print("Saving to...")
+            plt.savefig("/tmp/remotefs2/propagators.png", dpi=600)
 
         # the two propagators should be very close...
         np.testing.assert_allclose(i_ex__[0, :], shape_state["I_shape_ex"]["I_shape_ex"], atol=1E-9, rtol=1E-9)
