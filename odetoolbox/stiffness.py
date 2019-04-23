@@ -207,15 +207,6 @@ class StiffnessTester(object):
         sim_time_in_sec = sim_time * 0.001
         sim_resolution_in_sec = sim_resolution * 0.001
 
-        mean_ISI = 1. / rate
-
-        times = []
-
-        t_sum = 0
-        while t_sum < sim_time_in_sec:
-            t_sum += numpy.random.exponential(mean_ISI, 1)[0]
-            times.append(t_sum)
-
         '''
         Note that besides numpy.random, there is also the independent module
         random. ISIs could also have been drawn using
