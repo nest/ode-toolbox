@@ -110,13 +110,13 @@ class TestSolutionComputation(unittest.TestCase):
     def test_iaf_psc_alpha(self):
         
         debug = True
-        
+
         indict = open_json("iaf_psc_alpha.json")
         result = odetoolbox.analysis(indict)
         print("Got result from ode-toolbox: ")
         print(json.dumps(result,  indent=2))
         assert result["solver"] == "analytical"
-        
+
         shape_names = result["shape_state_updates"].keys()
         assert shape_names == result["shape_initial_values"].keys()
         N_shapes = len(shape_names)
@@ -153,7 +153,7 @@ class TestSolutionComputation(unittest.TestCase):
             print("\treturning " + str(_delta_vec))
 
             return _delta_vec
-        
+
         sol = solve_ivp(f, t_span=[0., spike_time], y0=[0., 0., v_abs_init], t_eval=t[np.logical_and(0. <= t, t <= spike_time)], rtol=1E-9, atol=1E-9)
 
         sol.y[:2, -1] = i_ex_init       # "apply" the spike
@@ -164,13 +164,13 @@ class TestSolutionComputation(unittest.TestCase):
         sol = solve_ivp(f, t_span=[spike_time, T], y0=sol.y[:, -1], t_eval=t[np.logical_and(spike_time < t, t <= T)])
         _sol_t_second_part = sol.t.copy()
         _sol_y_second_part = sol.y.copy()
-        
+
         _sol_t = np.hstack((_sol_t_first_part, _sol_t_second_part))
         _sol_y = np.hstack((_sol_y_first_part, _sol_y_second_part))
-        
+
         i_ex = _sol_y[:2, :]
         v_abs = _sol_y[2, :]
-        
+
 
         #
         #   timeseries using hand-calculated propagators
@@ -209,15 +209,12 @@ class TestSolutionComputation(unittest.TestCase):
         for shape_name in shape_names:
             print("* Defining variables for shape " + str(shape_name))
             shape_variables = result["shape_initial_values"][shape_name].keys()
-            #import pdb;pdb.set_trace()
-            #assert set(shape_variables) == set(map(lambda s: s.replace("__d", "'"), result["shape_state_updates"][shape_name].keys()))
             assert set(shape_variables) == set(result["shape_state_updates"][shape_name].keys())
-            #import pdb;pdb.set_trace()
             for shape_variable in shape_variables:
                 shape_variable_code_name = shape_variable.replace("'", "__d")
                 shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
                 shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
-                print("\t * Defining var: " + str(shape_variable) + " = sympy.symbols(\"" + shape_variable_code_name + "\")")
+                print("\t * Defining var: " + str(shape_variable) + " as sympy.symbols(\"" + shape_variable_code_name + "\")")
                 exec(shape_variable_code_name + " = sympy.symbols(\"" + shape_variable_code_name + "\")", globals())
 
 
@@ -317,7 +314,6 @@ class TestSolutionComputation(unittest.TestCase):
                             _var_name_code_name = _var_name.replace("'", "__d")
                             expr = expr.subs(_var_name, shape_state[_shape_name][_var_name_code_name][step - 1])  # _var_val [step - 1])
                             print("\t\t* replacing variable " + _var_name + " with " + str(shape_state[_shape_name][_var_name_code_name][step - 1]))
-                            #import pdb;pdb.set_trace() 
                     expr = expr.subs(Tau_syn_in, tau_syn)
                     expr = expr.subs(Tau_syn_ex, tau_syn)
                     if debug:
@@ -385,7 +381,6 @@ class TestSolutionComputation(unittest.TestCase):
         np.testing.assert_allclose(i_ex__[0, :] / np.amax(np.abs(i_ex__[0, :])), i_ex[0, :] / np.amax(np.abs(i_ex__[0, :])), atol=_num_norm_atol, rtol=_num_norm_rtol)
 
         np.testing.assert_allclose(i_ex__[1, :] / np.amax(np.abs(i_ex__[1, :])), i_ex[1, :] / np.amax(np.abs(i_ex__[1, :])), atol=_num_norm_atol, rtol=_num_norm_rtol)
-
 
         np.testing.assert_allclose(v_abs / np.amax(v_abs), ode_state["V_abs"] / np.amax(v_abs), atol=_num_norm_atol, rtol=_num_norm_rtol)
 
