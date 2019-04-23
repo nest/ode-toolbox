@@ -23,14 +23,12 @@ def compute_numeric_solution(shapes):
 
     data = {
         "solver": "numeric",
-        "shape_initial_values": [],
-        "shape_ode_definitions": [],
-        "shape_state_variables": [],
+        "shape_initial_values": {},
+        "shape_ode_definitions": {}
     }
 
     for shape in shapes:
-        data["shape_initial_values"].extend([str(x) for x in shape.initial_values])
-        data["shape_ode_definitions"].append(str(shape.ode_definition))
-        data["shape_state_variables"].extend([str(x) for x in shape.state_variables])
+        data["shape_initial_values"][str(shape.symbol)] = {var_name : str(expr) for var_name, expr in shape.initial_values.items()}
+        data["shape_ode_definitions"][str(shape.symbol)] = str(shape.ode_definition)
 
     return data

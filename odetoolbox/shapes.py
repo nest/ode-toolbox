@@ -317,7 +317,7 @@ class Shape(object):
         order = len(initial_values)
         
         def _initial_values_sanity_checks():
-
+            assert type(initial_values) is dict, "Initial values should be specified as a dictionary"
             _order_from_definition = 1
             _re_search = re.compile(symbol + "'+").findall(definition)
             
