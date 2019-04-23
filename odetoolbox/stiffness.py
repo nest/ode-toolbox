@@ -194,14 +194,19 @@ class StiffnessTester(object):
 
 
     def _generate_spikes(self, sim_time, sim_resolution, rate):
-        """The function computes representative spike trains for the given
-        simulation length. Uses a poisson distribution to create
-        biologically realistic characteristics of the spike-trains
+        """The function computes representative spike trains for the given simulation length. Uses a Poisson distribution to create biologically realistic characteristics of the spike-trains.
 
-        :param sim_time: The time of the simulation in ms
-        :param sim_resolution: The length of the particular grid
-        :return: A list with bins which contain the number of spikes which happened in the corresponding bin.
+        Parameters
+        ----------
+        sim_time : float
+            The time of the simulation in ms
+        sim_resolution : float
+            The length of the particular grid
 
+        Returns
+        -------
+        spike_density : dict(str -> list)
+            For each ODE symbol key: a list with bins which contain the number of spikes which happened in the corresponding bin.
         """
 
         sim_time_in_sec = sim_time * 0.001
@@ -217,12 +222,17 @@ class StiffnessTester(object):
         spikes = numpy.sort(times)
 
         time_slots = int(math.ceil(sim_time_in_sec / sim_resolution_in_sec))
-        spikes_per_slot = [0] * time_slots
-        for slot in range(0, time_slots):
-            t = list(filter(lambda x: slot * sim_resolution_in_sec <= x < (slot + 1) * sim_resolution_in_sec, spikes))
-            spikes_per_slot[slot] = len(t)
 
-        return [spikes_per_slot] * len(self.ode_definitions)
+        spike_density = {}
+        for ode_sym in self.ode_definitions.keys():
+            spikes_per_slot = [0] * time_slots
+            for slot in range(0, time_slots):
+                t = list(filter(lambda x: slot * sim_resolution_in_sec <= x < (slot + 1) * sim_resolution_in_sec, spikes))
+                spikes_per_slot[slot] = len(t)
+
+            spike_density[ode_sym] = spikes_per_slot
+
+        return spike_density
 
 
     def evaluate_integrator_imp(self, sim_resolution, accuracy, spike_rate, sim_time, raise_errors=True):
@@ -313,14 +323,15 @@ class StiffnessTester(object):
             if threshold_crossed:  # break outer loop
                 break
 
-            for idx, initial_value in enumerate(self.initial_values):
+            # apply the spikes, i.e. add the "initial values" to the system dynamical state vector
+            for ode_sym, iv_expr in self.initial_values.items():
+                # find the index in the system of ODEs belonging to this particular variable (e.g. 4 for iv_k == "y__4")
                 matcher = re.compile(r".*(\d)+$")
-                oder_order_number = int(matcher.match(initial_value).groups(0)[0])
+                ode_idx = int(matcher.match(str(ode_sym)).groups(0)[0])
 
-                # TODO: Why is there no convolution here? Is it correct
-                # and meaningful to just sum up the number of spikes?
+                # N.B. spikes are aliased to the time grid, so two or more spikes might arrive in the same time slice. This is handled by adding the initial value times this "spike multiplicity"
                 _globals = self.math_module_funcs.copy()
-                y[oder_order_number] += eval(self.initial_values[initial_value], _globals, self.parameters) * spikes[idx][time_slice]
+                y[ode_idx] += eval(str(iv_expr), _globals, self.parameters) * spikes[ode_sym][time_slice]
 
         step_average = (t - sum_last_steps) / step_counter
         return s_min_old, step_average, runtime
