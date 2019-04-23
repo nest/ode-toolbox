@@ -26,6 +26,7 @@ import os
 import unittest
 import sympy
 import numpy as np
+np.seterr(under="warn")
 if INTEGRATION_TEST_DEBUG_PLOTS:
     import matplotlib as mpl
     mpl.use('Agg')
@@ -38,6 +39,8 @@ from math import e
 from sympy import exp, sympify
 
 import scipy
+import scipy.special
+scipy.special.seterr(underflow="warn")
 import scipy.linalg
 from scipy.integrate import solve_ivp
 
@@ -50,7 +53,7 @@ def open_json(fname):
     return indict
 
 
-class TestSolutionComputation(unittest.TestCase):
+class TestIntegration(unittest.TestCase):
     '''Numerical comparison between ode-toolbox calculated propagators, hand-calculated propagators expressed in Python, and numerical integration, for the iaf_cond_alpha neuron.
 
     Definition of alpha function:
@@ -109,7 +112,7 @@ class TestSolutionComputation(unittest.TestCase):
 
     '''
 
-    def test_iaf_psc_alpha(self):
+    def test_integration_iaf_psc_alpha(self):
         
         debug = True
 
