@@ -85,7 +85,7 @@ def analysis(indict, enable_stiffness_check=True):
     from odetoolbox.shapes import Shape
 
     print("Validating input...")
-    for key in ["odes", "parameters", "shapes"]:
+    for key in ["odes", "shapes"]:
         if key not in indict:
             raise MalformedInput("The key '%s' is not contained in the input." % key)
 
