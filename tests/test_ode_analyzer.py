@@ -104,9 +104,9 @@ class TestSolutionComputation(unittest.TestCase):
         self.assertEqual("numeric", solver[0])
         if odetoolbox.HAVE_STIFFNESS:
             self.assertEqual("explicit", solver[1])
-        self.assertTrue(len(result["shape_initial_values"]) == 4)
         self.assertTrue(len(result["shape_ode_definitions"]) == 2)
-        self.assertTrue(len(result["shape_state_variables"]) == 4)
+        self.assertTrue(len(result["shape_initial_values"]) == 2)
+        self.assertTrue(list(map(lambda i: len(i), result["shape_initial_values"].values())) == [2, 2])
 
 
     def test_iaf_cond_alpha_mixed(self):
@@ -117,17 +117,17 @@ class TestSolutionComputation(unittest.TestCase):
         self.assertEqual("numeric", solver[0])
         if odetoolbox.HAVE_STIFFNESS:
             self.assertEqual("explicit", solver[1])
-        self.assertTrue(len(result["shape_initial_values"]) == 4)
         self.assertTrue(len(result["shape_ode_definitions"]) == 2)
-        self.assertTrue(len(result["shape_state_variables"]) == 4)
+        self.assertTrue(len(result["shape_initial_values"]) == 2)
+        self.assertTrue(list(map(lambda i: len(i), result["shape_initial_values"].values())) == [2, 2])
 
     def test_shapes_only(self):
         indict = open_json("shapes_only.json")
         result = odetoolbox.analysis(indict)
 
-        self.assertTrue(len(result["shape_initial_values"]) == 4)
         self.assertTrue(len(result["shape_ode_definitions"]) == 2)
-        self.assertTrue(len(result["shape_state_variables"]) == 4)
+        self.assertTrue(len(result["shape_initial_values"]) == 2)
+        self.assertTrue(list(map(lambda i: len(i), result["shape_initial_values"].values())) == [2, 2])
 
 if __name__ == '__main__':
     unittest.main()
