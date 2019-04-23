@@ -92,16 +92,12 @@ def analysis(indict, enable_stiffness_check=True):
     print("Analyzing shapes...")
     shapes = []
     for shape in indict["shapes"]:
-        try:
-            print("  " + shape["symbol"], end="")
-            if shape["type"] == "ode":
-                shapes.append(Shape.from_ode(**shape))
-            else:
-                shapes.append(Shape.from_function(**shape))
-            print(" is a linear homogeneous ODE")
-        except Exception as e:
-            print()
-            raise ShapeNotLinHom("The shape does not obey a linear homogeneous ODE.")
+        print("  " + shape["symbol"], end="")
+        if shape["type"] == "ode":
+            shapes.append(Shape.from_ode(**shape))
+        else:
+            shapes.append(Shape.from_function(**shape))
+        print(" is a linear homogeneous ODE")
 
     if len(indict["odes"]) == 0:
         print("Only shapes provided. Return ODE representation with IV.")

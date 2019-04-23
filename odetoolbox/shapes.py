@@ -25,6 +25,7 @@ post-synaptic shapes.
 
 """
 
+import re
 import sympy
 from sympy.parsing.sympy_parser import parse_expr
 from sympy import det, diff, Symbol, sympify, simplify
@@ -59,12 +60,13 @@ class Shape(object):
 
     Attributes
     ----------
+
     symbol : SymPy expression
         Symbolic name of the shape without additional qualifiers like prime symbols or similar.
     order : int
         Order of the ODE representing the shape.
     initial_values : dict of SymPy expressions
-        Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings correspond to the variable symbol values have to be in ascending order, i.e. iv_d0, iv_d1, ... for the derivatives d0, d1, ...
+        Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
     derivative_factors : list of SymPy expressions
         The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
     """
@@ -299,25 +301,62 @@ class Shape(object):
         Parameters
         ----------
         symbol : string
-            The symbol of the ODE
+            The symbol (variable name) of the ODE
         definition : string
             The definition of the ODE
         initial_values : dict
-            A dictionary mapping initial values to expressions. For example, XXX
+            A dictionary mapping initial values to expressions.
 
         Examples
         --------
-        Shape.from_ode("shape_alpha",
+        Shape.from_ode("alpha",
                        "-1/tau**2 * shape_alpha -2/tau * shape_alpha'",
-                       ["e/tau", "0"]) XXX
+                       {"alpha" : "0", "alpha'" : "e/tau", "0"]})
         """
 
         order = len(initial_values)
-        initial_values = [parse_expr(i) for i in initial_values]
-        derivatives = [Symbol(symbol+"__d"*i) for i in range(order) ]
+        
+        def _initial_values_sanity_checks():
+
+            _order_from_definition = 1
+            _re_search = re.compile(symbol + "'+").findall(definition)
+            
+            for match in _re_search:
+                __re_search = re.compile("'+").search(match)
+                _order = 0
+                if not __re_search is None:
+                    _order = len(__re_search.group())
+                _order_from_definition = max(_order + 1, _order_from_definition)
+            
+            assert _order_from_definition == order, "Wrong number of initial values specified, expected " + str(_order_from_definition) + ", got " + str(order)
+
+            initial_val_specified = [False] * order
+            for k, v in initial_values.items():
+                if not k[0:len(symbol)] == symbol:
+                    raise Exception("Initial value specified for unknown variable symbol \"" + k + "\"")
+                _order = 0
+                _re_search = re.compile("'+").search(k)
+                if not _re_search is None:
+                    _order = len(_re_search.group())
+                    if _order >= order:
+                        raise Exception("In defintion of initial value for variable \"" + k + "\": differential order (" + str(_order) + ") exceeds that of overall equation order (" + str(order) + ")")
+                    initial_val_specified[_order] = True
+                else:
+                    # _order == 0
+                    if initial_val_specified[_order]:
+                        raise Exception("Initial value for zero-th order specified more than once")
+                    initial_val_specified[_order] = True
+
+            if not all(initial_val_specified):
+                raise Exception("Initial value not specified for all differential orders")
+        
+        _initial_values_sanity_checks()
+
+        initial_values = {k : parse_expr(v) for k, v in initial_values.items()}
+        derivatives = [ Symbol(symbol+"__d"*i) for i in range(order) ]
         definition = parse_expr(definition.replace("'", "__d"))
         symbol = parse_expr(symbol)
-
+        
         derivative_factors = []
         for derivative in derivatives:
             derivative_factors.append(diff(definition, derivative))

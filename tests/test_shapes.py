@@ -37,10 +37,39 @@ class TestShapeFunction(unittest.TestCase):
 class TestShapeODE(unittest.TestCase):
 
     def test_ode_shape(self):
-
-        shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", ["0", "e/tau"])
+        shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha" : "0", "alpha'" : "e/tau"})
         self.assertIsNotNone(shape_inh.derivative_factors)
 
-        
+
+    def test_ode_shape_fails_too_high_order_deriv(self):
+        failed = False
+        try:
+            shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha" : "0", "alpha''" : "e/tau"})
+        except:
+            failed = True
+
+        self.assertTrue(failed)
+
+
+    def test_ode_shape_fails_missing_deriv(self):
+        failed = False
+        try:
+            shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha'" : "e/tau"})
+        except:
+            failed = True
+
+        self.assertTrue(failed)
+
+
+    def test_ode_shape_fails_unknown_symbol(self):
+        failed = False
+        try:
+            shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"xyz" : "0", "alpha" : "e/tau"})
+        except:
+            failed = True
+
+        self.assertTrue(failed)
+
+
 if __name__ == '__main__':
     unittest.main()
