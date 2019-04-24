@@ -26,7 +26,7 @@ import os
 import unittest
 import sympy
 import numpy as np
-np.seterr(under="warn")
+#np.seterr(under="warn")
 if INTEGRATION_TEST_DEBUG_PLOTS:
     import matplotlib as mpl
     mpl.use('Agg')
@@ -40,10 +40,14 @@ from sympy import exp, sympify
 
 import scipy
 import scipy.special
-scipy.special.seterr(underflow="warn")
 import scipy.linalg
 from scipy.integrate import solve_ivp
 
+try:
+    import pygsl.odeiv as odeiv
+except ImportError as ie:
+    print("Warning: PyGSL is not available. The integration test will be skipped.")
+    print("Warning: " + str(ie))
 
 
 def open_json(fname):
@@ -208,7 +212,20 @@ class TestIntegration(unittest.TestCase):
 
         Tau, Tau_syn_in, Tau_syn_ex, C_m,  I_e, currents = sympy.symbols("Tau Tau_syn_in Tau_syn_ex C_m  I_e currents")
 
-
+        symbs = {"sympy" : sympy,
+                 "Tau" : Tau,
+                 "Tau_syn_in" : Tau_syn_in,
+                 "Tau_syn_ex" : Tau_syn_ex,
+                 "C_m" : C_m,
+                 "I_e" : I_e,
+                 "currents" : currents,
+                 "c_m" : c_m,
+                 "tau" : tau,
+                 "tau_syn" : tau_syn,
+                 "exp" : exp,
+                 "e" : e,
+                 "h" : h}
+        
         ### define the necessary sympy variables (for shapes)
 
         for shape_name in shape_names:
@@ -220,7 +237,7 @@ class TestIntegration(unittest.TestCase):
                 shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
                 shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
                 print("\t * Defining var: " + str(shape_variable) + " as sympy.symbols(\"" + shape_variable_code_name + "\")")
-                exec(shape_variable_code_name + " = sympy.symbols(\"" + shape_variable_code_name + "\")", globals())
+                exec(shape_variable_code_name + " = sympy.symbols(\"" + shape_variable_code_name + "\")", symbs)
 
 
         ### define the necessary sympy variables (for ODE)
@@ -236,7 +253,7 @@ class TestIntegration(unittest.TestCase):
             ode_initial_values[ode_variable_name] = ODE_INITIAL_VALUES[ode_variable_name]
             ode_update_expressions[ode_variable_name] = " + ".join(["(" + v + ")" for k, v in result["ode_updates"][ode_variable_name].items()])
             print("   Update expression: " + str(ode_update_expressions[ode_variable_name]))
-            exec(ode_variable_name + " = sympy.symbols(\"" + ode_variable_name + "\")", globals())
+            exec(ode_variable_name + " = sympy.symbols(\"" + ode_variable_name + "\")", symbs)
 
 
         ### define the necessary shape state variables
@@ -262,7 +279,7 @@ class TestIntegration(unittest.TestCase):
                 print("\t\t* Variable " + str(shape_variable_code_name))
                 print("\t\t  Update expression: " + shape_variable_update_expr)
                 print("\t\t  Initial value = " + str(shape_variable_initial_value))
-                expr = sympify(eval(shape_variable_initial_value.replace("__h", "h")))
+                expr = sympify(eval(shape_variable_initial_value.replace("__h", "h")), globals().update(symbs))
                 expr = expr.subs(Tau, tau)
                 expr = expr.subs(C_m, c_m)
                 expr = expr.subs(Tau_syn_in, tau_syn)
@@ -278,7 +295,7 @@ class TestIntegration(unittest.TestCase):
         for k, v in result["propagator"].items():
             if debug:
                 print(" * Adding propagator: " + k + " = " + str(v.replace("__h", "h")))
-            exec(k + " = " + v.replace("__h", "h"))
+            exec(k + " = " + v.replace("__h", "h"), symbs)
 
         for step in range(1, N):
 
@@ -313,7 +330,7 @@ class TestIntegration(unittest.TestCase):
                         print("\t* update expression = " + shape_variable_update_expr)
 
                     # replace symbolic variables with their values at the last step
-                    expr = eval(shape_variable_update_expr)
+                    expr = eval(shape_variable_update_expr, globals().update(symbs))
                     for _shape_name, _shape in shape_state.items():
                         for _var_name, _var_val in _shape.items():
                             _var_name_code_name = _var_name.replace("'", "__d")
@@ -334,7 +351,7 @@ class TestIntegration(unittest.TestCase):
                 ode_update_expression = ode_update_expressions[ode_variable_name]
                 print("\t  expr = " + str(ode_update_expression))
                 
-                expr = sympify(eval(ode_update_expression.replace("__h", "h")))
+                expr = sympify(eval(ode_update_expression.replace("__h", "h")     , globals().update(symbs))    )
                 
                 expr = expr.subs(Tau, tau)
                 expr = expr.subs(C_m, c_m)
