@@ -31,6 +31,7 @@ import numpy.random
 # problem with the ODE, the grid resolution or the stiffness testing
 # framework itself.
 numpy.seterr(all='raise')
+numpy.seterr(under='warn')
 
 import re
 import time
