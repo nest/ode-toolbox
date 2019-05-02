@@ -24,42 +24,14 @@ from __future__ import print_function
 from sympy import diff, simplify
 from sympy.parsing.sympy_parser import parse_expr
 
-from . import analytic
-from . import numeric
-from . import shapes
+from .shapes import Shape
+from .analytic import Propagator
 
 try:
     from . import stiffness
     HAVE_STIFFNESS = True
 except:
     HAVE_STIFFNESS = False
-
-
-def ode_is_lin_const_coeff(ode_symbol, ode_definition, shapes):
-    """
-    :param ode_symbol string encoding the LHS
-    :param ode_definition string encoding RHS
-    :param shapes A list with `Shape`-obejects
-    :return true iff the ode definition is a linear and constant coefficient ODE
-    """
-
-    ode_symbol_sp = parse_expr(ode_symbol)
-    ode_definition_sp = parse_expr(ode_definition)
-
-    # Check linearity
-    ddvar = diff(diff(ode_definition_sp, ode_symbol_sp), ode_symbol_sp)
-
-    if simplify(ddvar) != 0:
-        return False
-
-    # Check coefficients
-    dvar = diff(ode_definition_sp, ode_symbol_sp)
-
-    for shape in shapes:
-        for symbol in dvar.free_symbols:
-            if str(shape.symbol) == str(symbol):
-                return False
-    return True
 
 
 class MalformedInput(Exception): pass
@@ -77,50 +49,92 @@ def analysis(indict, enable_stiffness_check=True):
     `README.md`.
 
     :return: The result of the analysis, again as a dictionary.
-
     """
 
-    from odetoolbox.analytic import compute_analytical_solution
-    from odetoolbox.numeric import compute_numeric_solution
+    #from odetoolbox.analytic import compute_analytical_solution
+    #from odetoolbox.numeric import compute_numeric_solution
     from odetoolbox.shapes import Shape
 
-    print("Validating input...")
-    for key in ["odes", "shapes"]:
-        if key not in indict:
-            raise MalformedInput("The key '%s' is not contained in the input." % key)
-
-    print("Analyzing shapes...")
     shapes = []
+
+    print("Reading shapes...")
+    if "shapes" not in indict:
+        raise MalformedInput("The key 'shapes' is not contained in the input.")
     for shape in indict["shapes"]:
-        print("  " + shape["symbol"], end="")
+        print("\tShape: " + shape["symbol"])
         if shape["type"] == "ode":
+            if not "initial_values" in shape.keys():
+                raise Exception("Initial values not specified for ODE shape '" + shape["symbol"] + "'")
             shapes.append(Shape.from_ode(**shape))
-        else:
+        elif shape["type"] == "function":
             shapes.append(Shape.from_function(**shape))
-        print(" is a linear homogeneous ODE")
+        else:
+            raise Exception("Unknown shape type '" + str(shape["type"]) + ", should be either 'ode' or 'function'")
 
-    if len(indict["odes"]) == 0:
-        print("Only shapes provided. Return ODE representation with IV.")
-        return compute_numeric_solution(shapes)
+    print("Performing dependency analysis...")
+    from graphviz import Digraph
+    E = []
+    for shape1 in shapes:
+        for shape2 in shapes:
 
-    print("Analyzing ODEs...")
-    for ode in indict["odes"]:
-        print("  " + ode["symbol"], end="")
-        lin_const_coeff = ode_is_lin_const_coeff(ode["symbol"], ode["definition"], shapes)
-        ode["is_linear_constant_coefficient"] = lin_const_coeff
-        prefix = " is a " if lin_const_coeff else " is not a "
-        print(prefix + "linear constant coefficient ODE.")
+            # check if symb1 occurs in the expression for symb2
+            shape2_depends_on_shape1 = shape2.diff_rhs_derivatives.has(shape1.symbol)
+
+            if not shape2_depends_on_shape1:
+                for derivative_factor in shape2.derivative_factors:
+                    if derivative_factor.has(shape1.symbol):
+                        # shape 2 depends on shape 1
+                        shape2_depends_on_shape1 = True
+                        break
+
+            if shape2_depends_on_shape1:
+                E.append((str(shape2.symbol), str(shape1.symbol)))
+
+    dot = Digraph(comment="Dependency graph", engine="fdp")#, format="pdf")
+    dot.attr(compound="true")
+    nodes = []
+    for shape in shapes:
+        if shape.is_lin_const_coeff():
+            style = "filled"
+            colour = "chartreuse"
+        else:
+            style = "rounded"
+            colour = "black"
+        if shape.order > 1:
+            with dot.subgraph(name="cluster_" + str(shape.symbol)) as sg:
+                nodes.append("cluster_" + str(shape.symbol))
+                sg.attr(label=str(shape.symbol))
+                for i in range(shape.order):
+                    sg.node(str(shape.symbol) + i * "'", style=style, color=colour)#, str(shape.symbol) + str(i))
+                    print("Creating sg node for " + str(shape.symbol) + i * "'" + ", colour = " + str(colour))
+        else:
+            dot.node(str(shape.symbol), style=style, color=colour)
+            nodes.append(str(shape.symbol))
+            print("Creating order 1 node for " + str(shape.symbol) + ", colour = " + str(colour))
+
+    for e in E:
+        prefer_connections_to_clusters = False
+        if prefer_connections_to_clusters:
+            e = list(e)
+            for i in range(2):
+                if "cluster_" +e[i] in nodes:
+                    e[i] = "cluster_" + e[i]
+
+        print("Edge from " + str(e[0]) + " to " + str(e[1]))
+        dot.edge(str(e[0]), str(e[1]))
+    #dot.view()
+    dot.render("/tmp/remotefs/ode_dependency_graph.dot")
+
 
     print("Generating solvers...")
-
-    for ode in indict["odes"]:
-        print("  " + ode["symbol"], end="")
-        if ode["is_linear_constant_coefficient"]:
+    for shape in shapes:
+        print("  " + shape.symbol, end="")
+        if shape.is_lin_const_coeff():
             print(": analytical")
             if "timestep_symbol_name" in indict.keys():
-                output = compute_analytical_solution(ode["symbol"], ode["definition"], shapes, timestep_symbol_name=indict["timestep_symbol_name"])
+                output = Propagator.from_shape(shape, shapes, timestep_symbol_name=indict["timestep_symbol_name"])
             else:
-                output = compute_analytical_solution(ode["symbol"], ode["definition"], shapes)
+                output = Propagator.from_shape(shape, shapes)
         else:
             print(": numerical ", end="")
             output = compute_numeric_solution(shapes)

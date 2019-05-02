@@ -105,13 +105,13 @@ class Propagator(object):
             if shape.order == 1:
                 A = Matrix([[shape.derivative_factors[0], 0],
                             [shape_factor, ode_symbol_factor]])
-            elif shape.order == 2:
+                '''elif shape.order == 2:
                 solutionpq = -shape.derivative_factors[1] / 2 + \
                              sqrt(shape.derivative_factors[1]**2 / 4 + \
                                   shape.derivative_factors[0])
                 A = Matrix([[shape.derivative_factors[1]+solutionpq, 0, 0 ],
                             [1, -solutionpq, 0 ],
-                            [0, shape_factor, ode_symbol_factor]])
+                            [0, shape_factor, ode_symbol_factor]])'''
             else:
                 A = zeros(shape.order + 1)
                 A[shape.order, shape.order] = ode_symbol_factor
@@ -155,12 +155,12 @@ class Propagator(object):
                         symbol_p_i_j = "__P_{}__{}_{}".format(shape.symbol, i, j)
                         P[i, j] = parse_expr(symbol_p_i_j)
                         self.propagator[symbol_p_i_j] = str(p[i, j])
-    
+
             y = zeros(shape.order + 1, 1)
             for i in range(shape.order):
                 y[i] = shape.state_variables[i]
             y[shape.order] = self.ode_symbol
-    
+
             P[shape.order, shape.order] = 0
             
             print("Shape " + str(shape.symbol))
@@ -181,20 +181,26 @@ class Propagator(object):
                     shape.state_updates[str(variable_symbol).replace("__d", "'")] = str(_state_updates_matrix[i])
 
 
-def compute_analytical_solution(ode_symbol, ode_definition, shapes, timestep_symbol_name="__h"):
+    @classmethod
+    def from_shape(cls, shape, shapes, timestep_symbol_name="__h"):
+        """Compute the analytical solution of `shape` in the context of all defined shapes `shapes` which it might dependend on"""
+        
+        propagator = Propagator(shape.symbol, shape.derivative_factors, shapes, timestep_symbol_name=timestep_symbol_name)
 
-    propagator = Propagator(ode_symbol, ode_definition, shapes, timestep_symbol_name=timestep_symbol_name)
 
-    data = {
-        "solver": "analytical",
-        "ode_updates": propagator.ode_updates,
-        "propagator": propagator.propagator,
-        "shape_initial_values": {},
-        "shape_state_updates": {},
-    }
+    def to_dict(self):
+        """Return a dictionary representation suitable for writing to a JSON file"""
+        
+        d = {
+            "solver": "analytical",
+            "ode_updates": propagator.ode_updates,
+            "propagator": propagator.propagator,
+            "shape_initial_values": {},
+            "shape_state_updates": {},
+        }
 
-    for shape in shapes:
-        data["shape_initial_values"][str(shape.symbol)] = {var_name : str(expr) for var_name, expr in shape.initial_values.items()}
-        data["shape_state_updates"][str(shape.symbol)] = {var_name : str(expr) for var_name, expr in shape.state_updates.items()}
+        for shape in shapes:
+            d["shape_initial_values"][str(shape.symbol)] = {var_name : str(expr) for var_name, expr in shape.initial_values.items()}
+            d["shape_state_updates"][str(shape.symbol)] = {var_name : str(expr) for var_name, expr in shape.state_updates.items()}
 
-    return data
+        return d

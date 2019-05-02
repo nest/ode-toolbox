@@ -71,7 +71,7 @@ class Shape(object):
         The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
     """
 
-    def __init__(self, symbol, order, initial_values, derivative_factors):
+    def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.parsing.sympy_parser.parse_expr("0")):
         """Perform type and consistency checks and assign arguments to member variables."""
         assert type(symbol) is Symbol, "symbol is not a SymPy symbol: '%r'" % symbol
         self.symbol = symbol
@@ -102,6 +102,22 @@ class Shape(object):
         for k in range(1, order):
             rhs.append("{} * {}{}".format(simplify(derivative_factors[k]), symbol, "__d" * i))
         self.ode_definition = " + ".join(rhs)
+        if not diff_rhs_derivatives == sympy.parsing.sympy_parser.parse_expr("0"):
+            self.ode_definition = " + " + str(diff_rhs_derivatives)
+        
+        #
+        self.diff_rhs_derivatives = diff_rhs_derivatives
+
+    def is_lin_const_coeff(self):
+        """
+        :param ode_symbol string encoding the LHS
+        :param ode_definition string encoding RHS
+        :param shapes A list with `Shape`-obejects
+        :return true iff the ode definition is a linear and constant coefficient ODE
+        """
+        import pdb;pdb.set_trace()
+        return self.diff_rhs_derivatives == sympy.parsing.sympy_parser.parse_expr("0")
+
 
     @classmethod
     def from_function(cls, symbol, definition, **kwargs):
@@ -271,7 +287,7 @@ class Shape(object):
                 if simplify(diff_rhs_lhs) == sympify(0):
                     found_ode = True
                     break
-        
+
         if not found_ode:
             msg = "Shape does not satisfy any ODE of order <= " % max_order
             raise Exception(msg)
@@ -315,7 +331,7 @@ class Shape(object):
         """
 
         order = len(initial_values)
-        
+
         def _initial_values_sanity_checks():
             assert type(initial_values) is dict, "Initial values should be specified as a dictionary"
             _order_from_definition = 1
@@ -333,7 +349,7 @@ class Shape(object):
             initial_val_specified = [False] * order
             for k, v in initial_values.items():
                 if not k[0:len(symbol)] == symbol:
-                    raise Exception("Initial value specified for unknown variable symbol \"" + k + "\"")
+                    raise Exception("In definition for " + str(symbol) + ": Initial value specified for unknown variable symbol \"" + k + "\"")
                 _order = 0
                 _re_search = re.compile("'+").search(k)
                 if not _re_search is None:
@@ -366,7 +382,9 @@ class Shape(object):
         for derivative_factor, derivative in zip(derivative_factors, derivatives):
             diff_rhs_derivatives -= derivative_factor * derivative
 
-        if simplify(diff_rhs_derivatives) != sympify(0):
-            raise Exception("Shape is not a linear homogeneous ODE")
+        return cls(symbol, order, initial_values, derivative_factors, diff_rhs_derivatives)
 
-        return cls(symbol, order, initial_values, derivative_factors)
+    def is_homogeneous_ode(self):
+        return simplify(self.diff_rhs_derivatives) == sympify(0)
+
+

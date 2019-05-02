@@ -83,9 +83,14 @@ class TestIntegration(unittest.TestCase):
 
         P = exp[h * S]
 
+          = [ (h/tau_syn + 1) * np.exp(-h/tau_syn)      h*np.exp(-h/tau_syn)                ]
+            [ -h*np.exp(-h/tau_syn)/tau_syn**2          (-h/tau_syn + 1)*np.exp(-h/tau_syn) ]
+
     Then
 
         z(t + h) = P * z(t)
+
+
 
 
     Test JSON:
