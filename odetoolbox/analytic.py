@@ -183,66 +183,7 @@ class Propagator(object):
                     shape.state_updates[str(variable_symbol).replace("__d", "'")] = str(_state_updates_matrix[i])
 
 
-    @classmethod
-    def from_shapes(cls, shapes, output_timestep_symbol_name="__h"):
-        """Construct the global system matrix including all shapes.
-        
-        XXX: TODO: generate propagators only for equations that are linear constant-coefficient.
-        
-        Global dynanamics
-        
-        .. math::
-        
-            x' = Ax + C
 
-        where :math:`x` and :math:`C` are column vectors of length :math:`N` and :math:`A` is an :math:`N \times N` matrix.        
-        """
-        
-        N = np.sum([shape.order for shape in shapes]).__index__()
-        x = sympy.zeros(N, 1)
-        A = sympy.zeros(N, N)
-        C = sympy.zeros(N, 1)
-
-        i = 0
-        for shape in shapes:
-            for j in range(shape.order):
-                x[i] = shape.state_variables[j]
-                i += 1
-        
-        i = 0
-        for shape in shapes:
-            print("Shape: " + str(shape.symbol))
-            shape_expr = shape.diff_rhs_derivatives
-            derivative_symbols = [ Symbol(str(shape.symbol) + "__d" * order) for order in range(shape.order) ]
-            for derivative_factor, derivative_symbol in zip(shape.derivative_factors, derivative_symbols):
-                shape_expr += derivative_factor * derivative_symbol
-            print("\t expr =  " + str(shape_expr))
-
-            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
-            for j in range(N):
-                A[highest_diff_sym_idx, j] = diff(shape_expr, x[j])
-            
-            # for higher-order shapes: mark subsequent derivatives x_i' = x_(i+1)
-            for order in range(shape.order - 1):
-                #import pdb;pdb.set_trace()
-                _idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (order + 1))][0]
-                print("\t\tThe symbol " + str(Symbol(str(shape.symbol) + "__d" * (order ))) + " is at position " + str(_idx) + " in vector " + str(x) + ", writing in row " + str(_idx))
-                A[i + (shape.order - order - 1), _idx] = 1.     # the highest derivative is at row `i`, the next highest is below, and so on, until you reach the variable symbol without any "__d" suffixes
-                #for k in range(shape.order):
-                    #if x[j] == derivative_symbols[k]:
-                        #print("\tx[" + str(j) + "] = " + str(x[j]) + " matches " + str(derivative_symbols[k]))
-                        #A[i, j] = shape.derivative_factors[k]
-            i += shape.order
- 
-        print("Matrices:")
-        print("x = " + str(x))
-        print("C = " + str(C))
-        print("A = " + str(A))
-        from IPython import embed;embed()
-
-        propagator = Propagator(shape.symbol, shape.derivative_factors, shapes, output_timestep_symbol_name=output_timestep_symbol_name)
-
-        return propagator
 
     def to_dict(self):
         """Return a dictionary representation suitable for writing to a JSON file"""
