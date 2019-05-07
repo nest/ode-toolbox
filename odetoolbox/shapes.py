@@ -46,13 +46,15 @@ class Shape(object):
 
     .. math::
 
-        x^{(n)} = \sum_{i=0}^{n-1} f_i x^{(i)}
+        x^{(n)} = N + \sum_{i=0}^{n-1} c_i x^{(i)}
+
+    Any constant or nonlinear part is here contained in the term N.
 
     In the input and output, derivatives are indicated by adding one prime (single quotation mark) for each derivative order. For example, in the expression
 
     .. code::
 
-        I''' = f0 I + f1 I' + f2 I''
+        I''' = c0 I + c1 I' + c2 I'' + N
 
     the `symbol` of the ODE would be `I` (i.e. without any qualifiers), `order` would be 3, and `derivative_factors` would be {"I" : "f0", "I'" : "f1", "I''" : f2 }
 
@@ -73,20 +75,20 @@ class Shape(object):
 
     def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.parsing.sympy_parser.parse_expr("0")):
         """Perform type and consistency checks and assign arguments to member variables."""
-        assert type(symbol) is Symbol, "symbol is not a SymPy symbol: '%r'" % symbol
+        assert type(symbol) is Symbol, "symbol is not a SymPy symbol: \"%r\"" % symbol
         self.symbol = symbol
 
-        assert type(order) is int, "order is not an integer: '%d'" % order
+        assert type(order) is int, "order is not an integer: \"%d\"" % order
         self.order = order
 
         assert len(initial_values) == order, "length of initial_values != order"
         for iv_name, iv in initial_values.items():
-            assert is_sympy_type(iv), "initial value for %s is not a SymPy expression: '%r'" % (iv_name, iv)
+            assert is_sympy_type(iv), "initial value for %s is not a SymPy expression: \"%r\"" % (iv_name, iv)
         self.initial_values = initial_values
 
         assert len(derivative_factors) == order, "length of derivative_factors != order"
         for df in derivative_factors:
-            assert is_sympy_type(df), "derivative factor is not a SymPy expression: '%r'" % iv
+            assert is_sympy_type(df), "derivative factor is not a SymPy expression: \"%r\"" % iv
         self.derivative_factors = derivative_factors
 
         # Compute the state variables for ODE the shape satisfies
@@ -97,30 +99,83 @@ class Shape(object):
             else:
                 self.state_variables.insert(0, symbol)
 
-        # Compute the definition of the ODE the shape satisfies
-        rhs = ["{} * {}".format(simplify(derivative_factors[0]), symbol)]
-        for k in range(1, order):
-            rhs.append("{} * {}{}".format(simplify(derivative_factors[k]), symbol, "__d" * i))
-        self.ode_definition = " + ".join(rhs)
-        if not diff_rhs_derivatives == sympy.parsing.sympy_parser.parse_expr("0"):
-            self.ode_definition = " + " + str(diff_rhs_derivatives)
-        
-        #
+        ## Compute the definition of the ODE the shape satisfies
+        #rhs = ["{} * {}".format(simplify(derivative_factors[0]), symbol)]
+        #for k in range(1, order):
+            #rhs.append("{} * {}{}".format(simplify(derivative_factors[k]), symbol, "__d" * i))
+        #self.ode_definition = " + ".join(rhs)
+        #if not diff_rhs_derivatives == sympy.parsing.sympy_parser.parse_expr("0"):
+            #self.ode_definition = " + " + str(diff_rhs_derivatives)
+
         self.diff_rhs_derivatives = diff_rhs_derivatives
 
     def is_lin_const_coeff(self):
         """
-        :param ode_symbol string encoding the LHS
-        :param ode_definition string encoding RHS
-        :param shapes A list with `Shape`-obejects
         :return true iff the ode definition is a linear and constant coefficient ODE
         """
-        import pdb;pdb.set_trace()
         return self.diff_rhs_derivatives == sympy.parsing.sympy_parser.parse_expr("0")
 
 
     @classmethod
-    def from_function(cls, symbol, definition, **kwargs):
+    def from_json(cls, indict):
+        """Create a shape object from a JSON input dictionary
+        """
+
+        if not "expression" in indict:
+            raise Exception("No `expression` keyword found in input")
+
+        lhs_match = re.search(".*=", indict["expression"])
+        if lhs_match is None:
+            raise Exception("Error while parsing expression \"" + indict["expression"] + "\"")
+        lhs = lhs_match.group()[:-1]
+
+        rhs_match = re.search("=.*", indict["expression"])
+        if rhs_match is None:
+            raise Exception("Error while parsing expression \"" + indict["expression"] + "\"")
+        rhs = rhs_match.group()[1:]
+
+        symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", lhs)
+        if symbol_match is None:
+            raise Exception("Error while parsing symbol name in \"" + lhs + "\"")
+        symbol = symbol_match.group()
+        order = len(re.findall("'", lhs))
+
+        initial_values = {}
+        if not "initial_value" in indict.keys() \
+         and not "initial_values" in indict.keys() \
+         and order > 0:
+            raise Exception("No initial values specified for order " + str(order) + " equation with variable symbol \"" + symbol + "\"")
+
+        if "initial_value" in indict.keys() \
+         and "initial_values" in indict.keys():
+            raise Exception("`initial_value` and `initial_values` cannot be specified simultaneously for equation with variable symbol \"" + symbol + "\"")
+
+        if "initial_value" in indict.keys():
+            if not order == 1:
+                raise Exception("Single initial value specified for equation that is not first order in equation with variable symbol \"" + symbol + "\"")
+            initial_values[symbol] = indict["initial_value"]
+
+        if "initial_values" in indict.keys():
+            if not len(indict["initial_values"]) == order:
+                raise Exception("Wrong number of initial values specified for order " + str(order) + " equation with variable symbol \"" + symbol + "\"")
+
+            for iv_lhs, iv_rhs in indict["initial_values"].items():
+                symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", iv_lhs)
+                if symbol_match is None:
+                    raise Exception("Error trying to parse initial value variable symbol from string \"" + iv_lhs + "\"")
+                iv_symbol = symbol_match.group()
+                if not iv_symbol == symbol:
+                    raise Exception("Initial value variable symbol \"" + iv_symbol + "\" does not match equation variable symbol \"" + symbol + "\"")
+                iv_order = len(re.findall("'", iv_lhs))
+                initial_values[iv_symbol + iv_order * "'"] = iv_rhs
+
+        if order == 0:
+            return Shape.from_function(symbol, rhs)
+        else:
+            return Shape.from_ode(symbol, rhs, initial_values)
+
+    @classmethod
+    def from_function(cls, symbol, definition, max_t=100, max_order=10):
         """Create a Shape object given a function of time.
 
         The goal of the algorithm is to calculate the factors of the ODE,
@@ -166,10 +221,6 @@ class Shape(object):
         >>> Shape("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         """
 
-        # Set variables for the limits of loops
-        max_t = 100
-        max_order = 10
-
         # Create a SymPy symbols the time (`t`)
         t = Symbol("t")
 
@@ -209,28 +260,28 @@ class Shape(object):
         # obeys.  This is a list just for consistency with later
         # cases, where multiple factors are calculatedrequired
         derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(t, t_val)]
-        
+
         # `diff_rhs_lhs` is the difference between the derivative of
         # shape and the shape itself times its derivative factor.
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
-        
+
         # If `diff_rhs_lhs` equals 0, `shape` satisfies a first order
         # linear homogeneous ODE. We set the flag `found_ode`
         # correspondingly.
         found_ode = simplify(diff_rhs_lhs) == sympify(0)
-        
+
         # If `shape` does not satisfy a linear homogeneous ODE of order 1,
         # we try to find one of higher order in a loop. The loop runs
         # while no linear homogeneous ODE was found and the maximum
         # order to check for was not yet reached.
         while not found_ode and order < max_order:
-        
+
             # Set the potential order for the iteration
             order += 1
-        
+
             # Add the next higher derivative to the list
             derivatives.append(diff(derivatives[-1], t))
-        
+
             # `X` is an `order`x`order` matrix that will be assigned
             # the derivatives up to `order`-1 of some natural numbers
             # as rows (differing in each row)
@@ -275,7 +326,7 @@ class Shape(object):
                 # [C_i]. Hence [C_i] can be found by inverting X.
                 derivative_factors = X.inv() * Y
                 diff_rhs_lhs = 0
-            
+
                 # We calculated the `derivative_factors` of the linear
                 # homogeneous ODE of order `order` and only assumed
                 # that shape satisfies such an ODE. We now have to
@@ -283,7 +334,7 @@ class Shape(object):
                 for k in range(order):
                     diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
                 diff_rhs_lhs += derivatives[order]
-        
+
                 if simplify(diff_rhs_lhs) == sympify(0):
                     found_ode = True
                     break
@@ -336,14 +387,14 @@ class Shape(object):
             assert type(initial_values) is dict, "Initial values should be specified as a dictionary"
             _order_from_definition = 1
             _re_search = re.compile(symbol + "'+").findall(definition)
-            
+
             for match in _re_search:
                 __re_search = re.compile("'+").search(match)
                 _order = 0
                 if not __re_search is None:
                     _order = len(__re_search.group())
                 _order_from_definition = max(_order + 1, _order_from_definition)
-            
+
             assert _order_from_definition == order, "Wrong number of initial values specified, expected " + str(_order_from_definition) + ", got " + str(order)
 
             initial_val_specified = [False] * order
@@ -365,22 +416,22 @@ class Shape(object):
 
             if not all(initial_val_specified):
                 raise Exception("Initial value not specified for all differential orders")
-        
+
         _initial_values_sanity_checks()
 
-        initial_values = {k : parse_expr(v) for k, v in initial_values.items()}
-        derivatives = [ Symbol(symbol+"__d"*i) for i in range(order) ]
+        initial_values = { k : parse_expr(v) for k, v in initial_values.items() }
+        derivative_symbols = [ Symbol(symbol+"__d"*i) for i in range(order) ]
         definition = parse_expr(definition.replace("'", "__d"))
         symbol = parse_expr(symbol)
-        
+
         derivative_factors = []
-        for derivative in derivatives:
-            derivative_factors.append(diff(definition, derivative))
+        for derivative_symbol in derivative_symbols:
+            derivative_factors.append(diff(definition, derivative_symbol))
 
         # check if the ODE is linear
         diff_rhs_derivatives = definition
-        for derivative_factor, derivative in zip(derivative_factors, derivatives):
-            diff_rhs_derivatives -= derivative_factor * derivative
+        for derivative_factor, derivative_symbol in zip(derivative_factors, derivative_symbols):
+            diff_rhs_derivatives -= derivative_factor * derivative_symbol
 
         return cls(symbol, order, initial_values, derivative_factors, diff_rhs_derivatives)
 

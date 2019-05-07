@@ -1,23 +1,30 @@
 {
-  "shapes": [
+  "dynamics": [
     {
-      "type": "function",
-      "symbol": "I_shape_in",
-      "definition": "(e/Tau_syn_in) * t * exp(-t/Tau_syn_in)"
+      "expression": "I_shape_in = (e/Tau_syn_in) * t * exp(-t/Tau_syn_in)"
     },
     {
-      "type": "function",
-      "symbol": "I_shape_ex",
-      "definition": "(e/Tau_syn_ex) * t * exp(-t/Tau_syn_ex)"
-    }
-  ],
-
-  "odes": [
+      "expression": "I_shape_ex'' = -1 / Tau_syn_ex**2 * I_shape_ex - 2/Tau_syn_ex * I_shape_ex'",
+      "initial_values": {
+        "I_shape_ex" : "0",
+        "I_shape_ex'" : "e / Tau_syn_ex"
+      }
+    },
     {
-      "symbol": "V_abs",
-      "definition": "(-1)/Tau*V_abs+1/C_m*(I_shape_in+I_shape_ex+I_e+currents)"
+        "expression": "I_shape_gap1' = I_shape_gap2",
+        "initial_value": "0"
+    },
+    {
+        "expression": "I_shape_gap2' = -I_shape_gap1 / Tau_syn_gap**2 - 2*I_shape_gap2 / Tau_syn_gap",
+        "initial_value": "e / Tau_syn_gap"
+    },
+    {
+      "expression": "V_abs' = -1/Tau*V_abs + 1/C_m*(I_shape_in + I_shape_ex + I_shape_gap1 + I_e + currents)",
+      "initial_value": "0."
     }
   ],
-
-  "parameters": {}
+  "options":
+  {
+    "output_timestep_symbol_name": "__h"
+  }
 }

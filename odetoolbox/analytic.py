@@ -24,7 +24,10 @@ import json
 from sympy import diff, exp, Matrix, simplify, sqrt, Symbol, sympify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.matrices import zeros
-
+import sympy
+import sympy.matrices
+import numpy
+import numpy as np
 
 class Propagator(object):
     """Class to store components of an exact propagation step.
@@ -47,10 +50,9 @@ class Propagator(object):
     ode_symbol = "V_m"
     ode_definition = "-1/Tau * V_m-1/C * (shape_alpha + shape_exp + shape_sin + currents + I_E)"
     prop_matrices, const_input, step_const = otpm.ode_to_prop_matrices(ode_symbol, ode_definition, shapes)
-
     """
 
-    def __init__(self, ode_symbol, ode_definition, shapes, timestep_symbol_name="__h"):
+    def __init__(self, symbol, order, defining_expression, initial_values, timestep_symbol_name="__h"):
 
         self.ode_symbol = parse_expr(ode_symbol)
         self.ode_definition = parse_expr(ode_definition)
@@ -182,11 +184,65 @@ class Propagator(object):
 
 
     @classmethod
-    def from_shape(cls, shape, shapes, timestep_symbol_name="__h"):
-        """Compute the analytical solution of `shape` in the context of all defined shapes `shapes` which it might dependend on"""
+    def from_shapes(cls, shapes, output_timestep_symbol_name="__h"):
+        """Construct the global system matrix including all shapes.
         
-        propagator = Propagator(shape.symbol, shape.derivative_factors, shapes, timestep_symbol_name=timestep_symbol_name)
+        XXX: TODO: generate propagators only for equations that are linear constant-coefficient.
+        
+        Global dynanamics
+        
+        .. math::
+        
+            x' = Ax + C
 
+        where :math:`x` and :math:`C` are column vectors of length :math:`N` and :math:`A` is an :math:`N \times N` matrix.        
+        """
+        
+        N = np.sum([shape.order for shape in shapes]).__index__()
+        x = sympy.zeros(N, 1)
+        A = sympy.zeros(N, N)
+        C = sympy.zeros(N, 1)
+
+        i = 0
+        for shape in shapes:
+            for j in range(shape.order):
+                x[i] = shape.state_variables[j]
+                i += 1
+        
+        i = 0
+        for shape in shapes:
+            print("Shape: " + str(shape.symbol))
+            shape_expr = shape.diff_rhs_derivatives
+            derivative_symbols = [ Symbol(str(shape.symbol) + "__d" * order) for order in range(shape.order) ]
+            for derivative_factor, derivative_symbol in zip(shape.derivative_factors, derivative_symbols):
+                shape_expr += derivative_factor * derivative_symbol
+            print("\t expr =  " + str(shape_expr))
+
+            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
+            for j in range(N):
+                A[highest_diff_sym_idx, j] = diff(shape_expr, x[j])
+            
+            # for higher-order shapes: mark subsequent derivatives x_i' = x_(i+1)
+            for order in range(shape.order - 1):
+                #import pdb;pdb.set_trace()
+                _idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (order + 1))][0]
+                print("\t\tThe symbol " + str(Symbol(str(shape.symbol) + "__d" * (order ))) + " is at position " + str(_idx) + " in vector " + str(x) + ", writing in row " + str(_idx))
+                A[i + (shape.order - order - 1), _idx] = 1.     # the highest derivative is at row `i`, the next highest is below, and so on, until you reach the variable symbol without any "__d" suffixes
+                #for k in range(shape.order):
+                    #if x[j] == derivative_symbols[k]:
+                        #print("\tx[" + str(j) + "] = " + str(x[j]) + " matches " + str(derivative_symbols[k]))
+                        #A[i, j] = shape.derivative_factors[k]
+            i += shape.order
+ 
+        print("Matrices:")
+        print("x = " + str(x))
+        print("C = " + str(C))
+        print("A = " + str(A))
+        from IPython import embed;embed()
+
+        propagator = Propagator(shape.symbol, shape.derivative_factors, shapes, output_timestep_symbol_name=output_timestep_symbol_name)
+
+        return propagator
 
     def to_dict(self):
         """Return a dictionary representation suitable for writing to a JSON file"""

@@ -39,6 +39,11 @@ class MalformedInput(Exception): pass
 class ShapeNotLinHom(Exception): pass
 
 
+default_config = {
+    "input_timestep_symbol_name" : "t",
+    "output_timestep_symbol_name" : "__h"
+}
+
 def analysis(indict, enable_stiffness_check=True):
     """The main entry point of the analysis.
 
@@ -57,19 +62,16 @@ def analysis(indict, enable_stiffness_check=True):
 
     shapes = []
 
-    print("Reading shapes...")
-    if "shapes" not in indict:
-        raise MalformedInput("The key 'shapes' is not contained in the input.")
-    for shape in indict["shapes"]:
-        print("\tShape: " + shape["symbol"])
-        if shape["type"] == "ode":
-            if not "initial_values" in shape.keys():
-                raise Exception("Initial values not specified for ODE shape '" + shape["symbol"] + "'")
-            shapes.append(Shape.from_ode(**shape))
-        elif shape["type"] == "function":
-            shapes.append(Shape.from_function(**shape))
-        else:
-            raise Exception("Unknown shape type '" + str(shape["type"]) + ", should be either 'ode' or 'function'")
+    print("Processing input shapes...")
+
+    if "dynamics" not in indict:
+        print("Warning: empty input (no dynamical equations found); returning empty output")
+        outdict = {}
+        return outdict
+
+    for shape_json in indict["dynamics"]:
+        shape = Shape.from_json(shape_json)
+        shapes.append(shape)
 
     print("Performing dependency analysis...")
     from graphviz import Digraph
@@ -127,15 +129,14 @@ def analysis(indict, enable_stiffness_check=True):
 
 
     print("Generating solvers...")
-    for shape in shapes:
-        print("  " + shape.symbol, end="")
-        if shape.is_lin_const_coeff():
-            print(": analytical")
-            if "timestep_symbol_name" in indict.keys():
-                output = Propagator.from_shape(shape, shapes, timestep_symbol_name=indict["timestep_symbol_name"])
-            else:
-                output = Propagator.from_shape(shape, shapes)
-        else:
+    output_timestep_symbol_name = default_config["output_timestep_symbol_name"]
+    if "options" in indict.keys():
+        options_dict = indict["options"]
+        if "output_timestep_symbol_name" in options_dict.keys():
+            output_timestep_symbol_name = options_dict["output_timestep_symbol_name"]
+    prop = Propagator.from_shapes(shapes, output_timestep_symbol_name=output_timestep_symbol_name)
+    if False:
+        if False:
             print(": numerical ", end="")
             output = compute_numeric_solution(shapes)
             if HAVE_STIFFNESS and enable_stiffness_check:
