@@ -109,11 +109,44 @@ class Shape(object):
 
         self.diff_rhs_derivatives = diff_rhs_derivatives
 
-    def is_lin_const_coeff(self):
+
+    def __str__(self):
+        s = "Shape \"" + str(self.symbol) + "\" of order " + str(self.order)
+        return s
+
+
+    def is_lin_const_coeff(self, shapes):
         """
-        :return true iff the ode definition is a linear and constant coefficient ODE
+        :return true iff the ode definition is a linear and constant coefficient ODE in all known variable symbols in `shapes`
         """
-        return self.diff_rhs_derivatives == sympy.parsing.sympy_parser.parse_expr("0")
+        print("checking lin const for " + str(self))
+        all_symbols = []
+        for shape in shapes:
+            for order in range(shape.order):
+                all_symbols.append(Symbol(str(shape.symbol) + "__d" * order))
+        
+        for sym in all_symbols:
+            expr = diff(self.diff_rhs_derivatives, sym)
+            if not sympify(expr) == sympify(0):
+                # symbol `sym` appears on right-hand side of this expression. Check to see if it appears as a linear term by checking whether taking its derivative again yields 0
+                return sympify(diff(expr, sym)) == sympify(0)
+        return True
+                
+                
+                
+        #for derivative_factor in self.diff_rhs_derivatives:
+        ## xxx: todo: Loop over all derivative factors; check if equal to sympy.numbers.Float or Integer
+        #return self.diff_rhs_derivatives == sympy.parsing.sympy_parser.parse_expr("0")
+
+
+    #def is_homogeneous_ode(self):
+        #"""`diff_rhs_derivatives` contains the nonlinear and homogeneous part; check if it contains a nonlinear part"""
+        #all_shape_symbols = [ Symbol(self.symbol+"__d"*i) for i in range(self.order) ]
+        #for derivative_symbol in all_shape_symbols:
+            #if not diff(self.diff_rhs_derivatives, derivative_symbol) == sympify(0):
+                #return False
+        #return True
+        ##return type(sympify(self.diff_rhs_derivatives).n())
 
 
     @classmethod
@@ -333,6 +366,8 @@ class Shape(object):
                 # check that this is actually the case:
                 for k in range(order):
                     diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
+                    #if not diff(derivative_factors[k], derivatives[k]) == sympify(0):
+                        #raise Exception("caboodle")
                 diff_rhs_lhs += derivatives[order]
 
                 if simplify(diff_rhs_lhs) == sympify(0):
@@ -424,18 +459,20 @@ class Shape(object):
         definition = parse_expr(definition.replace("'", "__d"))
         symbol = parse_expr(symbol)
 
+        # the purely linear part of the shape goes in `derivative_factors`
         derivative_factors = []
         for derivative_symbol in derivative_symbols:
-            derivative_factors.append(diff(definition, derivative_symbol))
+            diff_expr = diff(definition, derivative_symbol)
+            if not diff(diff_expr, derivative_symbol) == sympify(0):
+                # the equation is nonlinear in this `derivative_symbol`; do not put this term into `derivative_factors` but leave it for `diff_rhs_derivatives`
+                derivative_factors.append(sympify(0))
+            else:
+                derivative_factors.append(diff_expr)
 
-        # check if the ODE is linear
+        # the nonlinear and non-homogeneous parts are in `diff_rhs_derivatives`
         diff_rhs_derivatives = definition
         for derivative_factor, derivative_symbol in zip(derivative_factors, derivative_symbols):
             diff_rhs_derivatives -= derivative_factor * derivative_symbol
 
         return cls(symbol, order, initial_values, derivative_factors, diff_rhs_derivatives)
-
-    def is_homogeneous_ode(self):
-        return simplify(self.diff_rhs_derivatives) == sympify(0)
-
 

@@ -1,0 +1,8 @@
+{
+  "dynamics": [
+    {
+        "expression": "q' = -q**2",
+        "initial_value": "0"
+    }
+  ]
+}

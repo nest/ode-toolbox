@@ -1,0 +1,39 @@
+{
+  "dynamics": [
+    {
+        "expression": "p' = -p + q**2",
+        "initial_value": "0"
+    },
+    {
+        "expression": "q' = -sqrt(3)*q + alpha/3.14",
+        "initial_value": "0"
+    },
+    {
+        "expression": "s' = -s**2",
+        "initial_value": "0"
+    },
+    {
+        "expression": "u' = -s",
+        "initial_value": "0"
+    },
+    {
+        "expression": "v' = p - u + x1",
+        "initial_value": "0"
+    },
+    {
+      "expression": "alpha = (e/Tau) * t * exp(-t/Tau)"
+    },
+    {
+        "expression": "x1' = x2",
+        "initial_value": "0"
+    },
+    {
+        "expression": "x2' = x3**-2",
+        "initial_value": "0"
+    },
+    {
+        "expression": "x3' = x1",
+        "initial_value": "0"
+    }
+  ]
+}

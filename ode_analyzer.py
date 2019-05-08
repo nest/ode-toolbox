@@ -62,7 +62,7 @@ if __name__ == "__main__":
             indict = json.load(infile)
         except Exception as e:
             print("The input JSON file could not be parsed.")
-            print("Error: " + e.message)
+            print("Error: " + e.msg)
             print("Please consult the file doc/example.json for help.")
             print("Aborting.")
             sys.exit(exitcodes["invalid_json_input"])
