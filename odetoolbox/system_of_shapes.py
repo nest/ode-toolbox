@@ -97,3 +97,61 @@ class SystemOfShapes(object):
         self.x_ = x
         self.A_ = A
         self.C_ = C
+
+        self.shapes_ = shapes
+        
+
+    def get_dependency_edges(self):
+
+        E = []
+        
+        for i, sym1 in enumerate(self.x_):
+            for j, sym2 in enumerate(self.x_):
+                if not sympy.simplify(self.A_[j, i]) == sympy.parsing.sympy_parser.parse_expr("0"):
+                    E.append((sym2, sym1))
+                    #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
+                else:
+                    if not sympy.simplify(sympy.diff(self.C_[j], sym1)) == sympy.parsing.sympy_parser.parse_expr("0"):
+                        E.append((sym2, sym1))
+                        #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
+
+        return E
+    
+
+    def get_lin_cc_symbols(self, E):
+        """retrieve the variable symbols of those shapes than are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with "__d" suffixes up to the order of the shape."""
+        
+        #
+        # initial pass: is a node linear and constant coefficient by itself?
+        #
+        
+        node_is_lin = {}
+        for shape in self.shapes_:
+            if shape.is_lin_const_coeff(self.shapes_):
+                _node_is_lin = True
+            else:
+                _node_is_lin = False
+            all_shape_symbols = [ sympy.Symbol(str(shape.symbol) + "__d" * i) for i in range(shape.order) ]
+            for sym in all_shape_symbols:
+                node_is_lin[sym] = _node_is_lin
+
+        #
+        # propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient
+        #
+
+        queue = [ sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc ]
+        while len(queue) > 0:
+
+            n = queue.pop(0)
+
+            if not node_is_lin[n]:
+                # mark dependent neighbours as also not lin_cc
+                dependent_neighbours = [ n1 for (n1, n2) in E if n2 == n ]    # nodes that depend on n
+                for n_neigh in dependent_neighbours:
+                    if node_is_lin[n_neigh]:
+                        print("\t\tMarking dependent node " + str(n_neigh))
+                        node_is_lin[n_neigh] = False
+                        queue.append(n_neigh)
+
+        return node_is_lin
+    
