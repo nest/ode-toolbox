@@ -78,9 +78,15 @@ def analysis(indict, enable_stiffness_check=True):
     print("Constructing system matrix...")
     shape_sys = SystemOfShapes(shapes)
 
-    print("Plotting dependency graph...")
-    DependencyGraphPlotter.plot_graph(shapes, shape_sys, fn="/tmp/remotefs/ode_dependency_graph.dot")
+    print("Dependency analysis...")
+    dependency_edges = shape_sys.get_dependency_edges()
+    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges)
+    DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_lin_cc.dot")
+    node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
+    DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
     
+    print("The following variable symbol(s) will be treated analytically: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
+    print("Generating propagators...")
     
     
     output_timestep_symbol_name = default_config["output_timestep_symbol_name"]

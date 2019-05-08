@@ -135,10 +135,11 @@ class SystemOfShapes(object):
             for sym in all_shape_symbols:
                 node_is_lin[sym] = _node_is_lin
 
-        #
-        # propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient
-        #
+        return node_is_lin
 
+    def propagate_lin_cc_judgements(self, node_is_lin, E):
+        """propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient"""
+        
         queue = [ sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc ]
         while len(queue) > 0:
 
@@ -154,4 +155,3 @@ class SystemOfShapes(object):
                         queue.append(n_neigh)
 
         return node_is_lin
-    
