@@ -21,23 +21,23 @@
 #
 
 from __future__ import print_function
+
+import json
+import os
+import sys
+
 import odetoolbox
 
 
 exitcodes = {
     "wrong_num_args": 1,
     "file_not_found": 2,
-    "invalid_json_input": 5,
-    "malformed_input": 10,
-    "shape_not_lin_hom_": 15,
+    "invalid_json_input": 3,
+    "malformed_input": 4
 }
 
 
 if __name__ == "__main__":
-
-    import json
-    import os
-    import sys
 
     args = sys.argv[1:]
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         except Exception as e:
             print("The input JSON file could not be parsed.")
             print("Error: " + e.msg)
-            print("Please consult the file doc/example.json for help.")
+            print("Please consult the file README.md for help.")
             print("Aborting.")
             sys.exit(exitcodes["invalid_json_input"])
 

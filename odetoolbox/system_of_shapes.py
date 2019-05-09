@@ -32,7 +32,134 @@ import numpy as np
 class SystemOfShapes(object):
     """    """
 
-    def __init__(self, shapes, output_timestep_symbol_name="__h"):
+    def __init__(self, x, A, C, shapes):
+        assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
+        self.x_ = x
+        self.A_ = A
+        self.C_ = C
+        self.shapes_ = shapes
+
+
+    def get_dependency_edges(self):
+
+        E = []
+        
+        for i, sym1 in enumerate(self.x_):
+            for j, sym2 in enumerate(self.x_):
+                if not sympy.simplify(self.A_[j, i]) == sympy.parsing.sympy_parser.parse_expr("0"):
+                    E.append((sym2, sym1))
+                    #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
+                else:
+                    if not sympy.simplify(sympy.diff(self.C_[j], sym1)) == sympy.parsing.sympy_parser.parse_expr("0"):
+                        E.append((sym2, sym1))
+                        #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
+
+        return E
+    
+
+    def get_lin_cc_symbols(self, E):
+        """retrieve the variable symbols of those shapes than are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with "__d" suffixes up to the order of the shape."""
+        
+        #
+        # initial pass: is a node linear and constant coefficient by itself?
+        #
+        
+        node_is_lin = {}
+        for shape in self.shapes_:
+            if shape.is_lin_const_coeff(self.shapes_):
+                _node_is_lin = True
+            else:
+                _node_is_lin = False
+            all_shape_symbols = [ sympy.Symbol(str(shape.symbol) + "__d" * i) for i in range(shape.order) ]
+            for sym in all_shape_symbols:
+                node_is_lin[sym] = _node_is_lin
+
+        return node_is_lin
+
+    def propagate_lin_cc_judgements(self, node_is_lin, E):
+        """propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient"""
+        
+        queue = [ sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc ]
+        while len(queue) > 0:
+
+            n = queue.pop(0)
+
+            if not node_is_lin[n]:
+                # mark dependent neighbours as also not lin_cc
+                dependent_neighbours = [ n1 for (n1, n2) in E if n2 == n ]    # nodes that depend on n
+                for n_neigh in dependent_neighbours:
+                    if node_is_lin[n_neigh]:
+                        print("\t\tMarking dependent node " + str(n_neigh))
+                        node_is_lin[n_neigh] = False
+                        queue.append(n_neigh)
+
+        return node_is_lin
+
+    def get_sub_system(self, symbols):
+        """Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in `symbols` do not dependend on any of the other symbols that will be thrown away.
+        """
+
+        idx = [ i for i, sym in enumerate(self.x_) if sym in symbols ]
+        
+        x_sub = self.x_[idx, :]
+        A_sub = self.A_[idx, :][:, idx]
+        C_sub = self.C_[idx, :]
+        
+        shapes_sub = [shape for shape in self.shapes_ if shape.symbol in symbols]
+        
+        return SystemOfShapes(x_sub, A_sub, C_sub, shapes_sub)
+
+
+    def compute_propagator(self, output_timestep_symbol_name="__h"):
+        """
+        """
+
+        #from IPython import embed;embed()
+
+        #
+        #   generate the propagator matrix
+        #
+
+        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol_name)))
+        
+
+        #
+        #   generate symbols for each nonzero entry of the propagator matrix
+        #
+
+        P_sym = sympy.zeros(*P.shape)   # each entry in the propagator matrix is assigned its own symbol
+        P_expr = {}     # the expression corresponding to each propagator symbol
+        update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
+        for row in range(P_sym.shape[0]):
+            update_expr_terms = []
+            for col in range(P_sym.shape[1]):
+                if sympy.simplify(P[row, col]) != sympy.sympify(0):
+                    #sym_str = "__P_{}__{}_{}".format(self.x_[row], row, col)
+                    sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
+                    P_sym[row, col] = parse_expr(sym_str)
+                    P_expr[sym_str] = str(P[row, col])
+                    update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
+            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
+            
+                    
+
+        all_variable_symbols = [ str(sym) for sym in self.x_ ]
+        
+        #for i, sym1 in enumerate(all_variable_symbols):
+            #update_expr_terms = []
+            #for j, sym2 in enumerate(all_variable_symbols):
+                #if sympy.simplify(P[i, j]) != sympy.sympify(0):
+                    #update_expr_terms.append("
+
+        solver_dict = {"propagators" : P_expr,
+                       "update_expressions" : update_expr,
+                       "shape_state_variables" : all_variable_symbols }
+        import pdb;pdb.set_trace()
+
+        return solver_dict
+
+    @classmethod
+    def from_shapes(cls, shapes):
         """Construct the global system matrix including all shapes.
         
         Global dynamics
@@ -89,69 +216,6 @@ class SystemOfShapes(object):
 
             i += shape.order
  
-        #print("Matrices:")
-        #print("x = " + str(x))
-        #print("C = " + str(C))
-        #print("A = " + str(A))
+        return SystemOfShapes(x, A, C, shapes)
 
-        self.x_ = x
-        self.A_ = A
-        self.C_ = C
 
-        self.shapes_ = shapes
-        
-
-    def get_dependency_edges(self):
-
-        E = []
-        
-        for i, sym1 in enumerate(self.x_):
-            for j, sym2 in enumerate(self.x_):
-                if not sympy.simplify(self.A_[j, i]) == sympy.parsing.sympy_parser.parse_expr("0"):
-                    E.append((sym2, sym1))
-                    #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
-                else:
-                    if not sympy.simplify(sympy.diff(self.C_[j], sym1)) == sympy.parsing.sympy_parser.parse_expr("0"):
-                        E.append((sym2, sym1))
-                        #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
-
-        return E
-    
-
-    def get_lin_cc_symbols(self, E):
-        """retrieve the variable symbols of those shapes than are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with "__d" suffixes up to the order of the shape."""
-        
-        #
-        # initial pass: is a node linear and constant coefficient by itself?
-        #
-        
-        node_is_lin = {}
-        for shape in self.shapes_:
-            if shape.is_lin_const_coeff(self.shapes_):
-                _node_is_lin = True
-            else:
-                _node_is_lin = False
-            all_shape_symbols = [ sympy.Symbol(str(shape.symbol) + "__d" * i) for i in range(shape.order) ]
-            for sym in all_shape_symbols:
-                node_is_lin[sym] = _node_is_lin
-
-        return node_is_lin
-
-    def propagate_lin_cc_judgements(self, node_is_lin, E):
-        """propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient"""
-        
-        queue = [ sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc ]
-        while len(queue) > 0:
-
-            n = queue.pop(0)
-
-            if not node_is_lin[n]:
-                # mark dependent neighbours as also not lin_cc
-                dependent_neighbours = [ n1 for (n1, n2) in E if n2 == n ]    # nodes that depend on n
-                for n_neigh in dependent_neighbours:
-                    if node_is_lin[n_neigh]:
-                        print("\t\tMarking dependent node " + str(n_neigh))
-                        node_is_lin[n_neigh] = False
-                        queue.append(n_neigh)
-
-        return node_is_lin

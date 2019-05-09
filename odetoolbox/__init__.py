@@ -26,7 +26,6 @@ from sympy.parsing.sympy_parser import parse_expr
 from .system_of_shapes import SystemOfShapes
 
 from .shapes import Shape
-from .analytic import Propagator
 from .dependency_graph_plotter import DependencyGraphPlotter
 
 try:
@@ -45,6 +44,7 @@ default_config = {
     "input_timestep_symbol_name" : "t",
     "output_timestep_symbol_name" : "__h"
 }
+
 
 def analysis(indict, enable_stiffness_check=True):
     """The main entry point of the analysis.
@@ -66,17 +66,23 @@ def analysis(indict, enable_stiffness_check=True):
 
     print("Processing input shapes...")
 
+    output_timestep_symbol_name = default_config["output_timestep_symbol_name"]
+    if "options" in indict.keys():
+        options_dict = indict["options"]
+        if "output_timestep_symbol_name" in options_dict.keys():
+            output_timestep_symbol_name = options_dict["output_timestep_symbol_name"]
+
     if "dynamics" not in indict:
         print("Warning: empty input (no dynamical equations found); returning empty output")
-        outdict = {}
-        return outdict
+        solvers_json = {}
+        return solvers_json
 
     for shape_json in indict["dynamics"]:
         shape = Shape.from_json(shape_json)
         shapes.append(shape)
 
     print("Constructing system matrix...")
-    shape_sys = SystemOfShapes(shapes)
+    shape_sys = SystemOfShapes.from_shapes(shapes)
 
     print("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
@@ -85,44 +91,32 @@ def analysis(indict, enable_stiffness_check=True):
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
     DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
     
-    print("The following variable symbol(s) will be treated analytically: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
-    print("Generating propagators...")
-    
-    
-    output_timestep_symbol_name = default_config["output_timestep_symbol_name"]
-    if "options" in indict.keys():
-        options_dict = indict["options"]
-        if "output_timestep_symbol_name" in options_dict.keys():
-            output_timestep_symbol_name = options_dict["output_timestep_symbol_name"]
-    prop = Propagator.from_shapes(shapes, output_timestep_symbol_name=output_timestep_symbol_name)
-    if False:
-        if False:
-            print(": numerical ", end="")
-            output = compute_numeric_solution(shapes)
-            if HAVE_STIFFNESS and enable_stiffness_check:
+    solvers_json = []
 
-                # TODO: check what happens/has to happen for shapes
-                # that already have a definition of either type
-                # `function` or `ode`.
+    syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
+    if len(syms) > 0:
+        print("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
 
-                indict["shapes"] = []
-                for shape in shapes:
-                    ode_shape = {"type": "ode",
-                                 "symbol": str(shape.symbol),
-                                 "initial_values": shape.initial_values,
-                                 "definition": str(shape.ode_definition)}
-                    indict["shapes"].append(ode_shape)
+        sub_sys = shape_sys.get_sub_system(syms)
+        prop = sub_sys.compute_propagator(output_timestep_symbol_name=output_timestep_symbol_name)
+        solver_json = {"solver": "analytical",
+                     "propagator": prop }
+        solvers_json.append(solver_json)
 
-                tester = stiffness.StiffnessTester(indict)
+    #if len(syms) < len(shape_sys.x_):
+        #print("Picking numerical solver for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == False]))
+        #solver_json = sub_sys.compute_numeric_solution(shapes)
+        #if HAVE_STIFFNESS and enable_stiffness_check:
+            #tester = stiffness.StiffnessTester(shapes)
+            #solver_type = tester.check_stiffness()
 
-                # TODO: Check whether we need to run this with
-                # arguments different from the defaults.
-                solver_type = tester.check_stiffness()
+            #output["solver"] += "-" + solver_type
+            #print(solver_type + " scheme")
 
-                output["solver"] += "-" + solver_type
-                print(solver_type + " scheme")
+        #else:
+            #print("(stiffness test skipped, PyGSL not available)")
 
-            else:
-                print("(stiffness test skipped, PyGSL not available)")
+        #solvers_json.append(solver_json)
 
-    return output
+    return solvers_json
+

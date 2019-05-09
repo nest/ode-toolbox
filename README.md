@@ -1,30 +1,41 @@
-# NEST ODE toolbox 
+# NEST ODE-toolbox
 
 [![Build Status](https://travis-ci.org/nest/ode-toolbox.svg?branch=master)](https://travis-ci.org/nest/ode-toolbox)
 
-The ODE toolbox is a framework for the automatic symbolic analysis of the differential equations used for modeling spiking neuron models.
+In the computer simulation of dynamical systems, choosing the most suitable differential equation solver might depend on many factors. ODE-toolbox assists in picking the optimal solver for a given set of dynamical equations (also known as "ordinary differential equations" or "initial value problems"). ODE-toolbox will generate propagator matrices for the subset of dynamics that is linear and constant coefficient, which can be used to solve the equations up to machine precision. For those equations that are not analytically tractable, an optimal numerical integrator (e.g. explicit vs. implicit) is recommended based on several user-configurable heuristics.
 
-**Disclaimer:** Although the toolbox is hosted under the [GitHub account](https://github.com/nest/) of the [NEST Initiative](http://www.nest-initiative.org/), it is completely independent of any specific simulator. It was, however, initially developed in the context of the [NESTML](https://github.com/nest/nestml) project, in which the main focus was on the class of neurons presently available in the [NEST](https://github.com/nest/nest-simulator) simulator.
+ODE-toolbox is written in Python and relies on SymPy for the symbolic manipulation of equations. It was initially developed in the context of the [NESTML](https://github.com/nest/nestml) project, in which the main focus was on the class of spiking neurons presently available in the [NEST](https://github.com/nest/nest-simulator) simulator. It can, however, be used standalone and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
+
+
+## Installation
 
 ### Prerequisites
 
-The `ode-toolbox` requires `SymPy` in a version >= 1.1.1, which can be installed using `pip install sympy`. The stiffness tester depends on an an installation of [PyGSL](http://pygsl.sourceforge.net/). If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations (the remaining analysis is still performed).
+ODE-toolbox depends on the Python packages SymPy, SciPy and NumPy and (optionally) matplotlib and graphviz for visualisation, and pytest for self-tests. The stiffness tester additionally depends on an an installation of [PyGSL](http://pygsl.sourceforge.net/). If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations.
 
-For details, see the file [requirements.txt](requirements.txt).
+The required packages can be installed by running 
 
-### Installation
+```
+pip install sympy scipy numpy
+```
 
-To install the framework, use the following commands in a terminal:
+
+### Installing ODE-toolbox
+
+To install, run the following commands in a terminal:
 
 ```
 python setup.py install
 ```
 
-If you want to install the ODE toolbox into your home directory, add the option `--user` to the above call.
+If you wish to install ODE-toolbox into your home directory, add the option `--user` to the above call.
+
+For further installation hints, please see [.travis.yml](.travis.yml).
+
 
 ### Testing
 
-To run the unit and integration tests that come with the ODE toolbox, you can run the following command:
+To run the unit and integration tests that come with ODE-toolbox, you can run the following command:
 
 ```
 python setup.py test
@@ -32,7 +43,8 @@ python setup.py test
 
 Please note that this requires the [pytest](https://docs.pytest.org) package to be installed.
 
-## Usage of the analysis framework
+
+## Usage
 
 The `ode-toolbox` can be used in two ways:
 1. as a Python module. See [the tests](tests/test_ode_analyzer.py) for examples of the exact usage of the functions.
@@ -45,7 +57,7 @@ ode_analyzer.py <json_file>
 
 Input for `ode_analyzer.py` JSON files are composed of two lists of dictionaries `shapes` and `odes` and a dictionary `parameters`. `shapes` and `odes` must be stated at any call of the `ode_analyzer.py`. `parameters` dictionary is stated only if a stiffness test should be performed.
 
-### `odes`
+#### `odes`
 
 The ODEs entry contains dictionaries, each of which specifies an ODE with initial values. Each of these dictionaries has the following keys:
 
@@ -68,7 +80,7 @@ Shapes-list contains shapes which can be selectively specified as a function of 
 * `definition`: An arbitrary Python expression with free variables (an arbitrary valid Python variable name, e.g. `V_m`), derivative-variables (an arbitrary valid Python variable name with a postfix of a sequence of '-characters, e.g. `g_in'''`) and functions from the `math`-package. The definition of a `function` must depend on `t`-variable.
 * `initial_values`: Initial values of the ODE representing the shape. The dictionary contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions. Must be stated only for the `ode`-shape.
 
-### Output
+#### Output
 
 The analysis output is returned in the form of a Python dictionary. If the input was given as JSON in a file `input.json`, the output is stored in a file `input_result.json` in the current working directory.
 
