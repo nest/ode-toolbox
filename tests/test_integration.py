@@ -19,7 +19,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-INTEGRATION_TEST_DEBUG_PLOTS = False
+INTEGRATION_TEST_DEBUG_PLOTS = True
 
 import json
 import os
@@ -33,7 +33,6 @@ if INTEGRATION_TEST_DEBUG_PLOTS:
     import matplotlib.pyplot as plt
 
 from .context import odetoolbox
-from odetoolbox.analytic import Propagator
 
 from math import e
 from sympy import exp, sympify
@@ -126,13 +125,15 @@ class TestIntegration(unittest.TestCase):
         debug = True
 
         indict = open_json("iaf_psc_alpha.json")
-        result = odetoolbox.analysis(indict)
-        print("Got result from ode-toolbox: ")
-        print(json.dumps(result,  indent=2))
-        assert result["solver"] == "analytical"
+        solver_dict = odetoolbox.analysis(indict)
+        print("Got solver_dict from ode-toolbox: ")
+        print(json.dumps(solver_dict,  indent=2))
+        assert len(solver_dict) == 1
+        solver_dict = solver_dict[0]
+        assert solver_dict["solver"] == "analytical"
 
-        shape_names = result["shape_state_updates"].keys()
-        assert shape_names == result["shape_initial_values"].keys()
+        shape_names = solver_dict["update_expressions"].keys()
+        assert shape_names == solver_dict["initial_values"].keys()
         N_shapes = len(shape_names)
 
         h = 1E-3    # [s]
@@ -229,135 +230,93 @@ class TestIntegration(unittest.TestCase):
                  "tau_syn" : tau_syn,
                  "exp" : exp,
                  "e" : e,
-                 "h" : h}
+                 "h" : h,
+                 "__h" : h}
         
-        ### define the necessary sympy variables (for shapes)
+        #
+        #    define the necessary sympy variable symbols
+        #
 
-        for shape_name in shape_names:
-            print("* Defining variables for shape " + str(shape_name))
-            shape_variables = result["shape_initial_values"][shape_name].keys()
-            assert set(shape_variables) == set(result["shape_state_updates"][shape_name].keys())
-            for shape_variable in shape_variables:
-                shape_variable_code_name = shape_variable.replace("'", "__d")
-                shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
-                shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
-                print("\t * Defining var: " + str(shape_variable) + " as sympy.symbols(\"" + shape_variable_code_name + "\")")
-                exec(shape_variable_code_name + " = sympy.symbols(\"" + shape_variable_code_name + "\")", symbs)
+        print("* Defining sympy variable symbols")
+        for state_variable in solver_dict["state_variables"]:
+            print("\t * Defining var: " + str(state_variable))
+            exec(state_variable + " = sympy.symbols(\"" + state_variable + "\")", symbs)
 
 
-        ### define the necessary sympy variables (for ODE)
-
-        ode_dim = len(result["ode_updates"])
-        ode_state = {}
-        ode_initial_values = {}
-        ode_update_expressions = {}
-        for ode_variable_name in result["ode_updates"].keys():
-            print(" * Defining ODE variable: " + str(ode_variable_name))
-            ode_state[ode_variable_name] = np.zeros(N)
-            ode_state[ode_variable_name][0] = ODE_INITIAL_VALUES[ode_variable_name]
-            ode_initial_values[ode_variable_name] = ODE_INITIAL_VALUES[ode_variable_name]
-            ode_update_expressions[ode_variable_name] = " + ".join(["(" + v + ")" for k, v in result["ode_updates"][ode_variable_name].items()])
-            print("   Update expression: " + str(ode_update_expressions[ode_variable_name]))
-            exec(ode_variable_name + " = sympy.symbols(\"" + ode_variable_name + "\")", symbs)
-
-
-        ### define the necessary shape state variables
+        #
+        #   define the necessary numerical state variables
+        #
         
         # state and initial values are stored here by their "code name", i.e. with "__d" instead of "'" for derivative; this is to make it proper Python syntax to e.g. put a derivative on the left-hand side of an assignment
 
-        shape_state = {}
-        shape_initial_values = {}
-        for shape_name in shape_names:
-            print("* Defining shape state variables for shape \'" + shape_name + "\'")
-            shape_state[shape_name] = {}
-            shape_initial_values[shape_name] = {}
-            dim = len(result["shape_state_updates"])
-            print("\t  shape dim = " + str(dim))
-
-            shape_variables = result["shape_initial_values"][shape_name].keys()
-            assert shape_variables == result["shape_state_updates"][shape_name].keys()
-            for shape_variable in shape_variables:
-                shape_variable_code_name = shape_variable.replace("'", "__d")
-                shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
-                shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
-
-                print("\t\t* Variable " + str(shape_variable_code_name))
-                print("\t\t  Update expression: " + shape_variable_update_expr)
-                print("\t\t  Initial value = " + str(shape_variable_initial_value))
-                expr = sympify(eval(shape_variable_initial_value.replace("__h", "h")), globals().update(symbs))
-                expr = expr.subs(Tau, tau)
-                expr = expr.subs(C_m, c_m)
-                expr = expr.subs(Tau_syn_in, tau_syn)
-                expr = expr.subs(Tau_syn_ex, tau_syn)
-                print("\t\t     = " + str(expr))
-
-                shape_state[shape_name][shape_variable_code_name] = np.zeros(N)
-                shape_initial_values[shape_name][shape_variable_code_name] = expr
+        dim = len(solver_dict["state_variables"])
+        state = solver_dict["initial_values"].copy()
+        state = { k : np.nan * np.ones(N) for k, _ in state.items() }
+        initial_values = solver_dict["initial_values"].copy()
+        for k, v in initial_values.items():
+            expr = sympy.parsing.sympy_parser.parse_expr(v)
+            expr = expr.subs(Tau_syn_in, tau_syn)
+            expr = expr.subs(Tau_syn_ex, tau_syn)
+            expr = expr.subs(Tau, tau)
+            expr = expr.subs(C_m, c_m)
+            expr = expr.subs(I_e, 0.)
+            expr = expr.subs(currents, 0.)
+            expr = expr.subs(Tau_syn_in, tau_syn)
+            expr = expr.subs(Tau_syn_ex, tau_syn)
+            initial_values[k] = expr
+            
+            state[k][0] = 0.    # don't use the actual initial value here
 
 
-        ### add propagators to local scope
+        #
+        #   add propagator definitions
+        #
 
-        for k, v in result["propagator"].items():
+        for k, v in solver_dict["propagators"].items():
             if debug:
-                print(" * Adding propagator: " + k + " = " + str(v.replace("__h", "h")))
-            exec(k + " = " + v.replace("__h", "h"), symbs)
+                print(" * Adding propagator: " + k + " = " + str(v))
+            exec(k + " = " + v, symbs)
+
+
+        #
+        #   main simulation loop
+        #
 
         for step in range(1, N):
+            print("Step " + str(step) + " of " + str(N-1))
 
-            print("Step " + str(step) + " of " + str(N))
-
-            ### set spike stimulus if necessary
+            #
+            #   set spike stimulus if necessary
+            #
 
             if step - 1 == spike_time_idx:
-                for shape_name in shape_names:
-                    shape_variables = result["shape_initial_values"][shape_name].keys()
-                    assert shape_variables == result["shape_state_updates"][shape_name].keys()
-                    for shape_variable in shape_variables:
-                        shape_variable_code_name = shape_variable.replace("'", "__d")
-                        shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
-                        shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
-                        shape_state[shape_name][shape_variable_code_name][step - 1] = shape_initial_values[shape_name][shape_variable_code_name]
+                print("Applying spike stimulus at timestep " + str(spike_time_idx))
+                for state_variable in solver_dict["state_variables"]:
+                    state_variable_initial_value = initial_values[state_variable]
+                    state[state_variable][step - 1] = state_variable_initial_value
+                    state["I_shape_ex__d"][step - 1] = 500.
 
 
-            ### update the state of each shape using propagators
+            #
+            #   update the state using propagators
+            #
 
-            for shape_name in shape_names:
+            for state_variable, update_expr in solver_dict["update_expressions"].items():
                 if debug:
-                    print("--> shape_name = " + shape_name)
+                    print("\t* state_variable_name = " + state_variable)
+                    print("\t* update expression = " + update_expr)
 
-                shape_variables = result["shape_initial_values"][shape_name].keys()
-                for shape_variable in shape_variables:
-                    shape_variable_code_name = shape_variable.replace("'", "__d")
-                    shape_variable_initial_value = result["shape_initial_values"][shape_name][shape_variable]
-                    shape_variable_update_expr = result["shape_state_updates"][shape_name][shape_variable]
-                    if debug:
-                        print("\t* shape_variable_name = " + shape_variable_code_name)
-                        print("\t* update expression = " + shape_variable_update_expr)
-
-                    # replace symbolic variables with their values at the last step
-                    expr = eval(shape_variable_update_expr, globals().update(symbs))
-                    for _shape_name, _shape in shape_state.items():
-                        for _var_name, _var_val in _shape.items():
-                            _var_name_code_name = _var_name.replace("'", "__d")
-                            expr = expr.subs(_var_name, shape_state[_shape_name][_var_name_code_name][step - 1])  # _var_val [step - 1])
-                            print("\t\t* replacing variable " + _var_name + " with " + str(shape_state[_shape_name][_var_name_code_name][step - 1]))
-                    expr = expr.subs(Tau_syn_in, tau_syn)
-                    expr = expr.subs(Tau_syn_ex, tau_syn)
-                    if debug:
-                        print("\t* update expression evaluates to = " + str(expr))
-                    shape_state[shape_name][shape_variable_code_name][step] = expr
-
-
-            ### update the ODE state using propagators
-
-            for ode_variable_name, ode_variable_val, in ode_state.items():
-                print("\t* updating ODE variable " + str(ode_variable_name))
+                #
+                #   in the update expression, replace symbolic variables with their values at the last step
+                #
                 
-                ode_update_expression = ode_update_expressions[ode_variable_name]
-                print("\t  expr = " + str(ode_update_expression))
-                
-                expr = sympify(eval(ode_update_expression.replace("__h", "h")     , globals().update(symbs))    )
-                
+                expr = eval(update_expr, globals().update(symbs))
+                for _state_variable in solver_dict["state_variables"]:
+                    expr = expr.subs(_state_variable, state[_state_variable][step - 1]) 
+                    print("\t\t* replacing variable " + _state_variable + " with " + str(state[_state_variable][step - 1]))
+
+                expr = expr.subs(Tau_syn_in, tau_syn)
+                expr = expr.subs(Tau_syn_ex, tau_syn)
                 expr = expr.subs(Tau, tau)
                 expr = expr.subs(C_m, c_m)
                 expr = expr.subs(I_e, 0.)
@@ -365,27 +324,26 @@ class TestIntegration(unittest.TestCase):
                 expr = expr.subs(Tau_syn_in, tau_syn)
                 expr = expr.subs(Tau_syn_ex, tau_syn)
                 
-                expr = expr.subs(V_abs, ode_state[ode_variable_name][step - 1])
-                
-                # replace all shape variable names by their values
-                for _shape_name, _shape in shape_state.items():
-                    for _var_name, _var_val in _shape.items():
-                        expr = expr.subs(_var_name, _var_val[step - 1])
-                
-                ode_state[ode_variable_name][step] = expr
-                print("\t  expr evaluates to = " + str(expr))
+                if debug:
+                    print("\t* update expression evaluates to = " + str(expr))
+
+                #
+                #   assign the new numeric value to the state vector
+                #
+
+                state[state_variable][step] = expr
 
         if INTEGRATION_TEST_DEBUG_PLOTS:
             fig, ax = plt.subplots(3, sharex=True)
             ax[0].plot(1E3 * _sol_t, v_abs, label="V_abs (num)")
-            ax[0].plot(1E3 * t, ode_state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
+            ax[0].plot(1E3 * t, state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
 
             ax[1].plot(1E3 * _sol_t, i_ex[0, :], linewidth=2, label="i_ex (num)")
-            ax[1].plot(1E3 * t, shape_state["I_shape_ex"]["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)")
+            ax[1].plot(1E3 * t, state["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)")
             ax[1].plot(1E3 * t, i_ex__[0, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
 
             ax[2].plot(1E3 * _sol_t, i_ex[1, :], linewidth=2, label="i_ex' (num)")
-            ax[2].plot(1E3 * t, shape_state["I_shape_ex"]["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)")
+            ax[2].plot(1E3 * t, state["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)")
             ax[2].plot(1E3 * t, i_ex__[1, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
 
             for _ax in ax:
@@ -400,8 +358,8 @@ class TestIntegration(unittest.TestCase):
             plt.savefig("/tmp/remotefs2/propagators.png", dpi=600)
 
         # the two propagators should be very close...
-        np.testing.assert_allclose(i_ex__[0, :], shape_state["I_shape_ex"]["I_shape_ex"], atol=1E-9, rtol=1E-9)
-        #np.testing.assert_allclose(i_ex__[1, :], shape_state["I_shape_ex"]["I_shape_ex__d"], atol=1E-9, rtol=1E-9)    # XXX: cannot check this, as ode-toolbox conversion to lower triangular format changes the semantics/behaviour of I_shape_ex__d; see eq. 14 in Blundell et al. 2018 Front Neuroinformatics
+        np.testing.assert_allclose(i_ex__[0, :], state["I_shape_ex"], atol=1E-9, rtol=1E-9)
+        #np.testing.assert_allclose(i_ex__[1, :], state["I_shape_ex"]["I_shape_ex__d"], atol=1E-9, rtol=1E-9)    # XXX: cannot check this, as ode-toolbox conversion to lower triangular format changes the semantics/behaviour of I_shape_ex__d; see eq. 14 in Blundell et al. 2018 Front Neuroinformatics
 
         # the numerical value is compared with a bit more leniency... compare max-normalised timeseries with the given rel, abs tolerances
         _num_norm_atol = 1E-4

@@ -115,6 +115,20 @@ class Shape(object):
         return s
 
 
+    def get_initial_value(self, sym):
+        """get the initial value corresponding to the symbol
+        
+        Parameters
+        ----------
+        sym : str
+            string representation of a sympy symbol, e.g. `"V_m'"`
+        """
+        assert type(sym) is str
+        if not sym in self.initial_values:
+            return None
+        return self.initial_values[sym]
+        
+
     def is_lin_const_coeff(self, shapes):
         """
         :return true iff the ode definition is a linear and constant coefficient ODE in all known variable symbols in `shapes`

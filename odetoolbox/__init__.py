@@ -21,8 +21,8 @@
 
 from __future__ import print_function
 
-from sympy import diff, simplify
-from sympy.parsing.sympy_parser import parse_expr
+import sympy
+
 from .system_of_shapes import SystemOfShapes
 
 from .shapes import Shape
@@ -64,8 +64,11 @@ def analysis(indict, enable_stiffness_check=True):
 
     shapes = []
 
-    print("Processing input shapes...")
+    #
+    #   process the input, construct Shape instances
+    #
 
+    print("Processing input shapes...")
     output_timestep_symbol_name = default_config["output_timestep_symbol_name"]
     if "options" in indict.keys():
         options_dict = indict["options"]
@@ -81,8 +84,18 @@ def analysis(indict, enable_stiffness_check=True):
         shape = Shape.from_json(shape_json)
         shapes.append(shape)
 
+
+    #
+    #   construct global system matrix
+    #
+
     print("Constructing system matrix...")
     shape_sys = SystemOfShapes.from_shapes(shapes)
+
+
+    #
+    #   perform dependency analysis, plot dependency graph
+    #
 
     print("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
@@ -91,6 +104,11 @@ def analysis(indict, enable_stiffness_check=True):
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
     DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
     
+    
+    #
+    #   compute analytical solutions (propagators) where possible
+    #
+    
     solvers_json = []
 
     syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
@@ -98,10 +116,16 @@ def analysis(indict, enable_stiffness_check=True):
         print("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
 
         sub_sys = shape_sys.get_sub_system(syms)
-        prop = sub_sys.compute_propagator(output_timestep_symbol_name=output_timestep_symbol_name)
-        solver_json = {"solver": "analytical",
-                     "propagator": prop }
+        solver_json = sub_sys.compute_propagator(output_timestep_symbol_name=output_timestep_symbol_name)
+        solver_json["solver"] = "analytical"
+        #solver_json = {"solver": "analytical",
+                     #"propagator": prop }
         solvers_json.append(solver_json)
+
+    
+    #
+    #   compute numerical solvers for the remainder
+    #
 
     #if len(syms) < len(shape_sys.x_):
         #print("Picking numerical solver for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == False]))
@@ -117,6 +141,18 @@ def analysis(indict, enable_stiffness_check=True):
             #print("(stiffness test skipped, PyGSL not available)")
 
         #solvers_json.append(solver_json)
+
+    #
+    #   copy the initial values from the input to the output for convenience
+    #
+    
+    for solver_json in solvers_json:
+        solver_json["initial_values"] = {}
+        for shape in shapes:
+            all_shape_symbols = [ str(sympy.Symbol(str(shape.symbol) + "__d" * i)) for i in range(shape.order) ]
+            for sym in all_shape_symbols:
+                if sym in solver_json["state_variables"]:
+                    solver_json["initial_values"][sym] = str(shape.get_initial_value(str(shape.symbol)))
 
     return solvers_json
 

@@ -55,7 +55,7 @@ class SystemOfShapes(object):
                         #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
 
         return E
-    
+
 
     def get_lin_cc_symbols(self, E):
         """retrieve the variable symbols of those shapes than are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with "__d" suffixes up to the order of the shape."""
@@ -140,21 +140,12 @@ class SystemOfShapes(object):
                     P_expr[sym_str] = str(P[row, col])
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
-            
                     
-
         all_variable_symbols = [ str(sym) for sym in self.x_ ]
-        
-        #for i, sym1 in enumerate(all_variable_symbols):
-            #update_expr_terms = []
-            #for j, sym2 in enumerate(all_variable_symbols):
-                #if sympy.simplify(P[i, j]) != sympy.sympify(0):
-                    #update_expr_terms.append("
 
         solver_dict = {"propagators" : P_expr,
                        "update_expressions" : update_expr,
-                       "shape_state_variables" : all_variable_symbols }
-        import pdb;pdb.set_trace()
+                       "state_variables" : all_variable_symbols }
 
         return solver_dict
 
