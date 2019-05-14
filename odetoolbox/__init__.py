@@ -145,14 +145,15 @@ def analysis(indict, enable_stiffness_check=True):
     #
     #   copy the initial values from the input to the output for convenience
     #
-    
+
     for solver_json in solvers_json:
         solver_json["initial_values"] = {}
         for shape in shapes:
             all_shape_symbols = [ str(sympy.Symbol(str(shape.symbol) + "__d" * i)) for i in range(shape.order) ]
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
-                    solver_json["initial_values"][sym] = str(shape.get_initial_value(str(shape.symbol)))
+                    solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace("__d", "'")))
+    import pdb;pdb.set_trace()
 
     return solvers_json
 

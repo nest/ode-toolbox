@@ -154,18 +154,18 @@ class TestIntegration(unittest.TestCase):
 
 
         #
-        #   numerical reference timeseries
+        #   compute numerical reference timeseries
         #
 
         def f(t, y):
-            print("In f(t=" + str(t) + ", y=" + str(y) + ")")
+            #print("In f(t=" + str(t) + ", y=" + str(y) + ")")
             i_ex = y[0:2]
             V_abs = y[2]
 
             _d_i_ex = np.array([i_ex[1], -i_ex[0] / tau_syn**2 - 2 * i_ex[1] / tau_syn])
             _d_V_abs_expr_ = -1/tau*V_abs + 1/c_m*(2*i_ex[0])    # XXX: factor 2 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory currents (which are of the exact same shape/magnitude at all times)
             _delta_vec = np.concatenate((_d_i_ex, [_d_V_abs_expr_]))
-            print("\treturning " + str(_delta_vec))
+            #print("\treturning " + str(_delta_vec))
 
             return _delta_vec
 
@@ -232,7 +232,7 @@ class TestIntegration(unittest.TestCase):
                  "e" : e,
                  "h" : h,
                  "__h" : h}
-        
+
         #
         #    define the necessary sympy variable symbols
         #
@@ -246,8 +246,6 @@ class TestIntegration(unittest.TestCase):
         #
         #   define the necessary numerical state variables
         #
-        
-        # state and initial values are stored here by their "code name", i.e. with "__d" instead of "'" for derivative; this is to make it proper Python syntax to e.g. put a derivative on the left-hand side of an assignment
 
         dim = len(solver_dict["state_variables"])
         state = solver_dict["initial_values"].copy()
@@ -264,8 +262,9 @@ class TestIntegration(unittest.TestCase):
             expr = expr.subs(Tau_syn_in, tau_syn)
             expr = expr.subs(Tau_syn_ex, tau_syn)
             initial_values[k] = expr
-            
+
             state[k][0] = 0.    # don't use the actual initial value here
+            state["V_abs"][0] = v_abs_init     # ... except for V_abs
 
 
         #
@@ -285,6 +284,7 @@ class TestIntegration(unittest.TestCase):
         for step in range(1, N):
             print("Step " + str(step) + " of " + str(N-1))
 
+
             #
             #   set spike stimulus if necessary
             #
@@ -293,8 +293,8 @@ class TestIntegration(unittest.TestCase):
                 print("Applying spike stimulus at timestep " + str(spike_time_idx))
                 for state_variable in solver_dict["state_variables"]:
                     state_variable_initial_value = initial_values[state_variable]
-                    state[state_variable][step - 1] = state_variable_initial_value
-                    state["I_shape_ex__d"][step - 1] = 500.
+                    if "I" in state_variable:   # apply to currents only, not membrane potential
+                        state[state_variable][step - 1] = eval(str(state_variable_initial_value), symbs)
 
 
             #
@@ -306,10 +306,11 @@ class TestIntegration(unittest.TestCase):
                     print("\t* state_variable_name = " + state_variable)
                     print("\t* update expression = " + update_expr)
 
+
                 #
                 #   in the update expression, replace symbolic variables with their values at the last step
                 #
-                
+
                 expr = eval(update_expr, globals().update(symbs))
                 for _state_variable in solver_dict["state_variables"]:
                     expr = expr.subs(_state_variable, state[_state_variable][step - 1]) 
@@ -368,7 +369,7 @@ class TestIntegration(unittest.TestCase):
 
         np.testing.assert_allclose(i_ex__[1, :] / np.amax(np.abs(i_ex__[1, :])), i_ex[1, :] / np.amax(np.abs(i_ex__[1, :])), atol=_num_norm_atol, rtol=_num_norm_rtol)
 
-        np.testing.assert_allclose(v_abs / np.amax(v_abs), ode_state["V_abs"] / np.amax(v_abs), atol=_num_norm_atol, rtol=_num_norm_rtol)
+        np.testing.assert_allclose(v_abs / np.amax(v_abs), state["V_abs"] / np.amax(v_abs), atol=_num_norm_atol, rtol=_num_norm_rtol)
 
 if __name__ == '__main__':
     unittest.main()

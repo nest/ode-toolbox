@@ -117,7 +117,7 @@ class Shape(object):
 
     def get_initial_value(self, sym):
         """get the initial value corresponding to the symbol
-        
+
         Parameters
         ----------
         sym : str
@@ -127,7 +127,7 @@ class Shape(object):
         if not sym in self.initial_values:
             return None
         return self.initial_values[sym]
-        
+
 
     def is_lin_const_coeff(self, shapes):
         """
