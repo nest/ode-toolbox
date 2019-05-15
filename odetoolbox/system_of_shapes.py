@@ -29,6 +29,8 @@ import sympy.matrices
 import numpy
 import numpy as np
 
+from .shapes import Shape
+
 class SystemOfShapes(object):
     """    """
 
@@ -46,11 +48,11 @@ class SystemOfShapes(object):
         
         for i, sym1 in enumerate(self.x_):
             for j, sym2 in enumerate(self.x_):
-                if not sympy.simplify(self.A_[j, i]) == sympy.parsing.sympy_parser.parse_expr("0"):
+                if not sympy.simplify(self.A_[j, i]).is_zero:
                     E.append((sym2, sym1))
                     #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
                 else:
-                    if not sympy.simplify(sympy.diff(self.C_[j], sym1)) == sympy.parsing.sympy_parser.parse_expr("0"):
+                    if not sympy.simplify(sympy.diff(self.C_[j], sym1)).is_zero:
                         E.append((sym2, sym1))
                         #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
 
@@ -76,6 +78,7 @@ class SystemOfShapes(object):
 
         return node_is_lin
 
+
     def propagate_lin_cc_judgements(self, node_is_lin, E):
         """propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient"""
         
@@ -95,6 +98,7 @@ class SystemOfShapes(object):
 
         return node_is_lin
 
+
     def get_sub_system(self, symbols):
         """Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in `symbols` do not dependend on any of the other symbols that will be thrown away.
         """
@@ -110,7 +114,7 @@ class SystemOfShapes(object):
         return SystemOfShapes(x_sub, A_sub, C_sub, shapes_sub)
 
 
-    def compute_propagator(self, output_timestep_symbol_name="__h"):
+    def generate_propagator_solver(self, output_timestep_symbol="__h"):
         """
         """
 
@@ -120,7 +124,7 @@ class SystemOfShapes(object):
         #   generate the propagator matrix
         #
 
-        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol_name)))
+        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
         
 
         #
@@ -136,7 +140,7 @@ class SystemOfShapes(object):
                 if sympy.simplify(P[row, col]) != sympy.sympify(0):
                     #sym_str = "__P_{}__{}_{}".format(self.x_[row], row, col)
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
-                    P_sym[row, col] = parse_expr(sym_str)
+                    P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = str(P[row, col])
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
@@ -148,6 +152,27 @@ class SystemOfShapes(object):
                        "state_variables" : all_variable_symbols }
 
         return solver_dict
+
+
+    def generate_numeric_solver(self):
+        """
+        """
+        
+        update_expr = {}
+        for row, x in enumerate(self.x_):
+            update_expr_terms = []
+            for col, y in enumerate(self.x_):
+                update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
+            update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.C_[row]) + ")"
+            update_expr[str(x)] = str(sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)))
+        
+        all_variable_symbols = [ str(sym) for sym in self.x_ ]
+        
+        solver_dict = {"update_expressions" : update_expr,
+                       "state_variables" : all_variable_symbols }
+
+        return solver_dict
+
 
     @classmethod
     def from_shapes(cls, shapes):
@@ -175,16 +200,16 @@ class SystemOfShapes(object):
         
         i = 0
         for shape in shapes:
-            #print("Shape: " + str(shape.symbol))
+            print("Shape: " + str(shape.symbol))
             shape_expr = shape.diff_rhs_derivatives
             derivative_symbols = [ Symbol(str(shape.symbol) + "__d" * order) for order in range(shape.order) ]
             for derivative_factor, derivative_symbol in zip(shape.derivative_factors, derivative_symbols):
-                shape_expr = shape_expr + derivative_factor * derivative_symbol
-            #print("\t expr =  " + str(shape_expr))
+                shape_expr += derivative_factor * derivative_symbol
+            print("\t expr =  " + str(shape_expr))
 
             highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
             for j in range(N):
-                A[highest_diff_sym_idx, j] = diff(shape_expr, x[j])
+                A[highest_diff_sym_idx, j] = sympy.simplify(sympy.diff(shape_expr, x[j])) # XXX broken
             
             # for higher-order shapes: mark subsequent derivatives x_i' = x_(i+1)
             for order in range(shape.order - 1):
@@ -206,6 +231,8 @@ class SystemOfShapes(object):
             C[highest_diff_sym_idx] = shape_expr
 
             i += shape.order
+ 
+        import pdb;pdb.set_trace()
  
         return SystemOfShapes(x, A, C, shapes)
 
