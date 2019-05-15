@@ -197,38 +197,45 @@ class SystemOfShapes(object):
             for j in range(shape.order):
                 x[i] = shape.state_variables[j]
                 i += 1
-        
+
         i = 0
         for shape in shapes:
             print("Shape: " + str(shape.symbol))
+            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
             shape_expr = shape.diff_rhs_derivatives
             derivative_symbols = [ Symbol(str(shape.symbol) + "__d" * order) for order in range(shape.order) ]
             for derivative_factor, derivative_symbol in zip(shape.derivative_factors, derivative_symbols):
                 shape_expr += derivative_factor * derivative_symbol
             print("\t expr =  " + str(shape_expr))
 
-            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
-            for j in range(N):
-                A[highest_diff_sym_idx, j] = sympy.simplify(sympy.diff(shape_expr, x[j])) # XXX broken
-            
+
+            #
+            #   grab the defining expression and separate into linear and nonlinear part
+            #
+
+            for j, sym1 in enumerate(x):
+                diff_expr = sympy.simplify(sympy.diff(shape_expr, sym1))
+                print("\tdiff wrt " + str(sym1) + " = " + str(diff_expr))
+                for sym2 in x:
+                    print("\t\tsym2 = " + str(sym2))
+                    diff_wrt_sym2 = sympy.diff(diff_expr, sym2)
+                    print("\t\tdiff_wrt_sym2 = " + str(diff_wrt_sym2))
+                    if not diff_wrt_sym2.is_zero:
+                        # nonlinear term containing sym1
+                        C[highest_diff_sym_idx] += sym1 * sym2 * diff_wrt_sym2
+                        shape_expr -= sym1 * sym2 * diff_wrt_sym2                    
+                        diff_expr -= sym2 * diff_wrt_sym2
+                    shape_expr = sympy.simplify(shape_expr)
+                    diff_expr = sympy.simplify(diff_expr)
+                    A[highest_diff_sym_idx, j] = diff_expr
+                    print("\t\t---> new diff_expr = " + str(diff_expr))
+                    print("\t\t---> new shape_expr = " + str(shape_expr))
+
             # for higher-order shapes: mark subsequent derivatives x_i' = x_(i+1)
             for order in range(shape.order - 1):
                 _idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (order + 1))][0]
                 #print("\t\tThe symbol " + str(Symbol(str(shape.symbol) + "__d" * (order ))) + " is at position " + str(_idx) + " in vector " + str(x) + ", writing in row " + str(_idx))
                 A[i + (shape.order - order - 1), _idx] = 1.     # the highest derivative is at row `i`, the next highest is below, and so on, until you reach the variable symbol without any "__d" suffixes
-
-            i += shape.order
- 
-        i = 0
-        for shape in shapes:
-            print("Shape: " + str(shape.symbol))
-            shape_expr = shape.diff_rhs_derivatives
-
-            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
-            for j in range(N):
-                shape_expr = simplify(shape_expr - diff(shape_expr, x[j]) * x[j])
-
-            C[highest_diff_sym_idx] = shape_expr
 
             i += shape.order
  

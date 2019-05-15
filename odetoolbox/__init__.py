@@ -41,8 +41,8 @@ class ShapeNotLinHom(Exception): pass
 
 
 default_config = {
-    "input_timestep_symbol_name" : "t",
-    "output_timestep_symbol_name" : "__h"
+    "input_time_symbol" : "t",
+    "output_timestep_symbol" : "__h"
 }
 
 
@@ -69,19 +69,33 @@ def analysis(indict, enable_stiffness_check=True):
     #
 
     print("Processing input shapes...")
-    output_timestep_symbol_name = default_config["output_timestep_symbol_name"]
+    output_timestep_symbol = default_config["output_timestep_symbol"]
     if "options" in indict.keys():
         options_dict = indict["options"]
-        if "output_timestep_symbol_name" in options_dict.keys():
-            output_timestep_symbol_name = options_dict["output_timestep_symbol_name"]
+        if "output_timestep_symbol" in options_dict.keys():
+            output_timestep_symbol = options_dict["output_timestep_symbol"]
+
+    input_time_symbol = default_config["input_time_symbol"]
+    if "options" in indict.keys():
+        options_dict = indict["options"]
+        if "input_time_symbol" in options_dict.keys():
+            input_time_symbol = options_dict["input_time_symbol"]
 
     if "dynamics" not in indict:
         print("Warning: empty input (no dynamical equations found); returning empty output")
         solvers_json = {}
         return solvers_json
 
+    # first run for grabbing all the variable names. Coefficients might be incorrect.
+    all_variable_symbols = []
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json)
+        shape = Shape.from_json(shape_json, time_symbol=input_time_symbol)
+        all_variable_symbols.extend(shape.get_all_variable_symbols())
+    print("all_variable_symbols = " + str(all_variable_symbols))
+    
+    # second run provides the now-known list of variable symbols
+    for shape_json in indict["dynamics"]:
+        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=input_time_symbol)
         shapes.append(shape)
 
 
@@ -106,7 +120,7 @@ def analysis(indict, enable_stiffness_check=True):
     
     
     #
-    #   compute analytical solutions (propagators) where possible
+    #   generate analytical solutions (propagators) where possible
     #
     
     solvers_json = []
@@ -116,20 +130,20 @@ def analysis(indict, enable_stiffness_check=True):
         print("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
 
         sub_sys = shape_sys.get_sub_system(syms)
-        solver_json = sub_sys.compute_propagator(output_timestep_symbol_name=output_timestep_symbol_name)
+        solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
         solver_json["solver"] = "analytical"
-        #solver_json = {"solver": "analytical",
-                     #"propagator": prop }
         solvers_json.append(solver_json)
 
     
     #
-    #   compute numerical solvers for the remainder
+    #   generate numerical solvers for the remainder
     #
 
-    #if len(syms) < len(shape_sys.x_):
-        #print("Picking numerical solver for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == False]))
-        #solver_json = sub_sys.compute_numeric_solution(shapes)
+    if len(syms) < len(shape_sys.x_):
+        print("Generating numerical solver for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == False]))
+        syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if not _node_is_lin ]
+        sub_sys = shape_sys.get_sub_system(syms)
+        solver_json = sub_sys.generate_numeric_solver()
         #if HAVE_STIFFNESS and enable_stiffness_check:
             #tester = stiffness.StiffnessTester(shapes)
             #solver_type = tester.check_stiffness()
@@ -140,10 +154,10 @@ def analysis(indict, enable_stiffness_check=True):
         #else:
             #print("(stiffness test skipped, PyGSL not available)")
 
-        #solvers_json.append(solver_json)
+        solvers_json.append(solver_json)
 
     #
-    #   copy the initial values from the input to the output for convenience
+    #   copy the initial values from the input to the output for convenience; convert to numeric values
     #
 
     for solver_json in solvers_json:
@@ -153,7 +167,18 @@ def analysis(indict, enable_stiffness_check=True):
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
                     solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace("__d", "'")))
-    import pdb;pdb.set_trace()
+
+
+    #
+    #   copy the parameter values from the input to the output for convenience; convert into numeric values
+    #
+
+    if "parameters" in indict.keys():
+        for solver_json in solvers_json:
+            solver_json["parameters"] = {}
+            for param_name, param_expr in indict["parameters"].items():
+                # XXX: TODO: only make parameters appear in a solver if they are actually used there
+                solver_json["parameters"][param_name] = str(sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals).n())
 
     return solvers_json
 

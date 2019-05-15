@@ -124,7 +124,7 @@ class TestIntegration(unittest.TestCase):
         
         debug = True
 
-        indict = open_json("iaf_psc_alpha.json")
+        indict = open_json("test_integration.json")
         solver_dict = odetoolbox.analysis(indict)
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict,  indent=2))
@@ -355,11 +355,13 @@ class TestIntegration(unittest.TestCase):
             ax[-1].set_xlabel("Time [ms]")
 
             #plt.show()
-            print("Saving to...")
-            plt.savefig("/tmp/remotefs2/propagators.png", dpi=600)
+            fn = "/tmp/remotefs2/propagators.png"
+            print("Saving to " + fn)
+            plt.savefig(fn, dpi=600)
 
         # the two propagators should be very close...
         np.testing.assert_allclose(i_ex__[0, :], state["I_shape_ex"], atol=1E-9, rtol=1E-9)
+        np.testing.assert_allclose(i_ex__[0, :], state["I_shape_in"], atol=1E-9, rtol=1E-9)
         #np.testing.assert_allclose(i_ex__[1, :], state["I_shape_ex"]["I_shape_ex__d"], atol=1E-9, rtol=1E-9)    # XXX: cannot check this, as ode-toolbox conversion to lower triangular format changes the semantics/behaviour of I_shape_ex__d; see eq. 14 in Blundell et al. 2018 Front Neuroinformatics
 
         # the numerical value is compared with a bit more leniency... compare max-normalised timeseries with the given rel, abs tolerances
