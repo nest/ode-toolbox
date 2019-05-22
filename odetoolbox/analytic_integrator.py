@@ -163,15 +163,16 @@ class AnalyticIntegrator():
             #
             
             delta_t = spike_t - t_curr
-            assert delta_t > 0
-            state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
+            if delta_t > 0:
+                state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
 
             #
             #   delta impulse increment
             #
             
             for spike_sym in spike_syms:
-                state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
+                if spike_sym in self.initial_values.keys():
+                    state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
             
             t_curr = spike_t
 

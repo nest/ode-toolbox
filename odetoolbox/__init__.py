@@ -157,7 +157,7 @@ def analysis(indict, enable_stiffness_check=True):
                 kwargs["analytic_solver_dict"] = analytic_solver_json
             tester = stiffness.StiffnessTester(sub_sys, shapes, **kwargs)
             solver_type = tester.check_stiffness()
-            solver_json["solver"] = solver_type
+            solver_json["solver"] += "-" + solver_type
             print(solver_type + " scheme")
 
         #else:
