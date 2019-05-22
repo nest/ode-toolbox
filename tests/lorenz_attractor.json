@@ -1,0 +1,21 @@
+{
+  "dynamics": [
+    {
+      "expression": "x' = sigma * (y - x)",
+      "initial_value" : "1"
+    },
+    {
+      "expression": "y' = x * (rho - z) - y",
+      "initial_value" : "1"
+    },
+    {
+      "expression": "z' = x * y - beta * z",
+      "initial_value" : "1"
+    }
+  ],
+  "parameters" : {
+    "sigma" : "10",
+    "beta" : "8/3",
+    "rho" : "28"
+  }
+}

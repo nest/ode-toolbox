@@ -34,12 +34,12 @@ def is_sympy_type(var):
 
 
 class Shape(object):
-    """Canonical representation of a postsynaptic shape.
+    """Canonical representation of a shape function.
 
     Description
     -----------
 
-    This class provides a canonical representation of a postsynaptic shape independently of the way in which the user specified the shape. It assumes a differential equation of the general form (where bracketed superscript :math:`\cdot^{(n)}` indicates the n-th derivative with respect to time):
+    This class provides a canonical representation of a shape function independently of the way in which the user specified the shape. It assumes a differential equation of the general form (where bracketed superscript :math:`\cdot^{(n)}` indicates the n-th derivative with respect to time):
 
     .. math::
 
@@ -51,23 +51,10 @@ class Shape(object):
 
     .. code::
 
-        I''' = c0 I + c1 I' + c2 I'' + N
+        x''' = c0*x + c1*x' + c2*x'' + x*y + x**2
 
-    the `symbol` of the ODE would be `I` (i.e. without any qualifiers), `order` would be 3, and `derivative_factors` would be {"I" : "f0", "I'" : "f1", "I''" : f2 }
+    the `symbol` of the ODE would be `x` (i.e. without any qualifiers), `order` would be 3, `derivative_factors` would contain the linear part in the form of the list `[c0, c1, c2]`, and the nonlinear part is stored in `diff_rhs_derivatives`.
 
-    Internally, the representation is based on the following attributes:
-
-    Attributes
-    ----------
-
-    symbol : SymPy expression
-        Symbolic name of the shape without additional qualifiers like prime symbols or similar.
-    order : int
-        Order of the ODE representing the shape.
-    initial_values : dict of SymPy expressions
-        Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
-    derivative_factors : list of SymPy expressions
-        The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
     """
 
     # a minimal subset of sympy classes and functions to avoid "from sympy import *"
@@ -92,7 +79,22 @@ class Shape(object):
                      }
 
     def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.)):
-        """Perform type and consistency checks and assign arguments to member variables."""
+        """Perform type and consistency checks and assign arguments to member variables.
+
+
+        Parameters
+        ----------
+
+        symbol : SymPy expression
+            Symbolic name of the shape without additional qualifiers like prime symbols or similar.
+        order : int
+            Order of the ODE representing the shape.
+        initial_values : dict of SymPy expressions
+            Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
+        derivative_factors : list of SymPy expressions
+            The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
+        diff_rhs_derivatives : 
+        """
         assert type(symbol) is sympy.Symbol, "symbol is not a SymPy symbol: \"%r\"" % symbol
         self.symbol = symbol
 
@@ -175,6 +177,8 @@ class Shape(object):
     @classmethod
     def from_json(cls, indict, all_variable_symbols=[], time_symbol="t"):
         """Create a shape object from a JSON input dictionary
+        
+        XXX: TODO: read in lower_bound and upper_bound, if present
         """
 
         if not "expression" in indict:

@@ -32,14 +32,30 @@ import numpy as np
 from .shapes import Shape
 
 class SystemOfShapes(object):
-    """    """
+    """
+    
+    
+    """
 
     def __init__(self, x, A, C, shapes):
+        """
+        Parameters
+        ----------
+        A : sympy.Matrix
+            Jacobian of the system (square matrix).
+        """
         assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
         self.x_ = x
         self.A_ = A
         self.C_ = C
         self.shapes_ = shapes
+
+
+    def get_initial_value(self, sym):
+        for shape in self.shapes_:
+            if str(shape.symbol) == str(sym).replace("__d", "").replace("'", ""):
+                return shape.get_initial_value(sym)
+        assert False, "Unknown symbol: " + str(sym)
 
 
     def get_dependency_edges(self):
@@ -99,15 +115,36 @@ class SystemOfShapes(object):
         return node_is_lin
 
 
+    def get_jacobian_matrix(self):
+        """Get the Jacobian matrix
+        """
+        N = len(self.x_)
+        J = sympy.zeros(N, N)
+        for i, sym in enumerate(self.x_):
+            expr = self.C_[i]
+            for v in self.A_[i, :]:
+                expr += v
+            for j, sym2 in enumerate(self.x_):
+                J[i, j] = sympy.diff(expr, sym2)
+        return J
+
+
     def get_sub_system(self, symbols):
         """Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in `symbols` do not dependend on any of the other symbols that will be thrown away.
         """
 
         idx = [ i for i, sym in enumerate(self.x_) if sym in symbols ]
+        idx_compl = [ i for i, sym in enumerate(self.x_) if not sym in symbols ]
         
         x_sub = self.x_[idx, :]
         A_sub = self.A_[idx, :][:, idx]
-        C_sub = self.C_[idx, :]
+
+        C_old = self.C_.copy()
+        for _idx in idx:
+            C_old[_idx] += self.A_[_idx, idx_compl].dot(self.x_[idx_compl, :])
+            C_old[_idx] = sympy.simplify(C_old[_idx])
+        
+        C_sub = C_old[idx, :]
         
         shapes_sub = [shape for shape in self.shapes_ if shape.symbol in symbols]
         
@@ -141,15 +178,19 @@ class SystemOfShapes(object):
                     #sym_str = "__P_{}__{}_{}".format(self.x_[row], row, col)
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
-                    P_expr[sym_str] = str(P[row, col])
+                    P_expr[sym_str] = P[row, col]
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
-            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
+            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) + " + " + str(self.C_[row])
+            update_expr[str(self.x_[row])] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals))
                     
         all_variable_symbols = [ str(sym) for sym in self.x_ ]
 
+        initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_variable_symbols }
+
         solver_dict = {"propagators" : P_expr,
                        "update_expressions" : update_expr,
-                       "state_variables" : all_variable_symbols }
+                       "state_variables" : all_variable_symbols,
+                       "initial_values" : initial_values}
 
         return solver_dict
 
@@ -164,12 +205,14 @@ class SystemOfShapes(object):
             for col, y in enumerate(self.x_):
                 update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.C_[row]) + ")"
-            update_expr[str(x)] = str(sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)))
+            update_expr[str(x)] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals))
         
         all_variable_symbols = [ str(sym) for sym in self.x_ ]
+        initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_variable_symbols }
         
         solver_dict = {"update_expressions" : update_expr,
-                       "state_variables" : all_variable_symbols }
+                       "state_variables" : all_variable_symbols,
+                       "initial_values" : initial_values}
 
         return solver_dict
 
@@ -238,9 +281,7 @@ class SystemOfShapes(object):
                 A[i + (shape.order - order - 1), _idx] = 1.     # the highest derivative is at row `i`, the next highest is below, and so on, until you reach the variable symbol without any "__d" suffixes
 
             i += shape.order
- 
-        import pdb;pdb.set_trace()
- 
+
         return SystemOfShapes(x, A, C, shapes)
 
 

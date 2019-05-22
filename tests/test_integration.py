@@ -33,6 +33,7 @@ if INTEGRATION_TEST_DEBUG_PLOTS:
     import matplotlib.pyplot as plt
 
 from .context import odetoolbox
+from odetoolbox.analytic_integrator import AnalyticIntegrator
 
 from math import e
 from sympy import exp, sympify
@@ -124,18 +125,6 @@ class TestIntegration(unittest.TestCase):
         
         debug = True
 
-        indict = open_json("test_integration.json")
-        solver_dict = odetoolbox.analysis(indict)
-        print("Got solver_dict from ode-toolbox: ")
-        print(json.dumps(solver_dict,  indent=2))
-        assert len(solver_dict) == 1
-        solver_dict = solver_dict[0]
-        assert solver_dict["solver"] == "analytical"
-
-        shape_names = solver_dict["update_expressions"].keys()
-        assert shape_names == solver_dict["initial_values"].keys()
-        N_shapes = len(shape_names)
-
         h = 1E-3    # [s]
         T = 100E-3    # [s]
 
@@ -145,50 +134,64 @@ class TestIntegration(unittest.TestCase):
         c_m = 1E-6    # [F]
         v_abs_init = -1000.   # [mV]
         i_ex_init = [0., e / tau_syn]   # [A]
-        spike_time = 10E-3 # [s]
-        assert spike_time < T, "spike needs to occur before end of simulation"
+        spike_times = [10E-3] # [s]
+        for spike_time in spike_times:
+            assert spike_time < T, "spike needs to occur before end of simulation"
 
         N = int(np.ceil(T / h) + 1)
-        t = np.linspace(0., T, N)
-        spike_time_idx = np.argmin((spike_time - t)**2)
+        timevec = np.linspace(0., T, N)
+        spike_times_idx = [np.argmin((spike_time - timevec)**2) for spike_time in spike_times]
+
 
 
         #
         #   compute numerical reference timeseries
         #
-
+        
         def f(t, y):
             #print("In f(t=" + str(t) + ", y=" + str(y) + ")")
             i_ex = y[0:2]
             V_abs = y[2]
 
             _d_i_ex = np.array([i_ex[1], -i_ex[0] / tau_syn**2 - 2 * i_ex[1] / tau_syn])
-            _d_V_abs_expr_ = -1/tau*V_abs + 1/c_m*(2*i_ex[0])    # XXX: factor 2 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory currents (which are of the exact same shape/magnitude at all times)
+            _d_V_abs_expr_ = -V_abs / tau + 2 * i_ex[0] / c_m    # XXX: factor 2 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory currents (which are of the exact same shape/magnitude at all times)
             _delta_vec = np.concatenate((_d_i_ex, [_d_V_abs_expr_]))
             #print("\treturning " + str(_delta_vec))
 
             return _delta_vec
+        
+        numerical_timevec = np.zeros((1, 0), dtype=np.float)
+        numerical_sol = np.zeros((3, 0), dtype=np.float)
+        
+        _init_value = [0., 0., v_abs_init]
+        
+        t = 0.
+        spike_time_idx = 0
+        while t < T:
+            if spike_time_idx < len(spike_times):
+                _t_stop = spike_times[spike_time_idx]
+            else:
+                _t_stop = T
 
-        sol = solve_ivp(f, t_span=[0., spike_time], y0=[0., 0., v_abs_init], t_eval=t[np.logical_and(0. <= t, t <= spike_time)], rtol=1E-9, atol=1E-9)
+            sol = solve_ivp(f, t_span=[t, _t_stop], y0=_init_value, t_eval=timevec[np.logical_and(t < timevec, timevec <= _t_stop)], rtol=1E-9, atol=1E-9)
+            _init_value[:2] = i_ex_init       # "apply" the spike
+            _init_value[2] = sol.y[2, -1]
+            
+            numerical_timevec = np.hstack((numerical_timevec, sol.t.copy()[np.newaxis, :]))
+            numerical_sol = np.hstack((numerical_sol, sol.y.copy()))
+            
+            if numerical_timevec[0, -1] == spike_times[min(len(spike_times) - 1, spike_time_idx)]:
+                numerical_sol[:2, -1] = i_ex_init   # set value to "just after" application of the spike, just for the log
+            
+            t = _t_stop
+            spike_time_idx += 1
 
-        sol.y[:2, -1] = i_ex_init       # "apply" the spike
-
-        _sol_t_first_part = sol.t.copy()
-        _sol_y_first_part = sol.y.copy()
-
-        sol = solve_ivp(f, t_span=[spike_time, T], y0=sol.y[:, -1], t_eval=t[np.logical_and(spike_time < t, t <= T)])
-        _sol_t_second_part = sol.t.copy()
-        _sol_y_second_part = sol.y.copy()
-
-        _sol_t = np.hstack((_sol_t_first_part, _sol_t_second_part))
-        _sol_y = np.hstack((_sol_y_first_part, _sol_y_second_part))
-
-        i_ex = _sol_y[:2, :]
-        v_abs = _sol_y[2, :]
+        i_ex = numerical_sol[:2, :]
+        v_abs = numerical_sol[2, :]
 
 
         #
-        #   timeseries using hand-calculated propagators
+        #   timeseries using hand-calculated propagators (only for alpha postsynaptic currents, not V_abs)
         #
 
         P = scipy.linalg.expm(h * np.array([[0., 1.], [-1/tau_syn**2, -2/tau_syn]]))
@@ -199,153 +202,71 @@ class TestIntegration(unittest.TestCase):
         np.testing.assert_allclose(P, P_)
 
         print("Propagator matrix from python-ref: " + str(P))
+        spike_time_idx = spike_times_idx[0] # XXX
         i_ex__ = np.zeros((2, N))
         for step in range(1, N):
             if step - 1 == spike_time_idx:
                 i_ex__[:, step - 1] = i_ex_init
             i_ex__[:, step] = np.dot(P, i_ex__[:, step - 1])
 
-
+        
 
         #
         #   timeseries using ode-toolbox generated propagators
         #
 
-        SHAPE_NAME_IDX = -1      # hard-coded index of shape variable name index; assumes that the order is [dy^n/dt^n, ..., dy/dn, y]
-        ODE_INITIAL_VALUES = { "V_abs" : v_abs_init }
+        indict = open_json("test_integration.json")
+        solver_dict = odetoolbox.analysis(indict)
+        print("Got solver_dict from ode-toolbox: ")
+        print(json.dumps(solver_dict,  indent=2))
+        assert len(solver_dict) == 1
+        solver_dict = solver_dict[0]
+        assert solver_dict["solver"] == "analytical"
 
-        ### define the necessary sympy variables
+        ODE_INITIAL_VALUES = { "V_abs" : v_abs_init, "I_shape_ex" : 0., "I_shape_ex__d" : 0., "I_shape_in" : 0., "I_shape_in__d" : 0. }
 
-        Tau, Tau_syn_in, Tau_syn_ex, C_m,  I_e, currents = sympy.symbols("Tau Tau_syn_in Tau_syn_ex C_m  I_e currents")
+        _parms = {"Tau" : tau,
+                 "Tau_syn_in" : tau_syn,
+                 "Tau_syn_ex" : tau_syn,
+                 "C_m" : c_m,
+                 "I_e" : 0.,
+                 "currents" : 0.,
+                 "e" : sympy.exp(1) }
 
-        symbs = {"sympy" : sympy,
-                 "Tau" : Tau,
-                 "Tau_syn_in" : Tau_syn_in,
-                 "Tau_syn_ex" : Tau_syn_ex,
-                 "C_m" : C_m,
-                 "I_e" : I_e,
-                 "currents" : currents,
-                 "c_m" : c_m,
-                 "tau" : tau,
-                 "tau_syn" : tau_syn,
-                 "exp" : exp,
-                 "e" : e,
-                 "h" : h,
-                 "__h" : h}
+        if not "parameters" in solver_dict.keys():
+            solver_dict["parameters"] = {}
+        solver_dict["parameters"].update(_parms)
 
-        #
-        #    define the necessary sympy variable symbols
-        #
-
-        print("* Defining sympy variable symbols")
-        for state_variable in solver_dict["state_variables"]:
-            print("\t * Defining var: " + str(state_variable))
-            exec(state_variable + " = sympy.symbols(\"" + state_variable + "\")", symbs)
-
-
-        #
-        #   define the necessary numerical state variables
-        #
-
-        dim = len(solver_dict["state_variables"])
-        state = solver_dict["initial_values"].copy()
-        state = { k : np.nan * np.ones(N) for k, _ in state.items() }
-        initial_values = solver_dict["initial_values"].copy()
-        for k, v in initial_values.items():
-            expr = sympy.parsing.sympy_parser.parse_expr(v)
-            expr = expr.subs(Tau_syn_in, tau_syn)
-            expr = expr.subs(Tau_syn_ex, tau_syn)
-            expr = expr.subs(Tau, tau)
-            expr = expr.subs(C_m, c_m)
-            expr = expr.subs(I_e, 0.)
-            expr = expr.subs(currents, 0.)
-            expr = expr.subs(Tau_syn_in, tau_syn)
-            expr = expr.subs(Tau_syn_ex, tau_syn)
-            initial_values[k] = expr
-
-            state[k][0] = 0.    # don't use the actual initial value here
-            state["V_abs"][0] = v_abs_init     # ... except for V_abs
-
-
-        #
-        #   add propagator definitions
-        #
-
-        for k, v in solver_dict["propagators"].items():
-            if debug:
-                print(" * Adding propagator: " + k + " = " + str(v))
-            exec(k + " = " + v, symbs)
-
-
-        #
-        #   main simulation loop
-        #
-
-        for step in range(1, N):
-            print("Step " + str(step) + " of " + str(N-1))
-
-
-            #
-            #   set spike stimulus if necessary
-            #
-
-            if step - 1 == spike_time_idx:
-                print("Applying spike stimulus at timestep " + str(spike_time_idx))
-                for state_variable in solver_dict["state_variables"]:
-                    state_variable_initial_value = initial_values[state_variable]
-                    if "I" in state_variable:   # apply to currents only, not membrane potential
-                        state[state_variable][step - 1] = eval(str(state_variable_initial_value), symbs)
-
-
-            #
-            #   update the state using propagators
-            #
-
-            for state_variable, update_expr in solver_dict["update_expressions"].items():
-                if debug:
-                    print("\t* state_variable_name = " + state_variable)
-                    print("\t* update expression = " + update_expr)
-
-
-                #
-                #   in the update expression, replace symbolic variables with their values at the last step
-                #
-
-                expr = eval(update_expr, globals().update(symbs))
-                for _state_variable in solver_dict["state_variables"]:
-                    expr = expr.subs(_state_variable, state[_state_variable][step - 1]) 
-                    print("\t\t* replacing variable " + _state_variable + " with " + str(state[_state_variable][step - 1]))
-
-                expr = expr.subs(Tau_syn_in, tau_syn)
-                expr = expr.subs(Tau_syn_ex, tau_syn)
-                expr = expr.subs(Tau, tau)
-                expr = expr.subs(C_m, c_m)
-                expr = expr.subs(I_e, 0.)
-                expr = expr.subs(currents, 0.)
-                expr = expr.subs(Tau_syn_in, tau_syn)
-                expr = expr.subs(Tau_syn_ex, tau_syn)
+        # ...
+        spike_times_ = { "I_shape_ex__d" : spike_times, "I_shape_in__d" : spike_times }
+        analytic_integrator = AnalyticIntegrator(solver_dict, spike_times_)
+        analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
+        
+        state = { sym : [] for sym in solver_dict["state_variables"] }
+        state["timevec"] = []
+        for step, t in enumerate(timevec):
+            print("Step " + str(step) + " of " + str(N))
+            state_ = analytic_integrator.get_value(t)
+            state["timevec"].append(t)
+            for sym, val in state_.items():
+                state[sym].append(val)
                 
-                if debug:
-                    print("\t* update expression evaluates to = " + str(expr))
-
-                #
-                #   assign the new numeric value to the state vector
-                #
-
-                state[state_variable][step] = expr
-
+        
+        for k, v in state.items():
+            state[k] = np.array(v)
+        
         if INTEGRATION_TEST_DEBUG_PLOTS:
             fig, ax = plt.subplots(3, sharex=True)
-            ax[0].plot(1E3 * _sol_t, v_abs, label="V_abs (num)")
-            ax[0].plot(1E3 * t, state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
+            ax[0].plot(1E3 * numerical_timevec.squeeze(), v_abs, label="V_abs (num)")
+            ax[0].plot(1E3 * state["timevec"], state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
 
-            ax[1].plot(1E3 * _sol_t, i_ex[0, :], linewidth=2, label="i_ex (num)")
-            ax[1].plot(1E3 * t, state["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)")
-            ax[1].plot(1E3 * t, i_ex__[0, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
+            ax[1].plot(1E3 * numerical_timevec.squeeze(), i_ex[0, :], linewidth=2, label="i_ex (num)")
+            ax[1].plot(1E3 * state["timevec"], state["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)")
+            ax[1].plot(1E3 * timevec, i_ex__[0, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
 
-            ax[2].plot(1E3 * _sol_t, i_ex[1, :], linewidth=2, label="i_ex' (num)")
-            ax[2].plot(1E3 * t, state["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)")
-            ax[2].plot(1E3 * t, i_ex__[1, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
+            ax[2].plot(1E3 * numerical_timevec.squeeze(), i_ex[1, :], linewidth=2, label="i_ex' (num)")
+            ax[2].plot(1E3 * state["timevec"], state["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)")
+            ax[2].plot(1E3 * timevec, i_ex__[1, :], linewidth=2, linestyle="-.", marker="x", label="i_ex' (prop ref)")
 
             for _ax in ax:
                 _ax.legend()

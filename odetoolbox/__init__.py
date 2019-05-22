@@ -124,17 +124,16 @@ def analysis(indict, enable_stiffness_check=True):
     #
     
     solvers_json = []
-
+    analytic_solver_json = None
     syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
     if len(syms) > 0:
         print("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
-
         sub_sys = shape_sys.get_sub_system(syms)
-        solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
-        solver_json["solver"] = "analytical"
-        solvers_json.append(solver_json)
+        analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
+        analytic_solver_json["solver"] = "analytical"
+        solvers_json.append(analytic_solver_json)
 
-    
+
     #
     #   generate numerical solvers for the remainder
     #
@@ -144,12 +143,22 @@ def analysis(indict, enable_stiffness_check=True):
         syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if not _node_is_lin ]
         sub_sys = shape_sys.get_sub_system(syms)
         solver_json = sub_sys.generate_numeric_solver()
-        #if HAVE_STIFFNESS and enable_stiffness_check:
-            #tester = stiffness.StiffnessTester(shapes)
-            #solver_type = tester.check_stiffness()
-
-            #output["solver"] += "-" + solver_type
-            #print(solver_type + " scheme")
+        solver_json["solver"] = "numeric"   # will be overwritten if stiffness testing is used
+        if HAVE_STIFFNESS and enable_stiffness_check:
+            print("Performing stiffness test...")
+            kwargs = {}
+            if "options" in indict.keys() and "random_seed" in indict["options"].keys():
+                random_seed = int(indict["options"]["random_seed"])
+                assert random_seed >= 0, "Random seed needs to be a non-negative integer"
+                kwargs["random_seed"] = random_seed
+            if "parameters" in indict.keys():
+                kwargs["parameters"] = indict["parameters"]
+            if not analytic_solver_json is None:
+                kwargs["analytic_solver_dict"] = analytic_solver_json
+            tester = stiffness.StiffnessTester(sub_sys, shapes, **kwargs)
+            solver_type = tester.check_stiffness()
+            solver_json["solver"] = solver_type
+            print(solver_type + " scheme")
 
         #else:
             #print("(stiffness test skipped, PyGSL not available)")
@@ -177,8 +186,36 @@ def analysis(indict, enable_stiffness_check=True):
         for solver_json in solvers_json:
             solver_json["parameters"] = {}
             for param_name, param_expr in indict["parameters"].items():
-                # XXX: TODO: only make parameters appear in a solver if they are actually used there
-                solver_json["parameters"][param_name] = str(sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals).n())
+                # only make parameters appear in a solver if they are actually used there
+                symbol_appears_in_any_expr = False
+                if "update_expressions" in solver_json.keys():
+                    for sym, expr in solver_json["update_expressions"].items():
+                        if param_name in [str(sym) for sym in list(expr.atoms())]:
+                            symbol_appears_in_any_expr = True
+                            break
+
+                if "propagators" in solver_json.keys():
+                    for sym, expr in solver_json["propagators"].items():
+                        if param_name in [str(sym) for sym in list(expr.atoms())]:
+                        #if len(expr.atoms(param_name)) > 0:
+                            symbol_appears_in_any_expr = True
+                            break
+                
+                if symbol_appears_in_any_expr:
+                    solver_json["parameters"][param_name] = str(sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals).n())
+
+    #
+    #   convert expressions from sympy to string
+    #
+    
+    for solver_json in solvers_json:
+        if "update_expressions" in solver_json.keys():
+            for sym, expr in solver_json["update_expressions"].items():
+                solver_json["update_expressions"][sym] = str(expr)
+
+        if "propagators" in solver_json.keys():
+            for sym, expr in solver_json["propagators"].items():
+                solver_json["propagators"][sym] = str(expr)
 
     return solvers_json
 
