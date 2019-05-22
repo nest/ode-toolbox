@@ -77,9 +77,9 @@ class AnalyticIntegrator():
                     self.all_spike_times.append(t_sp)
                     self.all_spike_times_sym.append([sym])
 
-        idx = np.argsort(self.all_spike_times)[0]
-        self.all_spike_times = self.all_spike_times[idx]
-        self.all_spike_times_sym = self.all_spike_times_sym[idx]
+        idx = np.argsort(self.all_spike_times)
+        self.all_spike_times = [ self.all_spike_times[i] for i in idx ]
+        self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
         
         #self.state_vec = np.nan * np.ones(self.dim)
         #self.prop_matrix = 
@@ -136,31 +136,52 @@ class AnalyticIntegrator():
 
 
     def get_value(self, t, debug=True):
-        idx = np.where(self.all_spike_times > t)[0][0]
-        all_spike_times = self.all_spike_times[:idx]
-        all_spike_times_syms = self.all_spike_times_sym[:idx]
+        #idx = np.where(self.all_spike_times > t)[0][0]
+        #all_spike_times = self.all_spike_times[:idx]
+        #all_spike_times_syms = self.all_spike_times_sym[:idx]
         
-        state_at_t = self.initial_values.copy()
-        
-        # update step from the initial value to the time of the first spike, or, in case of no spikes within this time window, to time `t`
-        if len(all_spike_times) == 0:
-            t_stop = t
-        else:
-            t_stop = all_spike_times[0]
-        
-        state_at_t = self.update_step(t_stop, state_at_t)
-        
-        #for spike_t, spike_syms in zip(all_spike_times, all_spike_times_sym):
-        #for t_sp in all_spike_times:
-            delta_t = t - spike_t
+        #all_spike_times = []
+        #all_spike_times_sym = []
+        #for sym, sym_spikes in self.spike_times.items():
+            #all_spike_times.extend(sym_spikes)
+            #all_spike_times_sym.extend(len(sym_spikes) * [sym])
 
-            _delta_state = self.update_step(delta_t, self.shape_starting_values)        # change in state at time `t` due to spike at `spike_t`
+        #idx = np.argsort(all_spike_times)[0]
+        #all_spike_times = [ all_spike_times[i] for i in idx ] 
+        #all_spike_times_sym = [ all_spike_times_sym[i] for i in idx ]
+        
+        state_at_t_curr = self.initial_values.copy()
+        t_curr = 0.
+        
+        for spike_t, spike_syms in zip(self.all_spike_times, self.all_spike_times_sym):
+            
+            if spike_t > t:
+                break
+            
+            #
+            #   apply propagator to update the state from `t_curr` to `spike_t`
+            #
+            
+            delta_t = spike_t - t_curr
+            assert delta_t > 0
+            state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
 
             #
-            #   accumulate the contributions of all the spikes
+            #   delta impulse increment
             #
+            
+            for spike_sym in spike_syms:
+                state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
+            
+            t_curr = spike_t
 
-            for state_variable, val in _delta_state.items():
-                state_at_t[state_variable] += val
+            
+        #
+        #   apply propagator to update the state from `t_curr` to `t`
+        #
+        
+        delta_t = t - t_curr
+        state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
+        t_curr = t
 
-        return state_at_t
+        return state_at_t_curr

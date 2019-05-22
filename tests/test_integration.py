@@ -165,6 +165,10 @@ class TestIntegration(unittest.TestCase):
         
         _init_value = [0., 0., v_abs_init]
         
+        numerical_timevec = np.hstack((numerical_timevec, np.array([0])[np.newaxis, :]))
+        numerical_sol = np.hstack((numerical_sol, np.array(_init_value)[:, np.newaxis]))
+            
+        
         t = 0.
         spike_time_idx = 0
         while t < T:
