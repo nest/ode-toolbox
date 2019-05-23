@@ -42,6 +42,7 @@ class AnalyticIntegrator():
         
         self.t = 0.
         
+        print("Initialised AnalyticIntegrator with spike times = " + str(spike_times))
 
         #
         #   define the necessary numerical state variables
@@ -49,6 +50,7 @@ class AnalyticIntegrator():
 
         self.dim = len(self.solver_dict["state_variables"])
         self.initial_values = self.solver_dict["initial_values"].copy()
+        self.set_initial_values(self.initial_values.copy())
         self.shape_starting_values = self.solver_dict["initial_values"].copy()
         for k, v in self.shape_starting_values.items():
             expr = sympy.parsing.sympy_parser.parse_expr(v)
@@ -61,6 +63,7 @@ class AnalyticIntegrator():
         for k, v in self.update_expressions.items():
             if type(self.update_expressions[k]) is str:
                 self.update_expressions[k] = sympy.parsing.sympy_parser.parse_expr(self.update_expressions[k])
+
 
         #
         #   make a sorted list of all spike times for all symbols
@@ -80,7 +83,9 @@ class AnalyticIntegrator():
         idx = np.argsort(self.all_spike_times)
         self.all_spike_times = [ self.all_spike_times[i] for i in idx ]
         self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
-        
+        print("Initialised AnalyticIntegrator with all_spike_times = " + str(self.all_spike_times))
+        print("Initialised AnalyticIntegrator with all_spike_times_sym = " + str(self.all_spike_times_sym))
+
         #self.state_vec = np.nan * np.ones(self.dim)
         #self.prop_matrix = 
 
@@ -100,7 +105,7 @@ class AnalyticIntegrator():
         """
         for k, v in vals.items():
             assert k in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
-            self.initial_values[k] = v
+            self.initial_values[k] = float(v)
 
 
     def update_step(self, delta_t, initial_values, debug=True):

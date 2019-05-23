@@ -24,7 +24,6 @@ import os
 import unittest
 
 from .context import odetoolbox
-from odetoolbox.analytic import Propagator
 from odetoolbox.shapes import Shape
 
 
