@@ -105,7 +105,10 @@ class AnalyticIntegrator():
         """
         for k, v in vals.items():
             assert k in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
-            self.initial_values[k] = float(v)
+            expr = sympy.parsing.sympy_parser.parse_expr(str(v))
+            for param_symbol, param_val in self.solver_dict["parameters"].items():
+                expr = expr.subs(param_symbol, param_val)
+            self.initial_values[k] = float(expr.evalf())
 
 
     def update_step(self, delta_t, initial_values, debug=True):

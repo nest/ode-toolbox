@@ -1,0 +1,25 @@
+{
+  "__info" : "This file corresponds to `test_integration.py` and is a copy of the integrate-and-fire neuron with alpha-shaped postsynaptic currents expressed in two different ways (differentially and directly as a function)",
+
+  "dynamics": [
+    {
+      "expression": "I_shape_in = (e/Tau_syn_in) * t * exp(-t/Tau_syn_in)"
+    },
+    {
+      "expression": "I_shape_ex'' = -1 / Tau_syn_ex**2 * I_shape_ex - 2/Tau_syn_ex * I_shape_ex'",
+      "initial_values": {
+        "I_shape_ex" : "0",
+        "I_shape_ex'" : "e / Tau_syn_ex"
+      }
+    },
+    {
+      "expression": "V_abs' = -1/Tau*V_abs + 1/C_m*(I_shape_in + I_shape_ex + I_shape_gap1 + I_e + currents)",
+      "initial_value": "0."
+    }
+  ],
+
+  "options":
+  {
+    "output_timestep_symbol_name": "__h"
+  }
+}

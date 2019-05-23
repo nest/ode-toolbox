@@ -108,7 +108,7 @@ class SystemOfShapes(object):
                 dependent_neighbours = [ n1 for (n1, n2) in E if n2 == n ]    # nodes that depend on n
                 for n_neigh in dependent_neighbours:
                     if node_is_lin[n_neigh]:
-                        print("\t\tMarking dependent node " + str(n_neigh))
+                        #print("\t\tMarking dependent node " + str(n_neigh))
                         node_is_lin[n_neigh] = False
                         queue.append(n_neigh)
 
@@ -243,13 +243,13 @@ class SystemOfShapes(object):
 
         i = 0
         for shape in shapes:
-            print("Shape: " + str(shape.symbol))
+            #print("Shape: " + str(shape.symbol))
             highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
             shape_expr = shape.diff_rhs_derivatives
             derivative_symbols = [ Symbol(str(shape.symbol) + "__d" * order) for order in range(shape.order) ]
             for derivative_factor, derivative_symbol in zip(shape.derivative_factors, derivative_symbols):
                 shape_expr += derivative_factor * derivative_symbol
-            print("\t expr =  " + str(shape_expr))
+            #print("\t expr =  " + str(shape_expr))
 
 
             #
@@ -258,11 +258,11 @@ class SystemOfShapes(object):
 
             for j, sym1 in enumerate(x):
                 diff_expr = sympy.simplify(sympy.diff(shape_expr, sym1))
-                print("\tdiff wrt " + str(sym1) + " = " + str(diff_expr))
+                #print("\tdiff wrt " + str(sym1) + " = " + str(diff_expr))
                 for sym2 in x:
-                    print("\t\tsym2 = " + str(sym2))
+                    #print("\t\tsym2 = " + str(sym2))
                     diff_wrt_sym2 = sympy.diff(diff_expr, sym2)
-                    print("\t\tdiff_wrt_sym2 = " + str(diff_wrt_sym2))
+                    #print("\t\tdiff_wrt_sym2 = " + str(diff_wrt_sym2))
                     if not diff_wrt_sym2.is_zero:
                         # nonlinear term containing sym1
                         C[highest_diff_sym_idx] += sym1 * sym2 * diff_wrt_sym2
@@ -271,8 +271,8 @@ class SystemOfShapes(object):
                     shape_expr = sympy.simplify(shape_expr)
                     diff_expr = sympy.simplify(diff_expr)
                     A[highest_diff_sym_idx, j] = diff_expr
-                    print("\t\t---> new diff_expr = " + str(diff_expr))
-                    print("\t\t---> new shape_expr = " + str(shape_expr))
+                    #print("\t\t---> new diff_expr = " + str(diff_expr))
+                    #print("\t\t---> new shape_expr = " + str(shape_expr))
 
             # for higher-order shapes: mark subsequent derivatives x_i' = x_(i+1)
             for order in range(shape.order - 1):

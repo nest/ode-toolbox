@@ -78,7 +78,7 @@ class Shape(object):
                      "atanh" : sympy.atanh
                      }
 
-    def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.)):
+    def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), debug=False):
         """Perform type and consistency checks and assign arguments to member variables.
 
 
@@ -121,7 +121,8 @@ class Shape(object):
 
         self.diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
 
-        print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
+        if debug:
+            print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
 
 
     def __str__(self):
@@ -236,7 +237,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_function(cls, symbol, definition, max_t=100, max_order=4, time_symbol=sympy.Symbol("t")):
+    def from_function(cls, symbol, definition, max_t=100, max_order=4, time_symbol=sympy.Symbol("t"), debug=False):
         """Create a Shape object given a function of time.
 
         The goal of the algorithm is to calculate the factors of the ODE,
@@ -297,21 +298,22 @@ class Shape(object):
         #
 
         order = 1
-        print("\nProcessing shape " + str(symbol) + ", defining expression = " + str(definition))
+        if debug:
+            print("\nProcessing shape " + str(symbol) + ", defining expression = " + str(definition))
 
 
         #
         #   to avoid a division by zero below, we have to find a `t` so that the shape function is not zero at this `t`.
         #
 
-        print("\tFinding t...")
         t_val = None
         for t_ in range(1, max_t):
             if not definition.subs(time_symbol, t_).is_zero:
                 t_val = t_
                 break
 
-        print("Found t: " + str(t_val))
+        if debug > 1:
+            print("Found t: " + str(t_val))
 
         if t_val is None:
 
@@ -327,7 +329,9 @@ class Shape(object):
         #   first handle the case for an ODE of order 1, i.e. of the form I' = a0 * I
         #
 
-        print("\tFinding ode for order 1...")
+        if debug > 1:
+            print("\tFinding ode for order 1...")
+
         derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(time_symbol, t_val)]
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
         found_ode = sympy.simplify(diff_rhs_lhs).is_zero
@@ -340,7 +344,8 @@ class Shape(object):
             # Set the potential order for the iteration
             order += 1
 
-            print("\tFinding ode for order " + str(order) + "...")
+            if debug > 1:
+                print("\tFinding ode for order " + str(order) + "...")
 
             # Add the next higher derivative to the list
             derivatives.append(sympy.diff(derivatives[-1], time_symbol))
@@ -358,7 +363,8 @@ class Shape(object):
             # is not invertible. This is unlikely but we check for
             # invertibility of `X` for varying sets of natural
             # numbers.
-            print("\tFinding invertibility...")
+            if debug > 1:
+                print("\tFinding invertibility...")
             invertible = False
             for t_ in range(1, max_t):
                 for i in range(order):
@@ -383,7 +389,8 @@ class Shape(object):
             #   calculate `derivative_factors`
             #
             
-            print("\tinv()...")
+            if debug > 1:
+                print("\tinv()...")
             derivative_factors = sympy.simplify(X.inv() * Y)
 
 
@@ -392,12 +399,14 @@ class Shape(object):
             #
             
             diff_rhs_lhs = 0
-            print("\tchecking whether shape definition is satisfied...")
+            if debug > 1:
+                print("\tchecking whether shape definition is satisfied...")
             for k in range(order):
                 diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
             diff_rhs_lhs += derivatives[order]
 
-            print("\tsimplify...")
+            if debug > 1:
+                print("\tsimplify...")
             if len(str(diff_rhs_lhs)) < 1000 and sympy.simplify(diff_rhs_lhs).is_zero:
                 found_ode = True
                 break
@@ -415,7 +424,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_ode(cls, symbol, definition, initial_values, all_variable_symbols=[], **kwargs):
+    def from_ode(cls, symbol, definition, initial_values, all_variable_symbols=[], debug=False, **kwargs):
         """Create a Shape object given an ODE and initial values.
         
         ... separate storage of linear and nonlinear part ...
@@ -488,7 +497,6 @@ class Shape(object):
         if not symbol in all_variable_symbols:
             all_variable_symbols.extend(derivative_symbols)
         all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", "__d")) for sym_name in all_variable_symbols ]
-        print("all_variable_symbols = " + str(all_variable_symbols))
 
         # the purely linear part of the shape goes into `derivative_factors`
         derivative_factors = []
@@ -501,26 +509,21 @@ class Shape(object):
         #   for each defined symbol in this shape...
         #
 
-        print("\nProcessing shape " + str(symbol) + ", defining expression = " + str(definition))
+        if debug:
+            print("\nProcessing shape " + str(symbol) + ", defining expression = " + str(definition))
         for sym1 in derivative_symbols:
 
             #
             #   grab the defining expression and separate into linear and nonlinear part
             #
 
-            print("expr = " + str(expr))
             diff_expr = sympy.diff(expr, sym1)
-            print("diff_expr = " + str(diff_expr))
             for sym2 in all_variable_symbols:
-                print("\tsym2 = " + str(sym2))
                 diff_wrt_sym2 = sympy.diff(diff_expr, sym2)
-                print("\tdiff_wrt_sym2 = " + str(diff_wrt_sym2))
                 if not diff_wrt_sym2.is_zero:
                     # if does not appear as zero -> nonlinear
                     nonlinear_part += sym1 * sym2 * diff_wrt_sym2
                     diff_expr -= sym2 * diff_wrt_sym2
-                    print("\tnonlinear_part is now: " + str(nonlinear_part))
-                    print("\tdiff_expr is now: " + str(diff_expr))
                     
             # whatever remains of `diff_expr` after nonlinear terms have been subtracted away must be the linear portion
             new_linear_part_term = sym1 * diff_expr
@@ -531,9 +534,6 @@ class Shape(object):
             linear_part = sympy.simplify(linear_part)
             nonlinear_part = sympy.simplify(nonlinear_part)
             
-            print("Linear part = " + str(linear_part))
-            print("Nonlinear part = " + str(nonlinear_part))
-
             #
             #   check if this symbol appears as a linear constant coefficient term in the definition (e.g. "42/e * x" for sym1 = "x") by checking if differentiating again with respect to all known variable symbols yields zero
             #
@@ -558,10 +558,10 @@ class Shape(object):
 
             derivative_factors.append(sympy.diff(linear_part, sym1))
             #expr -= nonlinear_part
-            print("Subtracting new_linear_part_term = " + str(new_linear_part_term) + " from expr = " + str(expr) + " to yield " + str(sympy.simplify(expr - linear_part)))
+            #print("Subtracting new_linear_part_term = " + str(new_linear_part_term) + " from expr = " + str(expr) + " to yield " + str(sympy.simplify(expr - linear_part)))
             expr -= new_linear_part_term
             expr = sympy.simplify(expr)
-        print("final expr = " + str(expr))
+        #print("final expr = " + str(expr))
 
         #
         #   the nonlinear and non-homogeneous parts are in `diff_rhs_derivatives`
