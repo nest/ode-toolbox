@@ -54,7 +54,7 @@ class SystemOfShapes(object):
     def get_initial_value(self, sym):
         for shape in self.shapes_:
             if str(shape.symbol) == str(sym).replace("__d", "").replace("'", ""):
-                return shape.get_initial_value(sym)
+                return shape.get_initial_value(sym.replace("__d", "'"))
         assert False, "Unknown symbol: " + str(sym)
 
 

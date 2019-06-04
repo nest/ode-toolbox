@@ -133,7 +133,6 @@ def analysis(indict, enable_stiffness_check=True):
         analytic_solver_json["solver"] = "analytical"
         solvers_json.append(analytic_solver_json)
 
-
     #
     #   generate numerical solvers for the remainder
     #
@@ -144,7 +143,7 @@ def analysis(indict, enable_stiffness_check=True):
         sub_sys = shape_sys.get_sub_system(syms)
         solver_json = sub_sys.generate_numeric_solver()
         solver_json["solver"] = "numeric"   # will be overwritten if stiffness testing is used
-        if HAVE_STIFFNESS and enable_stiffness_check:
+        if HAVE_STIFFNESS and enable_stiffness_check and False :
             print("Performing stiffness test...")
             kwargs = {}
             if "options" in indict.keys() and "random_seed" in indict["options"].keys():

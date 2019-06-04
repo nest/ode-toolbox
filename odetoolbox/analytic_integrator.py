@@ -53,7 +53,7 @@ class AnalyticIntegrator():
         self.set_initial_values(self.initial_values.copy())
         self.shape_starting_values = self.solver_dict["initial_values"].copy()
         for k, v in self.shape_starting_values.items():
-            expr = sympy.parsing.sympy_parser.parse_expr(v)
+            expr = sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals)
             if "parameters" in self.solver_dict.keys():
                 for k_, v_ in self.solver_dict["parameters"].items():
                     expr = expr.subs(k_, v_)
@@ -62,7 +62,7 @@ class AnalyticIntegrator():
         self.update_expressions = self.solver_dict["update_expressions"].copy()
         for k, v in self.update_expressions.items():
             if type(self.update_expressions[k]) is str:
-                self.update_expressions[k] = sympy.parsing.sympy_parser.parse_expr(self.update_expressions[k])
+                self.update_expressions[k] = sympy.parsing.sympy_parser.parse_expr(self.update_expressions[k], global_dict=Shape._sympy_globals)
 
 
         #
@@ -105,7 +105,7 @@ class AnalyticIntegrator():
         """
         for k, v in vals.items():
             assert k in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
-            expr = sympy.parsing.sympy_parser.parse_expr(str(v))
+            expr = sympy.parsing.sympy_parser.parse_expr(str(v), global_dict=Shape._sympy_globals)
             for param_symbol, param_val in self.solver_dict["parameters"].items():
                 expr = expr.subs(param_symbol, param_val)
             self.initial_values[k] = float(expr.evalf())

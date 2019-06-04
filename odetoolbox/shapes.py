@@ -19,12 +19,6 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-
-"""Components of the NEST ODE toolbox for storing and processing
-post-synaptic shapes.
-
-"""
-
 import re
 import sympy
 
@@ -75,8 +69,11 @@ class Shape(object):
                      "cosh" : sympy.cosh,
                      "acosh" : sympy.acosh,
                      "tanh" : sympy.tanh,
-                     "atanh" : sympy.atanh
+                     "atanh" : sympy.atanh,
+                     "e" : sympy.exp(1),
+                     "E" : sympy.exp(1)
                      }
+
 
     def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), debug=False):
         """Perform type and consistency checks and assign arguments to member variables.
@@ -97,6 +94,8 @@ class Shape(object):
         """
         assert type(symbol) is sympy.Symbol, "symbol is not a SymPy symbol: \"%r\"" % symbol
         self.symbol = symbol
+
+        assert not str(symbol) in Shape._sympy_globals.keys(), "The symbol name " + str(symbol) + " clashes with a predefined symbol by the same name"
 
         assert type(order) is int, "order is not an integer: \"%d\"" % order
         self.order = order
@@ -121,7 +120,8 @@ class Shape(object):
 
         self.diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
 
-        if debug:
+        #if debug:
+        if True:
             print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
 
 
@@ -146,7 +146,7 @@ class Shape(object):
 
     def get_all_variable_symbols(self, differential_order_str="'"):
         """Get all variable symbols for this shape
-        
+
         Return
         ------
         all_symbols : list of sympy.Symbol
@@ -157,28 +157,42 @@ class Shape(object):
         return all_symbols
 
 
-    def is_lin_const_coeff(self, shapes):
+    def is_lin_const_coeff(self, shapes=[]):
         """
-        :return true if and only if the ode definition is a linear and constant coefficient ODE in all known variable symbols in `shapes`
+        Returns
+        -------
+        lin_const_coeff : bool
+            True if and only if the shape is linear and constant coefficient in all known variable symbols in `shapes`
         """
+        if not self in shapes:
+            shapes = shapes + [self]
+
         all_symbols = []
         for shape in shapes:
             all_symbols.extend(shape.get_all_variable_symbols(differential_order_str="__d"))
 
+        all_symbols = list(set(all_symbols))	# filter for unique symbols
         for sym in all_symbols:
+            for df in self.derivative_factors:
+                expr = sympy.diff(df, sym)
+                if not sympy.sympify(expr).is_zero:
+                    # the expression "sym * self.symbol" appears on right-hand side of this shape's definition
+                    return False
+
             expr = sympy.diff(self.diff_rhs_derivatives, sym)
             if not sympy.sympify(expr).is_zero:
                 # the variable symbol `sym` appears on right-hand side of this expression. Check to see if it appears as a linear term by checking whether taking its derivative again, with respect to any known variable, yields 0
                 for sym_ in all_symbols:
                     if not sympy.sympify(sympy.diff(expr, sym_)).is_zero:
                         return False
+
         return True
 
 
     @classmethod
     def from_json(cls, indict, all_variable_symbols=[], time_symbol="t"):
         """Create a shape object from a JSON input dictionary
-        
+
         XXX: TODO: read in lower_bound and upper_bound, if present
         """
 
@@ -419,6 +433,7 @@ class Shape(object):
         # derivative factors before creating and returning the Shape
         # object.
         initial_values = { str(symbol) + derivative_order * '\'' : x.subs(time_symbol, 0) for derivative_order, x in enumerate(derivatives[:-1]) }
+
         derivative_factors = [sympy.simplify(df) for df in derivative_factors]
         return cls(symbol, order, initial_values, derivative_factors)
 
@@ -489,7 +504,10 @@ class Shape(object):
 
         _initial_values_sanity_checks()
 
+        print("2 initial values are now: " + str(initial_values))
         initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals) for k, v in initial_values.items() }
+        print("3 initial values are now: " + str(initial_values))
+
         derivative_symbols = [ sympy.Symbol(symbol+"__d"*i) for i in range(order) ]
         definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
         symbol = sympy.Symbol(symbol)

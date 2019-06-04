@@ -57,7 +57,7 @@ class StiffnessTester(object):
         self.symbolic_jacobian_ = self._system_of_shapes.get_jacobian_matrix()
         self._shapes = shapes
         self._parameters = parameters
-        self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v).n() for k, v in self._parameters.items() }
+        self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self._parameters.items() }
 
         self.random_seed = random_seed
 
@@ -154,7 +154,7 @@ class StiffnessTester(object):
         return self.evaluate_integrator(sim_resolution, integrator, accuracy, spike_rate, sim_time, raise_errors=raise_errors)
 
 
-    def evaluate_integrator(self, h, integrator, accuracy, spike_rate, sim_time, sym_receiving_spikes=None, raise_errors=True, debug=True):
+    def evaluate_integrator(self, h, integrator, accuracy, spike_rate, sim_time, s_min_lower_bound=5E-9, sym_receiving_spikes=None, raise_errors=True, debug=True):
         """
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
         
@@ -222,7 +222,7 @@ class StiffnessTester(object):
         sum_last_steps = 0
         s_min_old = 0
         runtime = 0.
-        s_min_lower_bound = 5E-9
+        
 
         for time_slice in range(simulation_slices):
             print("Step " + str(time_slice) + " of " + str(simulation_slices))

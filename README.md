@@ -57,6 +57,9 @@ ode_analyzer.py <json_file>
 
 Input for `ode_analyzer.py` JSON files are composed of two lists of dictionaries `shapes` and `odes` and a dictionary `parameters`. `shapes` and `odes` must be stated at any call of the `ode_analyzer.py`. `parameters` dictionary is stated only if a stiffness test should be performed.
 
+Note that there are several predefined symbols, such as `e` and `E` for Euler's number, trigonometric functions, etc. The list of predefined symbols is defined in `symbols.py`, as the static member `Shape._sympy_globals`. Variable names should be chosen such that they do not overlap with the predefined symbols.
+
+
 #### `odes`
 
 The ODEs entry contains dictionaries, each of which specifies an ODE with initial values. Each of these dictionaries has the following keys:
