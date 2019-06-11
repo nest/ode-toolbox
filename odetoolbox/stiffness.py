@@ -23,10 +23,12 @@ from __future__ import print_function
 
 from inspect import getmembers
 import math
+import random
 import numpy as np
 import numpy.random
 from .shapes import Shape
 from .analytic_integrator import AnalyticIntegrator
+from .spike_generator import SpikeGenerator
 
 # Make NumPy warnings errors. Without this, we can't catch overflow errors that can occur in the step() function, which might indicate a problem with the ODE, the grid resolution or the stiffness testing framework itself.
 np.seterr(over='raise')
@@ -35,11 +37,10 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-import re
 import time
 
 import sympy
-from sympy.parsing.sympy_parser import parse_expr
+#from sympy.parsing.sympy_parser import parse_expr
 
 try:
     import pygsl.odeiv as odeiv
@@ -51,13 +52,14 @@ except ImportError as ie:
 
 class StiffnessTester(object):
 
-    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, random_seed=123):
+    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, stimuli=[], random_seed=123):
         self.math_module_funcs = { k : v for k, v in getmembers(math) if not k[0] == "_"}
         self._system_of_shapes = system_of_shapes
         self.symbolic_jacobian_ = self._system_of_shapes.get_jacobian_matrix()
         self._shapes = shapes
         self._parameters = parameters
         self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self._parameters.items() }
+        self._stimuli = stimuli
 
         self.random_seed = random_seed
 
@@ -71,12 +73,11 @@ class StiffnessTester(object):
         self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy()
         #self._update_expr = { sym : sympy.parsing.sympy_parser.parse_expr(expr, global_dict=Shape._sympy_globals) for sym, expr in self._system_of_shapes.generate_numeric_solver()["update_expressions"].items() }
 
-    
     @property
     def random_seed(self):
         return self._random_seed
-    
-    
+
+
     @random_seed.setter
     def random_seed(self, value):
         assert type(value) is int
@@ -84,164 +85,150 @@ class StiffnessTester(object):
         self._random_seed = value
 
 
-    def check_stiffness(self, sim_resolution=.1, sim_time=20., accuracy=1e-3, spike_rate=1.0*1000):
+    def check_stiffness(self, sim_resolution=.1, sim_time=1., accuracy=1E-3):
         """Perform stiffness testing.
-        
+
         The idea is not to compare if the given implicit method or the explicit method is better suited for this small simulation, for instance by comparing runtimes, but to instead check for tendencies of stiffness. If we find that the average step size of the implicit evolution method is a lot larger than the average step size of the explicit method, then this ODE system could be stiff. Especially if it become significantly more stiff when a different step size is used or when parameters are changed, an implicit evolution scheme could become increasingly important.
-        
+
         It is important to note here, that this analysis depends significantly on the parameters that are assigned for an ODE system. If these are changed significantly in magnitude, the result of the analysis can also change significantly.
         """
 
-
-        step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator_exp(sim_resolution, accuracy, spike_rate, sim_time)
-        step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator_imp(sim_resolution, accuracy, spike_rate, sim_time)
+        step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator_exp(sim_resolution, accuracy, sim_time)
+        step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator_imp(sim_resolution, accuracy, sim_time)
 
         #print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 
         return self.draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
-    def _generate_spikes(self, syms, sim_time, sim_resolution, rate):
-        """The function computes representative spike trains for the given simulation length. Uses a Poisson distribution to create biologically realistic characteristics of the spike-trains.
-
-        N.B. spikes are aliased to the time grid, so two or more spikes might arrive in the same time slice. This is handled by adding the initial value times this "spike multiplicity"
-
-        Parameters
-        ----------
-        syms : List[str]
-            A list of variable symbols to generate (independent) spike trains for.
-        sim_time : float
-            The time of the simulation in ms
-        sim_resolution : float
-            The length of the particular grid in ms
-
-        Returns
-        -------
-        spike_density : dict(str -> list)
-            For each ODE symbol key: a list with bins which contain the number of spikes which happened in the corresponding bin.
-        """
-
-        sim_time_in_sec = sim_time * 0.001
-        sim_resolution_in_sec = sim_resolution * 0.001
-
-        n_spikes = np.random.poisson(rate * sim_time_in_sec)
-        times = np.random.uniform(0, sim_time_in_sec, n_spikes)
-        spikes = np.sort(times)
-
-        time_slots = int(math.ceil(sim_time_in_sec / sim_resolution_in_sec) + 1)
-
-        spike_density = {}
-        for sym in syms:
-            spikes_per_slot = [0] * time_slots
-            for slot in range(0, time_slots):
-                t = list(filter(lambda x: slot * sim_resolution_in_sec <= x < (slot + 1) * sim_resolution_in_sec, spikes))
-                spikes_per_slot[slot] = len(t)
-
-            spike_density[str(sym)] = spikes_per_slot
-
-        return spike_density
-
-
-    def evaluate_integrator_imp(self, sim_resolution, accuracy, spike_rate, sim_time, raise_errors=True):
+    def evaluate_integrator_imp(self, sim_resolution, accuracy, sim_time, raise_errors=True):
 
         integrator = odeiv.step_bsimp     # Bulirsh-Stoer
-        return self.evaluate_integrator(sim_resolution, integrator, accuracy, spike_rate, sim_time, raise_errors=raise_errors)
+        return self.evaluate_integrator(sim_resolution, integrator, accuracy, sim_time, raise_errors=raise_errors)
 
 
-    def evaluate_integrator_exp(self, sim_resolution, accuracy, spike_rate, sim_time, raise_errors=True):
+    def evaluate_integrator_exp(self, sim_resolution, accuracy, sim_time, raise_errors=True):
 
         integrator = odeiv.step_rk4       # explicit 4th order Runge-Kutta
-        return self.evaluate_integrator(sim_resolution, integrator, accuracy, spike_rate, sim_time, raise_errors=raise_errors)
+        return self.evaluate_integrator(sim_resolution, integrator, accuracy, sim_time, raise_errors=raise_errors)
 
 
-    def evaluate_integrator(self, h, integrator, accuracy, spike_rate, sim_time, s_min_lower_bound=5E-9, sym_receiving_spikes=None, raise_errors=True, debug=True):
+    def evaluate_integrator(self, h, integrator, accuracy, sim_time, s_min_lower_bound=5E-9, sym_receiving_spikes=[], raise_errors=True, max_step_size=2E-3, debug=True):
         """
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
-        
+
         This function will reset the numpy random seed.
-        
+
         :param h: The maximal stepsize for one evolution step in miliseconds
-        :param integrator: A method from the GSL library for evolving ODES, e.g. `odeiv.step_rk4`
+        :param integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
         :param y: The 'state variables' in f(y)=y'
         :return: Average and minimal step size.
         """
 
         s_min = h  # initialised at upper bound: minimal step size <= the maximal stepsize h
-        simulation_slices = int(round(sim_time / h))
+        #simulation_slices = int(round(sim_time / h))
 
         np.random.seed(self.random_seed)
 
+        self.spike_times = SpikeGenerator.spike_times_from_json(self._stimuli, sim_time)
+
 
         #
-        #   generate spike times for the symbols that will be solved numerically
+        #   make a sorted list of all spike times for all symbols
         #
-            
-        if sym_receiving_spikes is None:
-            sym_receiving_spikes = self.analytic_solver_dict["state_variables"] + [str(sym) for sym in self._system_of_shapes.x_]
 
-        numerical_sym_receiving_spikes = [ str(sym) for sym in self._system_of_shapes.x_ if str(sym) in sym_receiving_spikes ]
-        spikes = self._generate_spikes(numerical_sym_receiving_spikes, sim_time, h, spike_rate)
-        print("Numerical spikes: " + str(spikes))
+        self.all_spike_times = []
+        self.all_spike_times_sym = []
+        for sym in self.spike_times.keys():
+            for t_sp in self.spike_times[sym]:
+                if t_sp in self.all_spike_times:
+                    idx = self.all_spike_times.index(t_sp)
+                    self.all_spike_times_sym[idx].extend([sym])
+                else:
+                    self.all_spike_times.append(t_sp)
+                    self.all_spike_times_sym.append([sym])
+
+        idx = np.argsort(self.all_spike_times)
+        self.all_spike_times = [ self.all_spike_times[i] for i in idx ]
+        self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
+
+
+        #
+        #  initialise analytic integrator
+        #
 
         if not self.analytic_solver_dict is None:
-
-            #
-            #   generate spike times for the symbols that will be solved analytically
-            #
-
-            analytic_sym_receiving_spikes = [ str(sym) for sym in self.analytic_solver_dict["state_variables"] if str(sym) in sym_receiving_spikes ]
-            spike_density_analytic = self._generate_spikes(analytic_sym_receiving_spikes, sim_time, h, spike_rate)
-            
-            spike_times_analytic = { sym : np.where(np.array(spike_density_analytic[sym]))[0] * h for sym in spike_density_analytic.keys() } # from density to spike times
-            
-            print("spike_times_analytic : " + str(spike_times_analytic))
-
-
-            #
-            #   instantiate analytic solver with the given spike times
-            #
-
-            self.analytic_integrator = AnalyticIntegrator(self.analytic_solver_dict, spike_times_analytic)
+            self.analytic_integrator = AnalyticIntegrator(self.analytic_solver_dict, self.spike_times)
             #analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
 
-        N = len(self._system_of_shapes.x_)
-        #y = np.nan * np.ones(N)
-        _locals = self._parameters.copy()
-        y = [ float(self._system_of_shapes.get_initial_value(str(sym)).subs(_locals).evalf()) for sym in self._system_of_shapes.x_ ]
+        #N = len(self._system_of_shapes.x_)
+        _initial_values = [ float(self._system_of_shapes.get_initial_value(str(sym)).subs(self._parameters).evalf()) for sym in self._system_of_shapes.x_ ]
+        y = _initial_values.copy()
 
         if debug:
-            y_log = []
-            t_log = []
+            y_log = [y]
+            t_log = [0.]
 
         gsl_stepper = integrator(len(y), self.step, self.numerical_jacobian)
         control = odeiv.control_y_new(gsl_stepper, accuracy, accuracy)
         evolve = odeiv.evolve(gsl_stepper, control, len(y))
 
-        t = 0.
-        step_counter = 0
-        sum_last_steps = 0
-        s_min_old = 0
-        runtime = 0.
-        
 
-        for time_slice in range(simulation_slices):
-            print("Step " + str(time_slice) + " of " + str(simulation_slices))
-            t_new = t + h
-            counter_while_loop = 0
-            t_old = 0
-            while t < t_new:
-                counter_while_loop += 1
-                t_old = t
-                time_start = time.time()
+        #
+        #    grab starting wall clock time
+        #
+
+        time_start = time.time()
+
+
+        #
+        #    main loop
+        #
+
+        t = 0.
+        idx_next_spike = 0
+        while t < sim_time:
+
+            #
+            # find the time of the next upcoming spike
+            #
+
+            """all_spike_times = []
+            for sym in syms:
+                all_spike_times.extend(spike_times[sym])
+            all_spike_times = np.sort(all_spike_times)
+            all_spike_times = [t_sp for t_sp in all_spike_times if t_sp > t]
+            t_next_spike = all_spike_times[0]"""
+
+            print("Top loop: t = " + str(t))
+
+
+            #
+            # simulate until the time of the next upcoming spike
+            #
+
+            if idx_next_spike >= len(self.all_spike_times):
+                t_next_spike = sim_time
+            else:
+                t_next_spike = self.all_spike_times[idx_next_spike]
+
+            print("\tsimulating inner till spike or end t = " + str(t_next_spike))
+
+            while t < t_next_spike:
                 try:
                     # h_ is NOT the reached step size but the suggested next step size!
-                    t, h_, y = evolve.apply(t, t_new, h, y)
+                    t, h_, y = evolve.apply(t, min(t + max_step_size, t_next_spike), h, y)
                 except Exception as e:
                     print("     ===> Failure of %s at t=%.2f with h=%.2f (y=%s)" % (gsl_stepper.name(), t, h, y))
                     if raise_errors:
-                        raise
-                runtime += time.time() - time_start
-                step_counter += 1
+                        raise e
+
+                if debug:
+                    t_log.append(t)
+                    y_log.append(y)
+
+
+                """#step_counter += 1
                 s_min_old = s_min
                 s_min = min(s_min, t - t_old)
                 if s_min < s_min_lower_bound:
@@ -249,46 +236,55 @@ class StiffnessTester(object):
                     if raise_errors:
                         raise Exception(estr)
                     else:
-                        print(estr)
-                
-                if debug:
-                    t_log.append(t)
-                    y_log.append(y)
+                        print(estr)"""
 
-            if counter_while_loop > 1:
+            idx_next_spike += 1
+
+
+            """if counter_while_loop > 1:
                 step_counter -= 1
                 sum_last_steps += t_new - t_old
                 # it is possible that the last step in a simulation_slot is very small, as it is simply
                 # the length of the remaining slot. Therefore we don't take the last step into account
-                s_min = s_min_old
+                s_min = s_min_old"""
 
-            threshold_crossed = False
-            # XXX: should apply the initial conditions?
-            #for threshold in self.thresholds:
-                #_globals = self.math_module_funcs.copy()
-                #local_parameters = self.parameters.copy()
-                #local_parameters.update({"y__%i"%i: y for i,y in enumerate(y)})
-                #if eval(threshold, _globals, local_parameters):
-                    #threshold_crossed = True
-                    #break  # break inner loop
 
-            print("\n\nXXX: TODO\n\n")
+            #
+            #	evaluate to numeric values for the ODEs that are solved analytically
+            #
 
-            if threshold_crossed:  # break outer loop
-                break
+            _locals = self._parameters.copy()
+            _locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
+
+            if not self.analytic_integrator is None:
+                _locals.update(self.analytic_integrator.get_value(t))
+
+
+            #
+            #	enforce upper and lower thresholds
+            #
+
+            for shape in self._shapes:
+                if not shape.upper_bound is None:
+                    idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(shape.symbol))
+                    upper_bound_numeric = float(shape.upper_bound.subs(_locals).evalf())
+                    if y[idx] > upper_bound_numeric:
+                        y[idx] = _initial_values[idx]
 
 
             #
             #   apply the spikes, i.e. add the "initial values" to the system dynamical state vector
             #
 
-            for sym, spike_density in spikes.items():
-                idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
-                y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).subs(_locals).evalf()) * spike_density[time_slice]
+            for sym, spike_density in self.spike_times.items():
+                if sym in list(self._system_of_shapes.x_):
+                    idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
+                    y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).subs(_locals).evalf())
 
-        step_average = (t - sum_last_steps) / step_counter
-        
-        
+        #step_average = (t - sum_last_steps) / step_counter
+
+        #runtime = time.time() - time_start
+
         if debug:
             t_log = np.array(t_log)
             y_log = np.array(y_log)
@@ -301,9 +297,13 @@ class StiffnessTester(object):
                     analytic_y_log[sym].append(val_dict[sym])
 
             idx_to_label = {}
-            for sym, spike_density in spikes.items():
-                idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
-                idx_to_label[idx] = str(sym)
+            for sym, spike_density in self.spike_times.items():
+                syms = [str(sym) for sym in list(self._system_of_shapes.x_)]
+                if sym.replace("'", "__d") in syms:
+                    idx = syms.index(sym)
+                    idx_to_label[idx] = str(sym)
+            for i, sym in enumerate(self._system_of_shapes.x_):
+                idx_to_label[i] = sym
 
             fig, ax = plt.subplots(y_log.shape[1] + len(analytic_syms), sharex=True)
             for i in range(y_log.shape[1]):
@@ -318,14 +318,12 @@ class StiffnessTester(object):
 
             ax[-1].set_xlabel("Time [ms]")
             fig.suptitle(str(integrator))
-        
 
             #plt.show()
             fn = "/tmp/remotefs2/stiffness_test_" + str(integrator) + ".png"
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)
 
-        
         return s_min_old, step_average, runtime
 
 
@@ -348,8 +346,7 @@ class StiffnessTester(object):
 
         if step_min_imp > 10. * machine_precision and step_min_exp < 10. * machine_precision:
             return "implicit"
-       
-            #analytic_integrator.set_initial_values(ODE_INITIAL_VALUES) elif step_min_imp < 10. * machine_precision and step_min_exp > 10. * machine_precision:
+        elif step_min_imp < 10. * machine_precision and step_min_exp > 10. * machine_precision:
             return "explicit"
         elif step_min_imp < 10. * machine_precision and step_min_exp < 10. * machine_precision:
             return "warning"
@@ -382,7 +379,7 @@ class StiffnessTester(object):
 
         if not self.analytic_integrator is None:
             _locals.update(self.analytic_integrator.get_value(t))
-        
+
         # evaluate every entry of the `jacobian_matrix` and store the
         # result in the corresponding entry of the `dfdy`
         for row in range(0, dimension):
@@ -401,18 +398,18 @@ class StiffnessTester(object):
 
         :return: Updated state vector
         """
-        
+
         _locals = self._parameters.copy()
         _locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
         #
         #   update state of analytically solved variables to time `t`
         #
-        
+
         if not self.analytic_integrator is None:
             # XXX: TODO: clamp analytic solution to bounds (if they exist)
             _locals.update(self.analytic_integrator.get_value(t))
-        
+
         try:
            return [ float(self._update_expr[str(sym)].subs(_locals).evalf()) for sym in self._system_of_shapes.x_ ]
         except Exception as e:

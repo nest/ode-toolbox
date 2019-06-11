@@ -92,7 +92,7 @@ def analysis(indict, enable_stiffness_check=True):
         shape = Shape.from_json(shape_json, time_symbol=input_time_symbol)
         all_variable_symbols.extend(shape.get_all_variable_symbols())
     print("all_variable_symbols = " + str(all_variable_symbols))
-    
+
     # second run provides the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
         shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=input_time_symbol)
@@ -143,7 +143,7 @@ def analysis(indict, enable_stiffness_check=True):
         sub_sys = shape_sys.get_sub_system(syms)
         solver_json = sub_sys.generate_numeric_solver()
         solver_json["solver"] = "numeric"   # will be overwritten if stiffness testing is used
-        if HAVE_STIFFNESS and enable_stiffness_check and False :
+        if HAVE_STIFFNESS and enable_stiffness_check:
             print("Performing stiffness test...")
             kwargs = {}
             if "options" in indict.keys() and "random_seed" in indict["options"].keys():
@@ -152,6 +152,8 @@ def analysis(indict, enable_stiffness_check=True):
                 kwargs["random_seed"] = random_seed
             if "parameters" in indict.keys():
                 kwargs["parameters"] = indict["parameters"]
+            if "stimuli" in indict.keys():
+                kwargs["stimuli"] = indict["stimuli"]
             if not analytic_solver_json is None:
                 kwargs["analytic_solver_dict"] = analytic_solver_json
             tester = stiffness.StiffnessTester(sub_sys, shapes, **kwargs)

@@ -29,19 +29,19 @@ from .shapes import Shape
 class AnalyticIntegrator():
     """integrate a dynamical system by means of the propagators returned by odetoolbox"""
     
-    def __init__(self, solver_dict, spike_times):
+    def __init__(self, solver_dict, spike_times, enable_caching=False):
         """
         Parameters
         ----------
         spike_times : Dict[str, List[float]]
             for each variable symbol, list of times at which a spike occurs
         """
-        
+
         self.solver_dict = solver_dict
         self.spike_times = spike_times
-        
+        self.enable_caching = enable_caching
         self.t = 0.
-        
+
         print("Initialised AnalyticIntegrator with spike times = " + str(spike_times))
 
         #
@@ -63,6 +63,12 @@ class AnalyticIntegrator():
         for k, v in self.update_expressions.items():
             if type(self.update_expressions[k]) is str:
                 self.update_expressions[k] = sympy.parsing.sympy_parser.parse_expr(self.update_expressions[k], global_dict=Shape._sympy_globals)
+
+        #
+        #  reset the system to t = 0
+        #
+
+        self.reset()
 
 
         #
@@ -86,22 +92,22 @@ class AnalyticIntegrator():
         print("Initialised AnalyticIntegrator with all_spike_times = " + str(self.all_spike_times))
         print("Initialised AnalyticIntegrator with all_spike_times_sym = " + str(self.all_spike_times_sym))
 
-        #self.state_vec = np.nan * np.ones(self.dim)
-        #self.prop_matrix = 
-
+    def reset(self):
+        self.t_curr = 0.
+        self.state_at_t_curr = self.initial_values.copy()
 
 
     def get_variable_symbols(self):
         return self.initial_values.keys()
 
-    
-    
+
     def set_initial_values(self, vals):
-        """
+        """Set initial values, i.e. the state of the system at t = 0.
+
         Parameters
         ----------
         vals : Dict(str -> float)
-            New values
+            New initial values.
         """
         for k, v in vals.items():
             assert k in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
@@ -112,11 +118,9 @@ class AnalyticIntegrator():
 
 
     def update_step(self, delta_t, initial_values, debug=True):
-        
         new_state = { k : np.nan for k in initial_values.keys() }
-        
-        for state_variable, expr in self.update_expressions.items():
 
+        for state_variable, expr in self.update_expressions.items():
             #if debug:
                 ##print("\t* state_variable_name = " + state_variable)
                 #print("\t* update expression = " + str(expr))
@@ -134,7 +138,7 @@ class AnalyticIntegrator():
                 expr = expr.subs(state_variable2, initial_values[state_variable2]) 
             expr = expr.subs("__h", delta_t)
             expr = float(expr.evalf())
-            
+
             #if debug:
                 #print("\t* update expression evaluates to = " + str(expr))
 
@@ -144,53 +148,63 @@ class AnalyticIntegrator():
 
 
     def get_value(self, t, debug=True):
-        #idx = np.where(self.all_spike_times > t)[0][0]
-        #all_spike_times = self.all_spike_times[:idx]
-        #all_spike_times_syms = self.all_spike_times_sym[:idx]
-        
-        #all_spike_times = []
-        #all_spike_times_sym = []
-        #for sym, sym_spikes in self.spike_times.items():
-            #all_spike_times.extend(sym_spikes)
-            #all_spike_times_sym.extend(len(sym_spikes) * [sym])
 
-        #idx = np.argsort(all_spike_times)[0]
-        #all_spike_times = [ all_spike_times[i] for i in idx ] 
-        #all_spike_times_sym = [ all_spike_times_sym[i] for i in idx ]
-        
-        state_at_t_curr = self.initial_values.copy()
-        t_curr = 0.
-        
+        print("Analytic integrator: state requested at t = " + str(t))
+
+        if (not self.enable_caching) \
+         or t < self.t_curr:
+            print("\treset state")
+            self.reset()
+
+        print("\tCurrent state: t_curr = " + str(self.t_curr) + ", state = " + str(self.state_at_t_curr))
+
+
+        #
+        #   process spikes between t_curr and t
+        #
+
         for spike_t, spike_syms in zip(self.all_spike_times, self.all_spike_times_sym):
-            
+
+            if spike_t <= self.t_curr:
+                continue
+
             if spike_t > t:
                 break
-            
+
+            print("\tpropagating till next spike time: " + str(spike_t))
+
+
             #
             #   apply propagator to update the state from `t_curr` to `spike_t`
             #
-            
-            delta_t = spike_t - t_curr
+
+            delta_t = spike_t - self.t_curr
             if delta_t > 0:
-                state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
+                self.state_at_t_curr = self.update_step(delta_t, self.state_at_t_curr)
 
             #
             #   delta impulse increment
             #
-            
-            for spike_sym in spike_syms:
-                if spike_sym in self.initial_values.keys():
-                    state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
-            
-            t_curr = spike_t
 
-            
+            for spike_sym in spike_syms:
+                print("\t\tincrementing " + str(spike_sym))
+                if spike_sym.replace("'", "__d") in self.initial_values.keys():
+                    self.state_at_t_curr[spike_sym.replace("'", "__d")] += self.shape_starting_values[spike_sym.replace("'", "__d")]
+                    print("\t\tincrementing " + str(spike_sym.replace("'", "__d")) + " by " + str(self.shape_starting_values[spike_sym.replace("'", "__d")]))
+
+            self.t_curr = spike_t
+
+        print("\tCurrent state: t_curr = " + str(self.t_curr) + ", state = " + str(self.state_at_t_curr))
+
+
         #
         #   apply propagator to update the state from `t_curr` to `t`
         #
-        
-        delta_t = t - t_curr
-        state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
-        t_curr = t
 
-        return state_at_t_curr
+        delta_t = t - self.t_curr
+        state_at_t = self.update_step(delta_t, self.state_at_t_curr)
+        #self.t_curr = t
+
+        print("\tpropagating till requested time: " + str(t))
+
+        return state_at_t #self.state_at_t_curr

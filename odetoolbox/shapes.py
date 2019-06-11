@@ -75,7 +75,7 @@ class Shape(object):
                      }
 
 
-    def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), debug=False):
+    def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), lower_bound=None, upper_bound=None, debug=False):
         """Perform type and consistency checks and assign arguments to member variables.
 
 
@@ -119,6 +119,14 @@ class Shape(object):
                 self.state_variables.insert(0, symbol)
 
         self.diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
+
+        self.lower_bound = lower_bound
+        if not self.lower_bound is None:
+            self.lower_bound = sympy.simplify(self.lower_bound)
+
+        self.upper_bound = upper_bound
+        if not self.upper_bound is None:
+            self.upper_bound = sympy.simplify(self.upper_bound)
 
         #if debug:
         if True:
@@ -192,8 +200,6 @@ class Shape(object):
     @classmethod
     def from_json(cls, indict, all_variable_symbols=[], time_symbol="t"):
         """Create a shape object from a JSON input dictionary
-
-        XXX: TODO: read in lower_bound and upper_bound, if present
         """
 
         if not "expression" in indict:
@@ -244,10 +250,18 @@ class Shape(object):
                 iv_order = len(re.findall("'", iv_lhs))
                 initial_values[iv_symbol + iv_order * "'"] = iv_rhs
 
+        lower_bound = None
+        if "lower_bound" in indict.keys():
+            lower_bound = indict["lower_bound"]
+
+        upper_bound = None
+        if "upper_bound" in indict.keys():
+            upper_bound = indict["upper_bound"]
+
         if order == 0:
             return Shape.from_function(symbol, rhs)
         else:
-            return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols)
+            return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound)
 
 
     @classmethod
@@ -439,11 +453,9 @@ class Shape(object):
 
 
     @classmethod
-    def from_ode(cls, symbol, definition, initial_values, all_variable_symbols=[], debug=False, **kwargs):
+    def from_ode(cls, symbol, definition, initial_values, all_variable_symbols=[], lower_bound=None, upper_bound=None, debug=False, **kwargs):
         """Create a Shape object given an ODE and initial values.
-        
-        ... separate storage of linear and nonlinear part ...
-        
+
         Note that shapes are only aware of their own state variables: if an equation for x depends on another state variable of another shape y, then y will appear in the nonlinear part of x.
 
 
@@ -504,9 +516,7 @@ class Shape(object):
 
         _initial_values_sanity_checks()
 
-        print("2 initial values are now: " + str(initial_values))
         initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals) for k, v in initial_values.items() }
-        print("3 initial values are now: " + str(initial_values))
 
         derivative_symbols = [ sympy.Symbol(symbol+"__d"*i) for i in range(order) ]
         definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
@@ -542,16 +552,16 @@ class Shape(object):
                     # if does not appear as zero -> nonlinear
                     nonlinear_part += sym1 * sym2 * diff_wrt_sym2
                     diff_expr -= sym2 * diff_wrt_sym2
-                    
+
             # whatever remains of `diff_expr` after nonlinear terms have been subtracted away must be the linear portion
             new_linear_part_term = sym1 * diff_expr
             linear_part += new_linear_part_term
-            
+
             #nonlinear_part = sympy.simplify(expr - linear_part)
-            
+
             linear_part = sympy.simplify(linear_part)
             nonlinear_part = sympy.simplify(nonlinear_part)
-            
+
             #
             #   check if this symbol appears as a linear constant coefficient term in the definition (e.g. "42/e * x" for sym1 = "x") by checking if differentiating again with respect to all known variable symbols yields zero
             #
@@ -584,7 +594,7 @@ class Shape(object):
         #
         #   the nonlinear and non-homogeneous parts are in `diff_rhs_derivatives`
         #
-        
+
         diff_rhs_derivatives = expr
 
             #diff_expr = sympy.diff(expr, derivative_symbol)
@@ -601,5 +611,5 @@ class Shape(object):
             #diff_rhs_derivatives -= derivative_factor * derivative_symbol
             #diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
 
-        return cls(symbol, order, initial_values, derivative_factors, diff_rhs_derivatives)
+        return cls(symbol, order, initial_values, derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
 
