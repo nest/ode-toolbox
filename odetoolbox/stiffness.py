@@ -52,7 +52,10 @@ except ImportError as ie:
 
 class StiffnessTester(object):
 
-    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, stimuli=[], random_seed=123):
+    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, stimuli=[], random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=100.):
+        self.max_step_size = max_step_size
+        self.integration_accuracy = integration_accuracy
+        self.sim_time = sim_time
         self.math_module_funcs = { k : v for k, v in getmembers(math) if not k[0] == "_"}
         self._system_of_shapes = system_of_shapes
         self.symbolic_jacobian_ = self._system_of_shapes.get_jacobian_matrix()
@@ -85,7 +88,7 @@ class StiffnessTester(object):
         self._random_seed = value
 
 
-    def check_stiffness(self, sim_resolution=.1, sim_time=1., accuracy=1E-3):
+    def check_stiffness(self, raise_errors=False):
         """Perform stiffness testing.
 
         The idea is not to compare if the given implicit method or the explicit method is better suited for this small simulation, for instance by comparing runtimes, but to instead check for tendencies of stiffness. If we find that the average step size of the implicit evolution method is a lot larger than the average step size of the explicit method, then this ODE system could be stiff. Especially if it become significantly more stiff when a different step size is used or when parameters are changed, an implicit evolution scheme could become increasingly important.
@@ -93,44 +96,32 @@ class StiffnessTester(object):
         It is important to note here, that this analysis depends significantly on the parameters that are assigned for an ODE system. If these are changed significantly in magnitude, the result of the analysis can also change significantly.
         """
 
-        step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator_exp(sim_resolution, accuracy, sim_time)
-        step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator_imp(sim_resolution, accuracy, sim_time)
+        step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
+        step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
 
         #print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 
         return self.draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
-    def evaluate_integrator_imp(self, sim_resolution, accuracy, sim_time, raise_errors=True):
-
-        integrator = odeiv.step_bsimp     # Bulirsh-Stoer
-        return self.evaluate_integrator(sim_resolution, integrator, accuracy, sim_time, raise_errors=raise_errors)
-
-
-    def evaluate_integrator_exp(self, sim_resolution, accuracy, sim_time, raise_errors=True):
-
-        integrator = odeiv.step_rk4       # explicit 4th order Runge-Kutta
-        return self.evaluate_integrator(sim_resolution, integrator, accuracy, sim_time, raise_errors=raise_errors)
-
-
-    def evaluate_integrator(self, h, integrator, accuracy, sim_time, s_min_lower_bound=5E-9, sym_receiving_spikes=[], raise_errors=True, max_step_size=2E-3, debug=True):
+    def evaluate_integrator(self, integrator, h_min_lower_bound=5E-9, sym_receiving_spikes=[], raise_errors=True, debug=True):
         """
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
 
         This function will reset the numpy random seed.
 
-        :param h: The maximal stepsize for one evolution step in miliseconds
+        :param max_step_size: The maximal stepsize for one evolution step in miliseconds
         :param integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
         :param y: The 'state variables' in f(y)=y'
         :return: Average and minimal step size.
         """
 
-        s_min = h  # initialised at upper bound: minimal step size <= the maximal stepsize h
-        #simulation_slices = int(round(sim_time / h))
+        h_min = np.inf
+        #simulation_slices = int(round(sim_time / max_step_size))
 
         np.random.seed(self.random_seed)
 
-        self.spike_times = SpikeGenerator.spike_times_from_json(self._stimuli, sim_time)
+        self.spike_times = SpikeGenerator.spike_times_from_json(self._stimuli, self.sim_time)
 
 
         #
@@ -162,15 +153,16 @@ class StiffnessTester(object):
             #analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
 
         #N = len(self._system_of_shapes.x_)
-        _initial_values = [ float(self._system_of_shapes.get_initial_value(str(sym)).subs(self._parameters).evalf()) for sym in self._system_of_shapes.x_ ]
+        _initial_values = [ float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._parameters)) for sym in self._system_of_shapes.x_ ]
         y = _initial_values.copy()
 
         if debug:
             y_log = [y]
             t_log = [0.]
+            h_log = []
 
         gsl_stepper = integrator(len(y), self.step, self.numerical_jacobian)
-        control = odeiv.control_y_new(gsl_stepper, accuracy, accuracy)
+        control = odeiv.control_y_new(gsl_stepper, self.integration_accuracy, self.integration_accuracy)
         evolve = odeiv.evolve(gsl_stepper, control, len(y))
 
 
@@ -185,22 +177,14 @@ class StiffnessTester(object):
         #    main loop
         #
 
+        h_sum = 0.
+        n_timesteps_taken = 0
         t = 0.
         idx_next_spike = 0
-        while t < sim_time:
+        self._locals = self._parameters.copy()
+        while t < self.sim_time:
 
-            #
-            # find the time of the next upcoming spike
-            #
-
-            """all_spike_times = []
-            for sym in syms:
-                all_spike_times.extend(spike_times[sym])
-            all_spike_times = np.sort(all_spike_times)
-            all_spike_times = [t_sp for t_sp in all_spike_times if t_sp > t]
-            t_next_spike = all_spike_times[0]"""
-
-            print("Top loop: t = " + str(t))
+            print("Numeric loop: t = " + str(t))
 
 
             #
@@ -208,115 +192,128 @@ class StiffnessTester(object):
             #
 
             if idx_next_spike >= len(self.all_spike_times):
-                t_next_spike = sim_time
+                t_next_spike = self.sim_time
+                syms_next_spike = []
             else:
                 t_next_spike = self.all_spike_times[idx_next_spike]
+                syms_next_spike = self.all_spike_times_sym[idx_next_spike]
 
             print("\tsimulating inner till spike or end t = " + str(t_next_spike))
 
             while t < t_next_spike:
-                try:
-                    # h_ is NOT the reached step size but the suggested next step size!
-                    t, h_, y = evolve.apply(t, min(t + max_step_size, t_next_spike), h, y)
-                except Exception as e:
-                    print("     ===> Failure of %s at t=%.2f with h=%.2f (y=%s)" % (gsl_stepper.name(), t, h, y))
-                    if raise_errors:
-                        raise e
+                t_end_requested = min(t + self.max_step_size, t_next_spike)
+                h_requested = t_end_requested - t
+                print("\t\t[t = " + str(t) + "] simulating with requested dt = " + str(h_requested) + " (max timestep = " + str(self.max_step_size) + ")")
+                #try:
+                    # h_suggested is NOT the reached step size but the suggested next step size!
+                t, h_suggested, y = evolve.apply(t, t_end_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
+                #except Exception as e:
+                    #print("     ===> Failure of %s at t=%.2f with h_requested = %.2f (y=%s)" % (gsl_stepper.name(), t, h_requested, y))
+                    #if raise_errors:
+                        #raise e
 
                 if debug:
                     t_log.append(t)
+                    h_log.append(h_suggested)
                     y_log.append(y)
 
-
-                """#step_counter += 1
-                s_min_old = s_min
-                s_min = min(s_min, t - t_old)
-                if s_min < s_min_lower_bound:
-                    estr = "Integration step below %.e (s=%.f). Please check your ODE." % (s_min_lower_bound, s_min)
+                print("\t\tcompare h_min = " + str(h_min) + ", h_requested = " + str(h_requested) + ", h_suggested = " + str(h_suggested))
+                #if h_ < h_requested:     # ignore small requested step sizes; look only at actually obtained step sizes
+                h_min = min(h_min, h_suggested)
+                if h_min < h_min_lower_bound:
+                    estr = "Integration step below %.e (s=%.f). Please check your ODE." % (h_min_lower_bound, h_min)
                     if raise_errors:
-                        raise Exception(estr)
+                        #raise Exception(estr)
+                        pass
                     else:
-                        print(estr)"""
+                        print(estr)
+                h_sum += h_suggested
+                n_timesteps_taken += 1
+
+
+                #
+                #	enforce upper and lower thresholds
+                #
+
+                for shape in self._shapes:
+                    if not shape.upper_bound is None:
+                        idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(shape.symbol))
+                        upper_bound_numeric = float(shape.upper_bound.evalf(subs=self._locals))
+                        if y[idx] > upper_bound_numeric:
+                            y[idx] = _initial_values[idx]
+
 
             idx_next_spike += 1
-
-
-            """if counter_while_loop > 1:
-                step_counter -= 1
-                sum_last_steps += t_new - t_old
-                # it is possible that the last step in a simulation_slot is very small, as it is simply
-                # the length of the remaining slot. Therefore we don't take the last step into account
-                s_min = s_min_old"""
 
 
             #
             #	evaluate to numeric values for the ODEs that are solved analytically
             #
 
-            _locals = self._parameters.copy()
-            _locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
+            self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
             if not self.analytic_integrator is None:
-                _locals.update(self.analytic_integrator.get_value(t))
+                self._locals.update(self.analytic_integrator.get_value(t))
 
-
-            #
-            #	enforce upper and lower thresholds
-            #
-
-            for shape in self._shapes:
-                if not shape.upper_bound is None:
-                    idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(shape.symbol))
-                    upper_bound_numeric = float(shape.upper_bound.subs(_locals).evalf())
-                    if y[idx] > upper_bound_numeric:
-                        y[idx] = _initial_values[idx]
 
 
             #
             #   apply the spikes, i.e. add the "initial values" to the system dynamical state vector
             #
 
-            for sym, spike_density in self.spike_times.items():
-                if sym in list(self._system_of_shapes.x_):
+            for sym in syms_next_spike:
+                if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
                     idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
-                    y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).subs(_locals).evalf())
+                    print("\tApplying spike to variable " + str(sym) + " (state vector index " + str(idx) + ") with magnitude " + str(float(self._system_of_shapes.get_initial_value(str(sym)).subs(self._locals).evalf())))
+                    y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._locals))
 
-        #step_average = (t - sum_last_steps) / step_counter
-
-        #runtime = time.time() - time_start
+        h_avg = h_sum / n_timesteps_taken
+        runtime = time.time() - time_start
 
         if debug:
             t_log = np.array(t_log)
+            h_log = np.array(h_log)
             y_log = np.array(y_log)
-            analytic_syms = self.analytic_integrator.get_value(t).keys()
-            analytic_dim = len(analytic_syms)
-            analytic_y_log = { sym : [] for sym in analytic_syms }
-            for t in t_log:
-                for sym in analytic_syms:
-                    val_dict = self.analytic_integrator.get_value(t)
-                    analytic_y_log[sym].append(val_dict[sym])
+            if not self.analytic_integrator is None:
+                analytic_syms = self.analytic_integrator.get_value(t).keys()
+                analytic_dim = len(analytic_syms)
+                analytic_y_log = { sym : [] for sym in analytic_syms }
+                for t in t_log:
+                    for sym in analytic_syms:
+                        val_dict = self.analytic_integrator.get_value(t)
+                        analytic_y_log[sym].append(val_dict[sym])
+            else:
+                analytic_syms = []
+                analytic_dim = 0
 
             idx_to_label = {}
             for sym, spike_density in self.spike_times.items():
                 syms = [str(sym) for sym in list(self._system_of_shapes.x_)]
                 if sym.replace("'", "__d") in syms:
-                    idx = syms.index(sym)
+                    idx = syms.index(sym.replace("'", "__d"))
                     idx_to_label[idx] = str(sym)
             for i, sym in enumerate(self._system_of_shapes.x_):
                 idx_to_label[i] = sym
 
-            fig, ax = plt.subplots(y_log.shape[1] + len(analytic_syms), sharex=True)
+            fig, ax = plt.subplots(y_log.shape[1] + analytic_dim + 1, sharex=True)
             for i in range(y_log.shape[1]):
-                ax[i].plot(t_log, y_log[:, i], label=idx_to_label[i], marker="o", color="blue")
+                sym = idx_to_label[i]
+                ax[i].plot(t_log, y_log[:, i], label=sym, marker="o", color="blue")
+                if sym in self.spike_times.keys():
+                    for t_sp in self.spike_times[sym]:
+                        ax[i].plot((t_sp, t_sp), ax[i].get_ylim(), marker="o", color="grey", alpha=.7, linewidth=2.)
             for i, sym in enumerate(analytic_syms):
                 ax[i + y_log.shape[1]].plot(t_log, analytic_y_log[sym], label=str(sym), marker="o", color="chartreuse")
+
+            ax[-1].semilogy(t_log[1:], h_log, linewidth=2, color="grey", marker="o", alpha=.7)
+            ax[-1].set_ylabel("suggested dt [s]")
 
             for _ax in ax:
                 _ax.legend()
                 _ax.grid(True)
                 _ax.set_xlim(0., np.amax(t_log))
 
-            ax[-1].set_xlabel("Time [ms]")
+            ax[-1].set_xlabel("Time [s]")
             fig.suptitle(str(integrator))
 
             #plt.show()
@@ -324,23 +321,23 @@ class StiffnessTester(object):
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)
 
-        return s_min_old, step_average, runtime
+        print("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
+
+        return h_min, h_avg, runtime
 
 
-    def draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp):
-        """
-        This function takes the minimal and average step size of the implicit and explicit evolution method.
-        The idea is 1. that if the ODE system is stiff the average step size of the implicit method tends to
-        be larger. The function checks if it is twice as large. This points to the facht that the ODE system
-        is possibly stiff expecially that it could be even more stiff for minor changes in stepzise and and
-        parameters. Further if the minimal step size is close to machine precision for one of the methods but
-        not for the other, this suggest that the other is more stable and should be used instead.
+    def draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, avg_step_size_ratio=6):
+        """Decide which is the best integrator to use for a certain system of ODEs
+        
+        1. If the ODE system is stiff the average step size of the implicit method tends to be larger. This indicates that the ODE system is possibly stiff (and that it could be even more stiff for minor changes in stepsize and parameters). 
+        
+        2. If the minimal step size is close to machine precision for one of the methods but not for the other, this suggest that the other is more stable and should be used instead.
+        
         :param step_min_imp: data measured during solving
         :param step_min_exp: data measured during solving
         :param step_average_imp: data measured during solving
         :param step_average_exp: data measured during solving
         """
-        # check minimal step lengths as used by GSL integration method
 
         machine_precision = np.finfo(float).eps
 
@@ -350,11 +347,12 @@ class StiffnessTester(object):
             return "explicit"
         elif step_min_imp < 10. * machine_precision and step_min_exp < 10. * machine_precision:
             return "warning"
-        elif step_min_imp > 10. * machine_precision and step_min_exp > 10. * machine_precision:
-            if step_average_imp > 6*step_average_exp:
-                return "implicit"
-            else:
-                return "explicit"
+
+        import pdb;pdb.set_trace()
+        if step_average_imp > avg_step_size_ratio * step_average_exp:
+            return "implicit"
+        else:
+            return "explicit"
 
 
 
@@ -374,17 +372,16 @@ class StiffnessTester(object):
         dfdy = np.zeros((dimension, dimension), np.float)
         dfdt = np.zeros((dimension,))
 
-        _locals = self._parameters.copy()
-        _locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
+        self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
         if not self.analytic_integrator is None:
-            _locals.update(self.analytic_integrator.get_value(t))
+            self._locals.update(self.analytic_integrator.get_value(t))
 
         # evaluate every entry of the `jacobian_matrix` and store the
         # result in the corresponding entry of the `dfdy`
         for row in range(0, dimension):
             for col in range(0, dimension):
-                dfdy[row, col] = float(self.symbolic_jacobian_[row, col].subs(_locals).evalf())
+                dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))
 
         return dfdy, dfdt
 
@@ -399,22 +396,20 @@ class StiffnessTester(object):
         :return: Updated state vector
         """
 
-        _locals = self._parameters.copy()
-        _locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
+        self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
         #
         #   update state of analytically solved variables to time `t`
         #
 
         if not self.analytic_integrator is None:
-            # XXX: TODO: clamp analytic solution to bounds (if they exist)
-            _locals.update(self.analytic_integrator.get_value(t))
+            self._locals.update(self.analytic_integrator.get_value(t))
 
         try:
-           return [ float(self._update_expr[str(sym)].subs(_locals).evalf()) for sym in self._system_of_shapes.x_ ]
+           return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")
-            for k,v in _locals.items():
+            for k,v in self._locals.items():
                 print("    ", k, "=", v)
             raise

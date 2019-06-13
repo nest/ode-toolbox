@@ -46,7 +46,7 @@ default_config = {
 }
 
 
-def analysis(indict, enable_stiffness_check=True):
+def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False):
     """The main entry point of the analysis.
 
     This function expects a single dictionary with the keys `odes`,
@@ -54,6 +54,13 @@ def analysis(indict, enable_stiffness_check=True):
 
     The exact format of the input entries is described in the file
     `README.md`.
+
+    Parameters
+    ----------
+    enable_stiffness_check : bool
+        Whether to perform stiffness checking.
+    disable_analytic_solver : bool
+        When performing stiffness checking, optionally disable analytic integration so that all ODEs are integrated numerically.
 
     :return: The result of the analysis, again as a dictionary.
     """
@@ -69,15 +76,12 @@ def analysis(indict, enable_stiffness_check=True):
     #
 
     print("Processing input shapes...")
+    input_time_symbol = default_config["input_time_symbol"]
     output_timestep_symbol = default_config["output_timestep_symbol"]
     if "options" in indict.keys():
         options_dict = indict["options"]
         if "output_timestep_symbol" in options_dict.keys():
             output_timestep_symbol = options_dict["output_timestep_symbol"]
-
-    input_time_symbol = default_config["input_time_symbol"]
-    if "options" in indict.keys():
-        options_dict = indict["options"]
         if "input_time_symbol" in options_dict.keys():
             input_time_symbol = options_dict["input_time_symbol"]
 
@@ -125,10 +129,14 @@ def analysis(indict, enable_stiffness_check=True):
     
     solvers_json = []
     analytic_solver_json = None
-    syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
-    if len(syms) > 0:
+    if disable_analytic_solver:
+        analytic_syms = []
+    else:
+        analytic_syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
+
+    if len(analytic_syms) > 0:
         print("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
-        sub_sys = shape_sys.get_sub_system(syms)
+        sub_sys = shape_sys.get_sub_system(analytic_syms)
         analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
         analytic_solver_json["solver"] = "analytical"
         solvers_json.append(analytic_solver_json)
@@ -137,13 +145,16 @@ def analysis(indict, enable_stiffness_check=True):
     #   generate numerical solvers for the remainder
     #
 
-    if len(syms) < len(shape_sys.x_):
-        print("Generating numerical solver for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == False]))
-        syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if not _node_is_lin ]
-        sub_sys = shape_sys.get_sub_system(syms)
+    if len(analytic_syms) < len(shape_sys.x_):
+        numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
+        print("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
+        sub_sys = shape_sys.get_sub_system(numeric_syms)
         solver_json = sub_sys.generate_numeric_solver()
-        solver_json["solver"] = "numeric"   # will be overwritten if stiffness testing is used
-        if HAVE_STIFFNESS and enable_stiffness_check:
+        solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
+        if enable_stiffness_check:
+            if not HAVE_STIFFNESS:
+                raise Exception("Stiffness test requested, but PyGSL not available")
+
             print("Performing stiffness test...")
             kwargs = {}
             if "options" in indict.keys() and "random_seed" in indict["options"].keys():
@@ -154,6 +165,9 @@ def analysis(indict, enable_stiffness_check=True):
                 kwargs["parameters"] = indict["parameters"]
             if "stimuli" in indict.keys():
                 kwargs["stimuli"] = indict["stimuli"]
+            for key in ["sim_time", "max_step_size", "integration_accuracy"]:
+                if "options" in indict.keys() and key in options_dict.keys():
+                    kwargs[key] = float(options_dict[key])
             if not analytic_solver_json is None:
                 kwargs["analytic_solver_dict"] = analytic_solver_json
             tester = stiffness.StiffnessTester(sub_sys, shapes, **kwargs)
@@ -161,10 +175,8 @@ def analysis(indict, enable_stiffness_check=True):
             solver_json["solver"] += "-" + solver_type
             print(solver_type + " scheme")
 
-        #else:
-            #print("(stiffness test skipped, PyGSL not available)")
-
         solvers_json.append(solver_json)
+
 
     #
     #   copy the initial values from the input to the output for convenience; convert to numeric values
@@ -204,6 +216,7 @@ def analysis(indict, enable_stiffness_check=True):
                 
                 if symbol_appears_in_any_expr:
                     solver_json["parameters"][param_name] = str(sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals).n())
+
 
     #
     #   convert expressions from sympy to string

@@ -33,7 +33,8 @@ if INTEGRATION_TEST_DEBUG_PLOTS:
     mpl.use('Agg')
     import matplotlib.pyplot as plt
 
-from .context import odetoolbox
+#from .context import odetoolbox
+import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
 
 from math import e
@@ -170,3 +171,8 @@ class TestAnalyticIntegrator(unittest.TestCase):
         np.testing.assert_allclose(state[True]["timevec"], state[False]["timevec"])
         for sym, val in state_.items():
             np.testing.assert_allclose(state[True][sym], state[False][sym])
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])
+    

@@ -66,8 +66,8 @@ The ODEs entry contains dictionaries, each of which specifies an ODE with initia
 
 * `symbol`: The unambiguous variable name that this ODE describes the dynamics of
 * `definition`: An arbitrary Python expression with free variables (an arbitrary valid Python variable name, e.g. `V_m`), derivative-variables (an arbitrary valid Python variable name with a postfix of a sequence of '-characters, e.g. `g_in'''`) and functions from the `math`-package. The definition of a `function` must depend on `t`-variable.
-* `upper_bound`: defines an optional condition as a valid boolean Python expression for the maximal value of the `symbol`-variable. This bound is used in the stiffness test.
-* `lower_bound`: defines an optional condition as a valid boolean Python expression for the minimal value of `symbol`-variable. This bound is used in the stiffness test.
+* `upper_threshold`: An optional condition as a valid boolean Python expression for the maximal value of the `symbol`-variable. This threshold is used in the stiffness test. When the threshold is reached, the corresponding variable is reset to the initial value.
+* `lower_threshold`: defines an optional condition as a valid boolean Python expression for the minimal value of `symbol`-variable. This bound is used in the stiffness test.
 * `initial_values`: A dictionary containing `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
 
 #### `parameters`

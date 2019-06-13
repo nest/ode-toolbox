@@ -13,7 +13,7 @@
       }
     },
     {
-      "expression": "V_abs' = -1/Tau*V_abs + 1/C_m*(I_shape_in + I_shape_ex + I_shape_gap1 + I_e + currents)",
+      "expression": "V_abs' = -V_abs/Tau + 1/C_m*(I_shape_in + I_shape_ex + I_shape_gap1 + I_e + currents)",
       "initial_value": "0."
     }
   ],

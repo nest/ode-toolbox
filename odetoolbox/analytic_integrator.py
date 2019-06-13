@@ -29,7 +29,7 @@ from .shapes import Shape
 class AnalyticIntegrator():
     """integrate a dynamical system by means of the propagators returned by odetoolbox"""
     
-    def __init__(self, solver_dict, spike_times, enable_caching=False):
+    def __init__(self, solver_dict, spike_times, enable_caching=True):
         """
         Parameters
         ----------
@@ -54,10 +54,11 @@ class AnalyticIntegrator():
         self.shape_starting_values = self.solver_dict["initial_values"].copy()
         for k, v in self.shape_starting_values.items():
             expr = sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals)
+            subs_dict = {}
             if "parameters" in self.solver_dict.keys():
                 for k_, v_ in self.solver_dict["parameters"].items():
-                    expr = expr.subs(k_, v_)
-            self.shape_starting_values[k] = float(expr.evalf())
+                    subs_dict[k_] = v_
+            self.shape_starting_values[k] = float(expr.evalf(subs=subs_dict))
 
         self.update_expressions = self.solver_dict["update_expressions"].copy()
         for k, v in self.update_expressions.items():
@@ -112,9 +113,10 @@ class AnalyticIntegrator():
         for k, v in vals.items():
             assert k in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
             expr = sympy.parsing.sympy_parser.parse_expr(str(v), global_dict=Shape._sympy_globals)
+            subs_dict = {}
             for param_symbol, param_val in self.solver_dict["parameters"].items():
-                expr = expr.subs(param_symbol, param_val)
-            self.initial_values[k] = float(expr.evalf())
+                subs_dict[param_symbol] = param_val
+            self.initial_values[k] = float(expr.evalf(subs=subs_dict))
 
 
     def update_step(self, delta_t, initial_values, debug=True):
@@ -129,15 +131,16 @@ class AnalyticIntegrator():
             #   in the update expression, replace symbolic variables with their numerical values
             #
 
+            subs_dict = {}
             for prop_symbol, prop_val in self.solver_dict["propagators"].items():
-                expr = expr.subs(prop_symbol, prop_val)
+                subs_dict[prop_symbol] = prop_val
             if "parameters" in self.solver_dict.keys():
                 for param_symbol, param_val in self.solver_dict["parameters"].items():
-                    expr = expr.subs(param_symbol, param_val)
+                    subs_dict[param_symbol] = param_val
             for state_variable2 in self.solver_dict["state_variables"]:
-                expr = expr.subs(state_variable2, initial_values[state_variable2]) 
-            expr = expr.subs("__h", delta_t)
-            expr = float(expr.evalf())
+                subs_dict[state_variable2] =  initial_values[state_variable2]
+            subs_dict["__h"] = delta_t
+            expr = float(expr.evalf(subs=subs_dict))
 
             #if debug:
                 #print("\t* update expression evaluates to = " + str(expr))
@@ -149,14 +152,14 @@ class AnalyticIntegrator():
 
     def get_value(self, t, debug=True):
 
-        print("Analytic integrator: state requested at t = " + str(t))
+        #print("Analytic integrator: state requested at t = " + str(t))
 
         if (not self.enable_caching) \
          or t < self.t_curr:
-            print("\treset state")
+            #print("\treset state")
             self.reset()
 
-        print("\tCurrent state: t_curr = " + str(self.t_curr) + ", state = " + str(self.state_at_t_curr))
+        #print("\tCurrent state: t_curr = " + str(self.t_curr) + ", state = " + str(self.state_at_t_curr))
 
 
         #
@@ -171,7 +174,7 @@ class AnalyticIntegrator():
             if spike_t > t:
                 break
 
-            print("\tpropagating till next spike time: " + str(spike_t))
+            #print("\tpropagating till next spike time: " + str(spike_t))
 
 
             #
@@ -187,14 +190,14 @@ class AnalyticIntegrator():
             #
 
             for spike_sym in spike_syms:
-                print("\t\tincrementing " + str(spike_sym))
+                #print("\t\tincrementing " + str(spike_sym))
                 if spike_sym.replace("'", "__d") in self.initial_values.keys():
                     self.state_at_t_curr[spike_sym.replace("'", "__d")] += self.shape_starting_values[spike_sym.replace("'", "__d")]
-                    print("\t\tincrementing " + str(spike_sym.replace("'", "__d")) + " by " + str(self.shape_starting_values[spike_sym.replace("'", "__d")]))
+                    #print("\t\tincrementing " + str(spike_sym.replace("'", "__d")) + " by " + str(self.shape_starting_values[spike_sym.replace("'", "__d")]))
 
             self.t_curr = spike_t
 
-        print("\tCurrent state: t_curr = " + str(self.t_curr) + ", state = " + str(self.state_at_t_curr))
+        #print("\tCurrent state: t_curr = " + str(self.t_curr) + ", state = " + str(self.state_at_t_curr))
 
 
         #
@@ -205,6 +208,6 @@ class AnalyticIntegrator():
         state_at_t = self.update_step(delta_t, self.state_at_t_curr)
         #self.t_curr = t
 
-        print("\tpropagating till requested time: " + str(t))
+        #print("\tpropagating till requested time: " + str(t))
 
         return state_at_t #self.state_at_t_curr

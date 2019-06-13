@@ -24,7 +24,8 @@ import os
 import unittest
 
 try:
-    from .context import odetoolbox
+    #from .context import odetoolbox
+    import odetoolbox
     from odetoolbox.stiffness import StiffnessTester
     HAVE_STIFFNESS = True
 except ImportError:
@@ -38,24 +39,39 @@ def open_json(filename):
         indict = json.load(infile)
     return indict
 
+#indict = open_json("iaf_cond_alpha_odes.json")
+#result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+#assert len(result) == 1 \
+    #and result[0]["solver"].endswith("explicit")
+
+
 
 @unittest.skipIf(not HAVE_STIFFNESS,
                  "Stiffness tests not supported on this system")
 class TestStiffnessChecker(unittest.TestCase):
 
-    def test_iaf_cond_alpha_odes(self):
-        indict = open_json("iaf_cond_alpha_odes.json")
-        tester = StiffnessTester(indict)
-        result = tester.check_stiffness()
-        self.assertEqual("explicit", result)
+    #def test_iaf_cond_alpha_odes(self):
+        #indict = open_json("iaf_cond_alpha_odes.json")
+        #result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        #assert len(result) == 1 \
+         #and result[0]["solver"].endswith("explicit")
 
-    def test_iaf_cond_alpha_odes_stiff(self):
-        indict = open_json("iaf_cond_alpha_odes_stiff.json")
-        tester = StiffnessTester(indict)
-        result = tester.check_stiffness()
-        self.assertEqual("implicit", result)
+    """def test_canonical_stiff_system(self):
+        indict = open_json("stiff_system.json")
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        assert len(result) == 1 \
+         and result[0]["solver"].endswith("implicit")"""
 
-    def test_iaf_cond_alpha_odes_threshold(self):
+    def test_morris_lecar_stiff(self):
+        indict = open_json("morris_lecar.json")
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        assert len(result) == 1 \
+         and result[0]["solver"].endswith("implicit")
+
+        #assert (result[0]["solver"].endswith("implicit") and result[1]["solver"] == "analytical") \
+         #or (result[1]["solver"].endswith("implicit") and result[0]["solver"] == "analytical")
+
+"""    def test_iaf_cond_alpha_odes_threshold(self):
         indict = open_json("iaf_cond_alpha_odes_threshold.json")
         tester = StiffnessTester(indict)
         result = tester.check_stiffness()
@@ -73,6 +89,8 @@ class TestStiffnessChecker(unittest.TestCase):
         result = tester.check_stiffness(sim_resolution=0.2, accuracy=1e-5)
         self.assertEqual("explicit", result)
 
+"""
 
-if __name__ == '__main__':
-    unittest.main()
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])

@@ -10,21 +10,13 @@
         "I_shape_ex'" : "e / Tau_syn_ex"
       }
     },
-    {
-        "expression": "I_shape_gap1' = I_shape_gap2",
-        "initial_value": "0"
-    },
-    {
-        "expression": "I_shape_gap2' = -I_shape_gap1 / Tau_syn_gap**2 - 2*I_shape_gap2 / Tau_syn_gap",
-        "initial_value": "e / Tau_syn_gap"
-    },
-    {
+     {
       "expression": "V_abs' = -1/Tau*V_abs + 1/C_m*(I_shape_in + I_shape_ex + I_shape_gap1 + I_e + currents)",
       "initial_value": "0."
     }
   ],
   "options":
   {
-    "output_timestep_symbol_name": "__h"
+    "output_timestep_symbol": "__h"
   }
 }

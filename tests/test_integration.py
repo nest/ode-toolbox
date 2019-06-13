@@ -180,13 +180,13 @@ class TestIntegration(unittest.TestCase):
             sol = solve_ivp(f, t_span=[t, _t_stop], y0=_init_value, t_eval=timevec[np.logical_and(t < timevec, timevec <= _t_stop)], rtol=1E-9, atol=1E-9)
             _init_value[:2] = i_ex_init       # "apply" the spike
             _init_value[2] = sol.y[2, -1]
-            
+
             numerical_timevec = np.hstack((numerical_timevec, sol.t.copy()[np.newaxis, :]))
             numerical_sol = np.hstack((numerical_sol, sol.y.copy()))
-            
+
             if numerical_timevec[0, -1] == spike_times[min(len(spike_times) - 1, spike_time_idx)]:
                 numerical_sol[:2, -1] = i_ex_init   # set value to "just after" application of the spike, just for the log
-            
+
             t = _t_stop
             spike_time_idx += 1
 
@@ -213,7 +213,6 @@ class TestIntegration(unittest.TestCase):
                 i_ex__[:, step - 1] = i_ex_init
             i_ex__[:, step] = np.dot(P, i_ex__[:, step - 1])
 
-        
 
         #
         #   timeseries using ode-toolbox generated propagators
@@ -245,7 +244,7 @@ class TestIntegration(unittest.TestCase):
         spike_times_ = { "I_shape_ex__d" : spike_times, "I_shape_in__d" : spike_times }
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times_)
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
-        
+
         state = { sym : [] for sym in solver_dict["state_variables"] }
         state["timevec"] = []
         for step, t in enumerate(timevec):
@@ -254,11 +253,10 @@ class TestIntegration(unittest.TestCase):
             state["timevec"].append(t)
             for sym, val in state_.items():
                 state[sym].append(val)
-                
-        
+
         for k, v in state.items():
             state[k] = np.array(v)
-        
+
         if INTEGRATION_TEST_DEBUG_PLOTS:
             fig, ax = plt.subplots(3, sharex=True)
             ax[0].plot(1E3 * numerical_timevec.squeeze(), v_abs, label="V_abs (num)")
