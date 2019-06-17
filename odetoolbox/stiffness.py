@@ -40,6 +40,7 @@ import matplotlib.pyplot as plt
 import time
 
 import sympy
+import sympy.utilities.autowrap
 #from sympy.parsing.sympy_parser import parse_expr
 
 try:
@@ -62,6 +63,7 @@ class StiffnessTester(object):
         self._shapes = shapes
         self._parameters = parameters
         self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self._parameters.items() }
+        self._locals = self._parameters.copy()
         self._stimuli = stimuli
 
         self.random_seed = random_seed
@@ -74,6 +76,9 @@ class StiffnessTester(object):
         self.analytic_integrator = None
         #self.initial_values = { sym : str(self.get_initial_value(sym)) for sym in self._system_of_shapes.x_ }
         self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy()
+        self._update_expr_wrapped = {}
+        for sym, expr in self._update_expr.items():
+            self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self._system_of_shapes.x_, backend="cython")
         #self._update_expr = { sym : sympy.parsing.sympy_parser.parse_expr(expr, global_dict=Shape._sympy_globals) for sym, expr in self._system_of_shapes.generate_numeric_solver()["update_expressions"].items() }
 
     @property
@@ -181,7 +186,6 @@ class StiffnessTester(object):
         n_timesteps_taken = 0
         t = 0.
         idx_next_spike = 0
-        self._locals = self._parameters.copy()
         while t < self.sim_time:
 
             print("Numeric loop: t = " + str(t))
@@ -406,7 +410,9 @@ class StiffnessTester(object):
             self._locals.update(self.analytic_integrator.get_value(t))
 
         try:
-           return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]
+            #import pdb;pdb.set_trace()
+            #return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]
+            return [ self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_ ]
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")

@@ -20,7 +20,7 @@
 #
 
 import json
-
+import functools
 from sympy import diff, exp, Matrix, simplify, sqrt, Symbol, sympify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.matrices import zeros
@@ -44,6 +44,7 @@ class SystemOfShapes(object):
         A : sympy.Matrix
             Jacobian of the system (square matrix).
         """
+        print("Creating system of shapes with A = " + str(A) + " and C = " + str(C))
         assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
         self.x_ = x
         self.A_ = A
@@ -198,18 +199,10 @@ class SystemOfShapes(object):
     def generate_numeric_solver(self):
         """
         """
-        
-        update_expr = {}
-        for row, x in enumerate(self.x_):
-            update_expr_terms = []
-            for col, y in enumerate(self.x_):
-                update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
-            update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.C_[row]) + ")"
-            update_expr[str(x)] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals))
-        
+        update_expr = self.reconstitute_expr()
         all_variable_symbols = [ str(sym) for sym in self.x_ ]
         initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_variable_symbols }
-        
+
         solver_dict = {"update_expressions" : update_expr,
                        "state_variables" : all_variable_symbols,
                        "initial_values" : initial_values}
@@ -217,19 +210,30 @@ class SystemOfShapes(object):
         return solver_dict
 
 
+    def reconstitute_expr(self):
+        update_expr = {}
+        for row, x in enumerate(self.x_):
+            update_expr_terms = []
+            for col, y in enumerate(self.x_):
+                update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
+            update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.C_[row]) + ")"
+            update_expr[str(x)] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals))
+        return update_expr
+
+
     @classmethod
     def from_shapes(cls, shapes):
         """Construct the global system matrix including all shapes.
-        
+
         Global dynamics
-        
+
         .. math::
-        
+
             x' = Ax + C
 
-        where :math:`x` and :math:`C` are column vectors of length :math:`N` and :math:`A` is an :math:`N \times N` matrix.        
+        where :math:`x` and :math:`C` are column vectors of length :math:`N` and :math:`A` is an :math:`N \times N` matrix.
         """
-        
+
         N = np.sum([shape.order for shape in shapes]).__index__()
         x = sympy.zeros(N, 1)
         A = sympy.zeros(N, N)
@@ -243,41 +247,79 @@ class SystemOfShapes(object):
 
         i = 0
         for shape in shapes:
-            #print("Shape: " + str(shape.symbol))
+            print("* Shape: " + str(shape.symbol))
             highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
             shape_expr = shape.diff_rhs_derivatives
             derivative_symbols = [ Symbol(str(shape.symbol) + "__d" * order) for order in range(shape.order) ]
             for derivative_factor, derivative_symbol in zip(shape.derivative_factors, derivative_symbols):
                 shape_expr += derivative_factor * derivative_symbol
-            #print("\t expr =  " + str(shape_expr))
+            print("  expr =  " + str(shape_expr))
 
 
             #
             #   grab the defining expression and separate into linear and nonlinear part
             #
 
-            for j, sym1 in enumerate(x):
+            """const_terms = [term for term in expr.args if not term.free_symbols]
+            const_term = functools.reduce(lambda x, y: x + y, const_terms)
+            C[highest_diff_sym_idx] += const_term"""
+
+            shape_expr_ = shape_expr.expand()
+            for j, sym in enumerate(x):
+                print("\t* Symbol " + str(sym))
+                if shape_expr_.is_Add:
+                    terms = shape_expr_.args
+                else:
+                    terms = [shape_expr_]
+                # a term is linear in `sym` if `term/sym` contains only free symbols that are not in all_known_symbols, i.e. if the sets are disjoint
+                linear_terms = [term for term in terms if (term / sym).free_symbols.isdisjoint(x)]
+                print("\t  linear_terms = " + str(linear_terms))
+                #all_linear_terms.append(linear_term)
+                if linear_terms:
+                    linear_factors = [term / sym for term in linear_terms]
+                    linear_factor = functools.reduce(lambda x, y: x + y, linear_factors)
+                    linear_terms = [term for term in linear_terms]
+                    linear_term = functools.reduce(lambda x, y: x + y, linear_terms)
+                else:
+                    linear_factor = sympy.Float(0)
+                    linear_term = sympy.Float(0)
+                print("\t  linear_term = " + str(linear_term))
+                A[highest_diff_sym_idx, j] = linear_factor
+                print("\t   Old shape_expr_ = " + str(shape_expr_))
+                #import pdb;pdb.set_trace()
+                shape_expr_ = sympy.simplify(shape_expr_ - linear_term).expand()
+                print("\t   New shape_expr_ = " + str(shape_expr_))
+
+            C[highest_diff_sym_idx] = shape_expr_
+
+            """for j, sym in enumerate(x):
+                # check if there is a term of the form "(constant) * sym"
+                linear_in_sym_term = 
+
                 diff_expr = sympy.simplify(sympy.diff(shape_expr, sym1))
-                #print("\tdiff wrt " + str(sym1) + " = " + str(diff_expr))
+                print("\tdiff wrt " + str(sym1) + " = " + str(diff_expr))
                 for sym2 in x:
-                    #print("\t\tsym2 = " + str(sym2))
+                    print("\t\tsym2 = " + str(sym2))
                     diff_wrt_sym2 = sympy.diff(diff_expr, sym2)
                     #print("\t\tdiff_wrt_sym2 = " + str(diff_wrt_sym2))
                     if not diff_wrt_sym2.is_zero:
                         # nonlinear term containing sym1
                         C[highest_diff_sym_idx] += sym1 * sym2 * diff_wrt_sym2
-                        shape_expr -= sym1 * sym2 * diff_wrt_sym2                    
+                        shape_expr -= sym1 * sym2 * diff_wrt_sym2
                         diff_expr -= sym2 * diff_wrt_sym2
-                    shape_expr = sympy.simplify(shape_expr)
-                    diff_expr = sympy.simplify(diff_expr)
+                        #shape_expr = sympy.simplify(shape_expr)
+                        #diff_expr = sympy.simplify(diff_expr)
                     A[highest_diff_sym_idx, j] = diff_expr
-                    #print("\t\t---> new diff_expr = " + str(diff_expr))
-                    #print("\t\t---> new shape_expr = " + str(shape_expr))
+                    print("\t\t---> new diff_expr = " + str(diff_expr))
+                    print("\t\t---> new shape_expr = " + str(shape_expr))"""
 
+            #
             # for higher-order shapes: mark subsequent derivatives x_i' = x_(i+1)
+            #
+
             for order in range(shape.order - 1):
                 _idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (order + 1))][0]
-                #print("\t\tThe symbol " + str(Symbol(str(shape.symbol) + "__d" * (order ))) + " is at position " + str(_idx) + " in vector " + str(x) + ", writing in row " + str(_idx))
+                print("\t\tThe symbol " + str(Symbol(str(shape.symbol) + "__d" * (order ))) + " is at position " + str(_idx) + " in vector " + str(x) + ", writing in row " + str(_idx))
                 A[i + (shape.order - order - 1), _idx] = 1.     # the highest derivative is at row `i`, the next highest is below, and so on, until you reach the variable symbol without any "__d" suffixes
 
             i += shape.order

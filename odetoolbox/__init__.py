@@ -24,6 +24,9 @@ from __future__ import print_function
 import sympy
 
 from .system_of_shapes import SystemOfShapes
+#from odetoolbox.analytic import compute_analytical_solution
+#from odetoolbox.numeric import compute_numeric_solution
+from odetoolbox.shapes import Shape
 
 from .shapes import Shape
 from .dependency_graph_plotter import DependencyGraphPlotter
@@ -45,35 +48,20 @@ default_config = {
     "output_timestep_symbol" : "__h"
 }
 
+def dependency_analysis(shape_sys):
+    """perform dependency analysis, plot dependency graph"""
+    print("Dependency analysis...")
+    dependency_edges = shape_sys.get_dependency_edges()
+    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges)
+    DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_lin_cc.dot")
+    node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
+    DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
+    return dependency_edges
 
-def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False):
-    """The main entry point of the analysis.
-
-    This function expects a single dictionary with the keys `odes`,
-    `parameters` and `shapes` that describe the input to the analysis.
-
-    The exact format of the input entries is described in the file
-    `README.md`.
-
-    Parameters
-    ----------
-    enable_stiffness_check : bool
-        Whether to perform stiffness checking.
-    disable_analytic_solver : bool
-        When performing stiffness checking, optionally disable analytic integration so that all ODEs are integrated numerically.
-
-    :return: The result of the analysis, again as a dictionary.
-    """
-
-    #from odetoolbox.analytic import compute_analytical_solution
-    #from odetoolbox.numeric import compute_numeric_solution
-    from odetoolbox.shapes import Shape
+def from_json_to_shapes(indict, default_config):
+    """process the input, construct Shape instances"""
 
     shapes = []
-
-    #
-    #   process the input, construct Shape instances
-    #
 
     print("Processing input shapes...")
     input_time_symbol = default_config["input_time_symbol"]
@@ -84,11 +72,6 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
             output_timestep_symbol = options_dict["output_timestep_symbol"]
         if "input_time_symbol" in options_dict.keys():
             input_time_symbol = options_dict["input_time_symbol"]
-
-    if "dynamics" not in indict:
-        print("Warning: empty input (no dynamical equations found); returning empty output")
-        solvers_json = {}
-        return solvers_json
 
     # first run for grabbing all the variable names. Coefficients might be incorrect.
     all_variable_symbols = []
@@ -102,31 +85,25 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
         shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=input_time_symbol)
         shapes.append(shape)
 
+    return input_time_symbol, output_timestep_symbol, shapes
 
-    #
-    #   construct global system matrix
-    #
 
-    print("Constructing system matrix...")
+def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False):
+
+    if "dynamics" not in indict:
+        print("Warning: empty input (no dynamical equations found); returning empty output")
+        solvers_json = {}
+        return solvers_json
+
+    input_time_symbol, output_timestep_symbol, shapes = from_json_to_shapes(indict, default_config)
     shape_sys = SystemOfShapes.from_shapes(shapes)
+    dependency_edges = dependency_analysis(shape_sys)
 
 
-    #
-    #   perform dependency analysis, plot dependency graph
-    #
-
-    print("Dependency analysis...")
-    dependency_edges = shape_sys.get_dependency_edges()
-    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges)
-    DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_lin_cc.dot")
-    node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
-    DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
-    
-    
     #
     #   generate analytical solutions (propagators) where possible
     #
-    
+
     solvers_json = []
     analytic_solver_json = None
     if disable_analytic_solver:
@@ -140,6 +117,7 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
         analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
         analytic_solver_json["solver"] = "analytical"
         solvers_json.append(analytic_solver_json)
+
 
     #
     #   generate numerical solvers for the remainder
@@ -213,7 +191,7 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
                         #if len(expr.atoms(param_name)) > 0:
                             symbol_appears_in_any_expr = True
                             break
-                
+
                 if symbol_appears_in_any_expr:
                     solver_json["parameters"][param_name] = str(sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals).n())
 
@@ -221,7 +199,7 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
     #
     #   convert expressions from sympy to string
     #
-    
+
     for solver_json in solvers_json:
         if "update_expressions" in solver_json.keys():
             for sym, expr in solver_json["update_expressions"].items():
@@ -233,3 +211,24 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
 
     return solvers_json
 
+
+def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False):
+    """The main entry point of the analysis.
+
+    This function expects a single dictionary with the keys `odes`,
+    `parameters` and `shapes` that describe the input to the analysis.
+
+    The exact format of the input entries is described in the file
+    `README.md`.
+
+    Parameters
+    ----------
+    enable_stiffness_check : bool
+        Whether to perform stiffness checking.
+    disable_analytic_solver : bool
+        When performing stiffness checking, optionally disable analytic integration so that all ODEs are integrated numerically.
+
+    :return: The result of the analysis, again as a dictionary.
+    """
+    d = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver)
+    return d

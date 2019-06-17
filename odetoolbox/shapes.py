@@ -64,6 +64,7 @@ class Shape(object):
                      "cos" : sympy.cos,
                      "tan" : sympy.tan,
                      "asin" : sympy.asin,
+                     "sinh" : sympy.sinh,
                      "asinh" : sympy.asinh,
                      "acos" : sympy.acos,
                      "cosh" : sympy.cosh,
@@ -114,7 +115,7 @@ class Shape(object):
         self.state_variables = []
         for i in range(self.order):
             if i > 0:
-                self.state_variables.insert(0, sympy.Symbol("{}{}".format(str(symbol), "__d" * i)))
+                self.state_variables.insert(0, sympy.Symbol("{}{}".format(str(symbol), "__d" * i), real=True))
             else:
                 self.state_variables.insert(0, symbol)
 
@@ -265,7 +266,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_function(cls, symbol, definition, max_t=100, max_order=4, time_symbol=sympy.Symbol("t"), debug=False):
+    def from_function(cls, symbol, definition, max_t=100, max_order=4, time_symbol=sympy.Symbol("t", real=True), debug=False):
         """Create a Shape object given a function of time.
 
         The goal of the algorithm is to calculate the factors of the ODE,
@@ -524,7 +525,7 @@ class Shape(object):
 
         if not symbol in all_variable_symbols:
             all_variable_symbols.extend(derivative_symbols)
-        all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", "__d")) for sym_name in all_variable_symbols ]
+        all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", "__d"), real=True) for sym_name in all_variable_symbols ]
 
         # the purely linear part of the shape goes into `derivative_factors`
         derivative_factors = []
