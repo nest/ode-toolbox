@@ -58,6 +58,7 @@ def dependency_analysis(shape_sys):
     DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
     return dependency_edges
 
+
 def from_json_to_shapes(indict, default_config):
     """process the input, construct Shape instances"""
 

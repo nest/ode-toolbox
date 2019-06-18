@@ -19,6 +19,8 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import functools
+import numpy as np
 import re
 import sympy
 
@@ -265,6 +267,81 @@ class Shape(object):
             return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound)
 
 
+    def reconstitute_expr(self, derivative_symbol="__d"):
+        expr = self.diff_rhs_derivatives
+        derivative_symbols = [ sympy.Symbol(str(self.symbol) + derivative_symbol * order) for order in range(self.order) ]
+        for derivative_factor, derivative_symbol in zip(self.derivative_factors, derivative_symbols):
+            expr += derivative_factor * derivative_symbol
+        return expr
+
+
+    @staticmethod
+    def split_lin_nonlin(expr, x):
+        """const_terms = [term for term in expr.args if not term.free_symbols]
+        const_term = functools.reduce(lambda x, y: x + y, const_terms)
+        C[highest_diff_sym_idx] += const_term"""
+
+        assert all([is_sympy_type(sym) for sym in x])
+
+        lin_factors = []
+
+        print("* Splitting expr = " + str(expr))
+        expr = expr.expand()
+        print("                 = " + str(expr))
+        for j, sym in enumerate(x):
+            # check if there is a linear part in `sym`
+            print("\t* Symbol " + str(sym))
+            if expr.is_Add:
+                terms = expr.args
+            else:
+                terms = [expr]
+            # a term is linear in `sym` if `term/sym` contains only free symbols that are not in all_known_symbols, i.e. if the sets are disjoint
+            linear_terms = [term for term in terms if (term / sym).free_symbols.isdisjoint(x)]
+            print("\t  linear_terms = " + str(linear_terms))
+            #all_linear_terms.append(linear_term)
+            if linear_terms:
+                linear_factors = [term / sym for term in linear_terms]
+                linear_factor = functools.reduce(lambda x, y: x + y, linear_factors)
+                linear_terms = [term for term in linear_terms]
+                linear_term = functools.reduce(lambda x, y: x + y, linear_terms)
+            else:
+                linear_factor = sympy.Float(0)
+                linear_term = sympy.Float(0)
+
+            print("\t  linear_term = " + str(linear_term))
+            lin_factors.append(linear_factor)
+            print("\t   Old expr = " + str(expr))
+            expr = expr - linear_term
+            print("\t   New expr = " + str(expr))
+
+        lin_factors = np.array(lin_factors)
+        nonlin_term = expr
+        assert len(lin_factors) == len(x)
+        print("\t--> lin_factors = " + str(lin_factors))
+        print("\t--> nonlin_term = " + str(nonlin_term))
+
+        return lin_factors, nonlin_term
+
+        """for j, sym1 in enumerate(x):
+            #diff_expr = sympy.simplify(sympy.diff(shape_expr, sym1))
+            diff_expr = sympy.diff(shape_expr, sym1)
+            print("\tdiff wrt " + str(sym1) + " = " + str(diff_expr))
+            for sym2 in x:
+                print("\t\tsym2 = " + str(sym2))
+                diff_wrt_sym2 = sympy.diff(diff_expr, sym2)
+                #print("\t\tdiff_wrt_sym2 = " + str(diff_wrt_sym2))
+                if not diff_wrt_sym2.is_zero:
+                    # nonlinear term containing sym1
+                    C[highest_diff_sym_idx] += sym1 * sym2 * diff_wrt_sym2
+                    shape_expr -= sym1 * sym2 * diff_wrt_sym2
+                    diff_expr -= sym2 * diff_wrt_sym2
+                    #shape_expr = sympy.simplify(shape_expr)
+                    #diff_expr = sympy.simplify(diff_expr)
+                A[highest_diff_sym_idx, j] = diff_expr
+                print("\t\t---> new diff_expr = " + str(diff_expr))
+                print("\t\t---> new shape_expr = " + str(shape_expr))"""
+
+
     @classmethod
     def from_function(cls, symbol, definition, max_t=100, max_order=4, time_symbol=sympy.Symbol("t", real=True), debug=False):
         """Create a Shape object given a function of time.
@@ -383,10 +460,10 @@ class Shape(object):
             # the derivatives up to `order`-1 of some natural numbers
             # as rows (differing in each row)
             X = sympy.zeros(order)
-        
+
             # `Y` is a vector of length `order` that will be assigned the derivatives of `order` of the natural number in the corresponding row of `X`
             Y = sympy.zeros(order, 1)
-        
+
             # It is possible that by choosing certain natural numbers,
             # the system of equations will not be solvable, i.e. `X`
             # is not invertible. This is unlikely but we check for
@@ -401,7 +478,7 @@ class Shape(object):
                     Y[i] = derivatives[order].subs(time_symbol, substitute)
                     for j in range(order):
                         X[i, j] = derivatives[j].subs(time_symbol, substitute)
-        
+
                 if sympy.det(X) != 0:
                     invertible = True
                     break
@@ -409,15 +486,15 @@ class Shape(object):
             #
             #   If we failed to find an invertible `X`, it is very unlikely that the shape function obeys a linear homogeneous ODE of order `order` and we go on checking the next potential order.
             #
-            
+
             if not invertible:
                 continue
-            
-            
+
+
             #
             #   calculate `derivative_factors`
             #
-            
+
             if debug > 1:
                 print("\tinv()...")
             derivative_factors = sympy.simplify(X.inv() * Y)
@@ -517,17 +594,16 @@ class Shape(object):
 
         _initial_values_sanity_checks()
 
+        symbol = sympy.Symbol(symbol)
+        definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
         initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals) for k, v in initial_values.items() }
 
-        derivative_symbols = [ sympy.Symbol(symbol+"__d"*i) for i in range(order) ]
-        definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
-        symbol = sympy.Symbol(symbol)
-
+        derivative_symbols = [ sympy.Symbol(str(symbol)+"__d"*i, real=True) for i in range(order) ]
         if not symbol in all_variable_symbols:
             all_variable_symbols.extend(derivative_symbols)
         all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", "__d"), real=True) for sym_name in all_variable_symbols ]
 
-        # the purely linear part of the shape goes into `derivative_factors`
+        """# the purely linear part of the shape goes into `derivative_factors`
         derivative_factors = []
         expr = definition.copy()    # part of the defining expression yet to process
         linear_part = sympy.Float(0.)
@@ -611,6 +687,13 @@ class Shape(object):
         #for derivative_factor, derivative_symbol in zip(derivative_factors, derivative_symbols):
             #diff_rhs_derivatives -= derivative_factor * derivative_symbol
             #diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
+
+        print("In creating shape " + str(symbol))
+        print(str(definition))"""
+        
+        #derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, all_variable_symbols)
+        #derivative_factors = [ derivative_factors[all_variable_symbols.index(sym)] for sym in derivative_symbols ]
+        derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, derivative_symbols)
 
         return cls(symbol, order, initial_values, derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
 

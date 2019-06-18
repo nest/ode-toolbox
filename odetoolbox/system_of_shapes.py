@@ -33,8 +33,6 @@ from .shapes import Shape
 
 class SystemOfShapes(object):
     """
-    
-    
     """
 
     def __init__(self, x, A, C, shapes):
@@ -249,10 +247,7 @@ class SystemOfShapes(object):
         for shape in shapes:
             print("* Shape: " + str(shape.symbol))
             highest_diff_sym_idx = [k for k, el in enumerate(x) if el == Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
-            shape_expr = shape.diff_rhs_derivatives
-            derivative_symbols = [ Symbol(str(shape.symbol) + "__d" * order) for order in range(shape.order) ]
-            for derivative_factor, derivative_symbol in zip(shape.derivative_factors, derivative_symbols):
-                shape_expr += derivative_factor * derivative_symbol
+            shape_expr = shape.reconstitute_expr()
             print("  expr =  " + str(shape_expr))
 
 
@@ -260,58 +255,9 @@ class SystemOfShapes(object):
             #   grab the defining expression and separate into linear and nonlinear part
             #
 
-            """const_terms = [term for term in expr.args if not term.free_symbols]
-            const_term = functools.reduce(lambda x, y: x + y, const_terms)
-            C[highest_diff_sym_idx] += const_term"""
-
-            shape_expr_ = shape_expr.expand()
-            for j, sym in enumerate(x):
-                print("\t* Symbol " + str(sym))
-                if shape_expr_.is_Add:
-                    terms = shape_expr_.args
-                else:
-                    terms = [shape_expr_]
-                # a term is linear in `sym` if `term/sym` contains only free symbols that are not in all_known_symbols, i.e. if the sets are disjoint
-                linear_terms = [term for term in terms if (term / sym).free_symbols.isdisjoint(x)]
-                print("\t  linear_terms = " + str(linear_terms))
-                #all_linear_terms.append(linear_term)
-                if linear_terms:
-                    linear_factors = [term / sym for term in linear_terms]
-                    linear_factor = functools.reduce(lambda x, y: x + y, linear_factors)
-                    linear_terms = [term for term in linear_terms]
-                    linear_term = functools.reduce(lambda x, y: x + y, linear_terms)
-                else:
-                    linear_factor = sympy.Float(0)
-                    linear_term = sympy.Float(0)
-                print("\t  linear_term = " + str(linear_term))
-                A[highest_diff_sym_idx, j] = linear_factor
-                print("\t   Old shape_expr_ = " + str(shape_expr_))
-                #import pdb;pdb.set_trace()
-                shape_expr_ = sympy.simplify(shape_expr_ - linear_term).expand()
-                print("\t   New shape_expr_ = " + str(shape_expr_))
-
-            C[highest_diff_sym_idx] = shape_expr_
-
-            """for j, sym in enumerate(x):
-                # check if there is a term of the form "(constant) * sym"
-                linear_in_sym_term = 
-
-                diff_expr = sympy.simplify(sympy.diff(shape_expr, sym1))
-                print("\tdiff wrt " + str(sym1) + " = " + str(diff_expr))
-                for sym2 in x:
-                    print("\t\tsym2 = " + str(sym2))
-                    diff_wrt_sym2 = sympy.diff(diff_expr, sym2)
-                    #print("\t\tdiff_wrt_sym2 = " + str(diff_wrt_sym2))
-                    if not diff_wrt_sym2.is_zero:
-                        # nonlinear term containing sym1
-                        C[highest_diff_sym_idx] += sym1 * sym2 * diff_wrt_sym2
-                        shape_expr -= sym1 * sym2 * diff_wrt_sym2
-                        diff_expr -= sym2 * diff_wrt_sym2
-                        #shape_expr = sympy.simplify(shape_expr)
-                        #diff_expr = sympy.simplify(diff_expr)
-                    A[highest_diff_sym_idx, j] = diff_expr
-                    print("\t\t---> new diff_expr = " + str(diff_expr))
-                    print("\t\t---> new shape_expr = " + str(shape_expr))"""
+            lin_factors, nonlin_term = Shape.split_lin_nonlin(shape_expr, x)
+            A[highest_diff_sym_idx, :] = lin_factors[np.newaxis, :]
+            C[highest_diff_sym_idx] = nonlin_term
 
             #
             # for higher-order shapes: mark subsequent derivatives x_i' = x_(i+1)
