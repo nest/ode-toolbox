@@ -74,7 +74,8 @@ class Shape(object):
                      "tanh" : sympy.tanh,
                      "atanh" : sympy.atanh,
                      "e" : sympy.exp(1),
-                     "E" : sympy.exp(1)
+                     "E" : sympy.exp(1),
+                     "t" : sympy.Symbol("t", real=True)
                      }
 
 
@@ -164,7 +165,7 @@ class Shape(object):
         """
         all_symbols = []
         for order in range(self.order):
-            all_symbols.append(sympy.Symbol(str(self.symbol) + differential_order_str * order))
+            all_symbols.append(sympy.Symbol(str(self.symbol) + differential_order_str * order, real=True))
         return all_symbols
 
 
@@ -201,7 +202,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_json(cls, indict, all_variable_symbols=[], time_symbol="t"):
+    def from_json(cls, indict, all_variable_symbols=[], time_symbol=sympy.Symbol("t", real=True)):
         """Create a shape object from a JSON input dictionary
         """
 
@@ -269,7 +270,7 @@ class Shape(object):
 
     def reconstitute_expr(self, derivative_symbol="__d"):
         expr = self.diff_rhs_derivatives
-        derivative_symbols = [ sympy.Symbol(str(self.symbol) + derivative_symbol * order) for order in range(self.order) ]
+        derivative_symbols = [ sympy.Symbol(str(self.symbol) + derivative_symbol * order, real=True) for order in range(self.order) ]
         for derivative_factor, derivative_symbol in zip(self.derivative_factors, derivative_symbols):
             expr += derivative_factor * derivative_symbol
         return expr
@@ -393,7 +394,7 @@ class Shape(object):
         # The symbol and the definition of the shape function were given as
         # strings. We have to transform them to SymPy symbols for using
         # them in symbolic calculations.
-        symbol = sympy.Symbol(symbol)
+        symbol = sympy.Symbol(symbol, real=True)
         definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol))
 
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
@@ -459,10 +460,10 @@ class Shape(object):
             # `X` is an `order`x`order` matrix that will be assigned
             # the derivatives up to `order`-1 of some natural numbers
             # as rows (differing in each row)
-            X = sympy.zeros(order)
+            X = sympy.zeros(order, real=True)
 
             # `Y` is a vector of length `order` that will be assigned the derivatives of `order` of the natural number in the corresponding row of `X`
-            Y = sympy.zeros(order, 1)
+            Y = sympy.zeros(order, 1, real=True)
 
             # It is possible that by choosing certain natural numbers,
             # the system of equations will not be solvable, i.e. `X`
@@ -503,7 +504,7 @@ class Shape(object):
             #
             #   fill in the obtained expressions for the derivative_factors and check whether they satisfy the definition of the shape
             #
-            
+
             diff_rhs_lhs = 0
             if debug > 1:
                 print("\tchecking whether shape definition is satisfied...")
@@ -521,12 +522,15 @@ class Shape(object):
             msg = "Shape does not satisfy any ODE of order <= " + str(max_order)
             raise Exception(msg)
 
-        # Calculate the initial values of the found ODE and simplify the
-        # derivative factors before creating and returning the Shape
-        # object.
+        derivative_factors = [sympy.simplify(df) for df in derivative_factors]
+
+
+        #
+        #    calculate the initial values of the found ODE
+        #
+
         initial_values = { str(symbol) + derivative_order * '\'' : x.subs(time_symbol, 0) for derivative_order, x in enumerate(derivatives[:-1]) }
 
-        derivative_factors = [sympy.simplify(df) for df in derivative_factors]
         return cls(symbol, order, initial_values, derivative_factors)
 
 
@@ -594,7 +598,7 @@ class Shape(object):
 
         _initial_values_sanity_checks()
 
-        symbol = sympy.Symbol(symbol)
+        symbol = sympy.Symbol(symbol, real=True)
         definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
         initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals) for k, v in initial_values.items() }
 

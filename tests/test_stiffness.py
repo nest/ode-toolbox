@@ -39,57 +39,38 @@ def open_json(filename):
         indict = json.load(infile)
     return indict
 
-#indict = open_json("iaf_cond_alpha_odes.json")
-#result = odetoolbox.analysis(indict, disable_analytic_solver=True)
-#assert len(result) == 1 \
-    #and result[0]["solver"].endswith("explicit")
-
-
 
 @unittest.skipIf(not HAVE_STIFFNESS,
                  "Stiffness tests not supported on this system")
 class TestStiffnessChecker(unittest.TestCase):
 
-    #def test_iaf_cond_alpha_odes(self):
-        #indict = open_json("iaf_cond_alpha_odes.json")
-        #result = odetoolbox.analysis(indict, disable_analytic_solver=True)
-        #assert len(result) == 1 \
-         #and result[0]["solver"].endswith("explicit")
-
-    """def test_canonical_stiff_system(self):
+    def test_canonical_stiff_system(self):
         indict = open_json("stiff_system.json")
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
-        assert len(result) == 1 \
-         and result[0]["solver"].endswith("implicit")"""
 
-    def test_morris_lecar_stiff(self):
-        indict = open_json("morris_lecar.json")
+        indict["parameters"]["a"] = "-100"
         result = odetoolbox.analysis(indict, disable_analytic_solver=True)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("implicit")
 
-        #assert (result[0]["solver"].endswith("implicit") and result[1]["solver"] == "analytical") \
-         #or (result[1]["solver"].endswith("implicit") and result[0]["solver"] == "analytical")
+        indict["parameters"]["a"] = "-1"
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        assert len(result) == 1 \
+         and result[0]["solver"].endswith("explicit")
 
-"""    def test_iaf_cond_alpha_odes_threshold(self):
-        indict = open_json("iaf_cond_alpha_odes_threshold.json")
-        tester = StiffnessTester(indict)
-        result = tester.check_stiffness()
-        self.assertEqual("explicit", result)
 
-    def test_fitzhugh_nagumo(self):
-        indict = open_json("fitzhugh_nagumo.json")
-        tester = StiffnessTester(indict)
-        result = tester.check_stiffness(sim_resolution=0.05, accuracy=1e-5)
-        self.assertEqual("explicit", result)
-
-    def test_morris_lecar(self):
+    def test_morris_lecar_stiff(self):
         indict = open_json("morris_lecar.json")
-        tester = StiffnessTester(indict)
-        result = tester.check_stiffness(sim_resolution=0.2, accuracy=1e-5)
-        self.assertEqual("explicit", result)
 
-"""
+        indict["options"]["integration_accuracy"] = 1E-9
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        assert len(result) == 1 \
+         and result[0]["solver"].endswith("implicit")
+
+        indict["options"]["integration_accuracy"] = 1E-3
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        assert len(result) == 1 \
+         and result[0]["solver"].endswith("explicit")
+
 
 if __name__ == "__main__":
     import pytest

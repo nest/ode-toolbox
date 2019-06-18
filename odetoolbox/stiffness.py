@@ -188,9 +188,6 @@ class StiffnessTester(object):
         idx_next_spike = 0
         while t < self.sim_time:
 
-            print("Numeric loop: t = " + str(t))
-
-
             #
             # simulate until the time of the next upcoming spike
             #
@@ -202,33 +199,28 @@ class StiffnessTester(object):
                 t_next_spike = self.all_spike_times[idx_next_spike]
                 syms_next_spike = self.all_spike_times_sym[idx_next_spike]
 
-            print("\tsimulating inner till spike or end t = " + str(t_next_spike))
-
             while t < t_next_spike:
                 t_end_requested = min(t + self.max_step_size, t_next_spike)
                 h_requested = t_end_requested - t
-                print("\t\t[t = " + str(t) + "] simulating with requested dt = " + str(h_requested) + " (max timestep = " + str(self.max_step_size) + ")")
-                #try:
+                try:
                     # h_suggested is NOT the reached step size but the suggested next step size!
-                t, h_suggested, y = evolve.apply(t, t_end_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
-                #except Exception as e:
-                    #print("     ===> Failure of %s at t=%.2f with h_requested = %.2f (y=%s)" % (gsl_stepper.name(), t, h_requested, y))
-                    #if raise_errors:
-                        #raise e
+                    t, h_suggested, y = evolve.apply(t, t_end_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
+                except Exception as e:
+                    print("     ===> Failure of %s at t=%.2f with h_requested = %.2f (y=%s)" % (gsl_stepper.name(), t, h_requested, y))
+                    if raise_errors:
+                        raise e
 
                 if debug:
                     t_log.append(t)
                     h_log.append(h_suggested)
                     y_log.append(y)
 
-                print("\t\tcompare h_min = " + str(h_min) + ", h_requested = " + str(h_requested) + ", h_suggested = " + str(h_suggested))
-                #if h_ < h_requested:     # ignore small requested step sizes; look only at actually obtained step sizes
-                h_min = min(h_min, h_suggested)
+                if h_suggested < h_requested:     # ignore small requested step sizes; look only at actually obtained step sizes
+                    h_min = min(h_min, h_suggested)
                 if h_min < h_min_lower_bound:
                     estr = "Integration step below %.e (s=%.f). Please check your ODE." % (h_min_lower_bound, h_min)
                     if raise_errors:
-                        #raise Exception(estr)
-                        pass
+                        raise Exception(estr)
                     else:
                         print(estr)
                 h_sum += h_suggested
@@ -268,7 +260,6 @@ class StiffnessTester(object):
             for sym in syms_next_spike:
                 if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
                     idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
-                    print("\tApplying spike to variable " + str(sym) + " (state vector index " + str(idx) + ") with magnitude " + str(float(self._system_of_shapes.get_initial_value(str(sym)).subs(self._locals).evalf())))
                     y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._locals))
 
         h_avg = h_sum / n_timesteps_taken
@@ -332,11 +323,11 @@ class StiffnessTester(object):
 
     def draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, avg_step_size_ratio=6):
         """Decide which is the best integrator to use for a certain system of ODEs
-        
+
         1. If the ODE system is stiff the average step size of the implicit method tends to be larger. This indicates that the ODE system is possibly stiff (and that it could be even more stiff for minor changes in stepsize and parameters). 
-        
+
         2. If the minimal step size is close to machine precision for one of the methods but not for the other, this suggest that the other is more stable and should be used instead.
-        
+
         :param step_min_imp: data measured during solving
         :param step_min_exp: data measured during solving
         :param step_average_imp: data measured during solving
@@ -352,7 +343,6 @@ class StiffnessTester(object):
         elif step_min_imp < 10. * machine_precision and step_min_exp < 10. * machine_precision:
             return "warning"
 
-        import pdb;pdb.set_trace()
         if step_average_imp > avg_step_size_ratio * step_average_exp:
             return "implicit"
         else:
@@ -410,7 +400,6 @@ class StiffnessTester(object):
             self._locals.update(self.analytic_integrator.get_value(t))
 
         try:
-            #import pdb;pdb.set_trace()
             #return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]
             return [ self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_ ]
         except Exception as e:

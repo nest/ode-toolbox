@@ -116,7 +116,11 @@ class AnalyticIntegrator():
             subs_dict = {}
             for param_symbol, param_val in self.solver_dict["parameters"].items():
                 subs_dict[param_symbol] = param_val
-            self.initial_values[k] = float(expr.evalf(subs=subs_dict))
+            try:
+                self.initial_values[k] = float(expr.evalf(subs=subs_dict))
+            except TypeError:
+                msg = "Could not convert initial value expression to float. The following symbol(s) may be undeclared: " + ", ".join([str(expr_) for expr_ in expr.evalf(subs=subs_dict).free_symbols])
+                raise Exception(msg)
 
 
     def update_step(self, delta_t, initial_values, debug=True):
@@ -140,7 +144,7 @@ class AnalyticIntegrator():
             for state_variable2 in self.solver_dict["state_variables"]:
                 subs_dict[state_variable2] =  initial_values[state_variable2]
             subs_dict["__h"] = delta_t
-            expr = float(expr.evalf(subs=subs_dict))
+            expr = float(expr.subs(subs_dict).evalf(subs=subs_dict))
 
             #if debug:
                 #print("\t* update expression evaluates to = " + str(expr))

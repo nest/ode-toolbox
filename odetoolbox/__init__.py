@@ -48,7 +48,7 @@ default_config = {
     "output_timestep_symbol" : "__h"
 }
 
-def dependency_analysis(shape_sys):
+def dependency_analysis(shape_sys, shapes):
     """perform dependency analysis, plot dependency graph"""
     print("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
@@ -56,7 +56,7 @@ def dependency_analysis(shape_sys):
     DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_lin_cc.dot")
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
     DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
-    return dependency_edges
+    return dependency_edges, node_is_lin
 
 
 def from_json_to_shapes(indict, default_config):
@@ -73,6 +73,8 @@ def from_json_to_shapes(indict, default_config):
             output_timestep_symbol = options_dict["output_timestep_symbol"]
         if "input_time_symbol" in options_dict.keys():
             input_time_symbol = options_dict["input_time_symbol"]
+    else:
+        options_dict = {}
 
     # first run for grabbing all the variable names. Coefficients might be incorrect.
     all_variable_symbols = []
@@ -86,7 +88,7 @@ def from_json_to_shapes(indict, default_config):
         shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=input_time_symbol)
         shapes.append(shape)
 
-    return input_time_symbol, output_timestep_symbol, shapes
+    return input_time_symbol, output_timestep_symbol, shapes, options_dict
 
 
 def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False):
@@ -96,9 +98,9 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
         solvers_json = {}
         return solvers_json
 
-    input_time_symbol, output_timestep_symbol, shapes = from_json_to_shapes(indict, default_config)
+    input_time_symbol, output_timestep_symbol, shapes, options_dict = from_json_to_shapes(indict, default_config)
     shape_sys = SystemOfShapes.from_shapes(shapes)
-    dependency_edges = dependency_analysis(shape_sys)
+    dependency_edges, node_is_lin = dependency_analysis(shape_sys, shapes)
 
 
     #
