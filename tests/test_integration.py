@@ -240,7 +240,7 @@ class TestIntegration(unittest.TestCase):
         solver_dict["parameters"].update(_parms)
 
         # ...
-        spike_times_ = { "I_shape_ex__d" : spike_times, "I_shape_in__d" : spike_times }
+        spike_times_ = { "I_shape_ex__d" : spike_times, "I_shape_in__d" : spike_times, "I_shape_gap2" : spike_times }
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times_)
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
 
@@ -261,12 +261,16 @@ class TestIntegration(unittest.TestCase):
             ax[0].plot(1E3 * numerical_timevec.squeeze(), v_abs, label="V_abs (num)")
             ax[0].plot(1E3 * state["timevec"], state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
 
-            ax[1].plot(1E3 * numerical_timevec.squeeze(), i_ex[0, :], linewidth=2, label="i_ex (num)")
+            ax[1].plot(1E3 * numerical_timevec.squeeze(), i_ex[0, :], linewidth=2, label="i (num)")
             ax[1].plot(1E3 * state["timevec"], state["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)")
+            ax[1].plot(1E3 * state["timevec"], state["I_shape_in"], linewidth=2, linestyle=":", marker="o", label="i_in (prop)")
+            ax[1].plot(1E3 * state["timevec"], state["I_shape_gap1"], linewidth=2, linestyle=":", marker="o", label="i_gap (prop)")
             ax[1].plot(1E3 * timevec, i_ex__[0, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
 
             ax[2].plot(1E3 * numerical_timevec.squeeze(), i_ex[1, :], linewidth=2, label="i_ex' (num)")
             ax[2].plot(1E3 * state["timevec"], state["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)")
+            ax[2].plot(1E3 * state["timevec"], state["I_shape_in__d"], linewidth=2, linestyle=":", marker="o", label="i_in' (prop)")
+            ax[2].plot(1E3 * state["timevec"], state["I_shape_gap2"], linewidth=2, linestyle=":", marker="o", label="i_gap' (prop)")
             ax[2].plot(1E3 * timevec, i_ex__[1, :], linewidth=2, linestyle="-.", marker="x", label="i_ex' (prop ref)")
 
             for _ax in ax:
@@ -284,8 +288,10 @@ class TestIntegration(unittest.TestCase):
         # the two propagators should be very close...
         np.testing.assert_allclose(i_ex__[0, :], state["I_shape_ex"], atol=1E-9, rtol=1E-9)
         np.testing.assert_allclose(i_ex__[0, :], state["I_shape_in"], atol=1E-9, rtol=1E-9)
-        np.testing.assert_allclose(i_ex__[0, :], state["I_shape_syn"], atol=1E-9, rtol=1E-9)
-        #np.testing.assert_allclose(i_ex__[1, :], state["I_shape_ex"]["I_shape_ex__d"], atol=1E-9, rtol=1E-9)    # XXX: cannot check this, as ode-toolbox conversion to lower triangular format changes the semantics/behaviour of I_shape_ex__d; see eq. 14 in Blundell et al. 2018 Front Neuroinformatics
+        np.testing.assert_allclose(i_ex__[0, :], state["I_shape_gap1"], atol=1E-9, rtol=1E-9)
+        np.testing.assert_allclose(i_ex__[1, :], state["I_shape_ex__d"], atol=1E-9, rtol=1E-9)
+        np.testing.assert_allclose(i_ex__[1, :], state["I_shape_in__d"], atol=1E-9, rtol=1E-9)
+        np.testing.assert_allclose(i_ex__[1, :], state["I_shape_gap2"], atol=1E-9, rtol=1E-9)
 
         # the numerical value is compared with a bit more leniency... compare max-normalised timeseries with the given rel, abs tolerances
         _num_norm_atol = 1E-4

@@ -75,7 +75,7 @@ class Shape(object):
                      "atanh" : sympy.atanh,
                      "e" : sympy.exp(1),
                      "E" : sympy.exp(1),
-                     "t" : sympy.Symbol("t", real=True)
+                     "t" : sympy.Symbol("t")
                      }
 
 
@@ -118,7 +118,7 @@ class Shape(object):
         self.state_variables = []
         for i in range(self.order):
             if i > 0:
-                self.state_variables.insert(0, sympy.Symbol("{}{}".format(str(symbol), "__d" * i), real=True))
+                self.state_variables.insert(0, sympy.Symbol("{}{}".format(str(symbol), "__d" * i)))
             else:
                 self.state_variables.insert(0, symbol)
 
@@ -165,7 +165,7 @@ class Shape(object):
         """
         all_symbols = []
         for order in range(self.order):
-            all_symbols.append(sympy.Symbol(str(self.symbol) + differential_order_str * order, real=True))
+            all_symbols.append(sympy.Symbol(str(self.symbol) + differential_order_str * order))
         return all_symbols
 
 
@@ -202,12 +202,9 @@ class Shape(object):
 
 
     @classmethod
-    def from_json(cls, indict, all_variable_symbols=[], time_symbol=sympy.Symbol("t", real=True), _debug=False):
+    def from_json(cls, indict, all_variable_symbols=[], time_symbol=sympy.Symbol("t"), _debug=False):
         """Create a shape object from a JSON input dictionary
         """
-
-        #if _debug:
-        #    import pdb;pdb.set_trace()
 
         if not "expression" in indict:
             raise Exception("No `expression` keyword found in input")
@@ -273,7 +270,7 @@ class Shape(object):
 
     def reconstitute_expr(self, derivative_symbol="__d"):
         expr = self.diff_rhs_derivatives
-        derivative_symbols = [ sympy.Symbol(str(self.symbol) + derivative_symbol * order, real=True) for order in range(self.order) ]
+        derivative_symbols = [ sympy.Symbol(str(self.symbol) + derivative_symbol * order) for order in range(self.order) ]
         for derivative_factor, derivative_symbol in zip(self.derivative_factors, derivative_symbols):
             expr += derivative_factor * derivative_symbol
         return expr
@@ -296,8 +293,6 @@ class Shape(object):
         for j, sym in enumerate(x):
             # check if there is a linear part in `sym`
             print("\t* Symbol " + str(sym))
-            if str(sym) == "I_shape_ex" and len(x) == 7:
-                import pdb;pdb.set_trace()
             if expr.is_Add:
                 terms = expr.args
             else:
@@ -350,7 +345,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=[], time_symbol=sympy.Symbol("t", real=True), debug=False):
+    def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=[], time_symbol=sympy.Symbol("t"), debug=False):
         """Create a Shape object given a function of time.
 
         The goal of the algorithm is to calculate the factors of the ODE,
@@ -401,7 +396,7 @@ class Shape(object):
         # The symbol and the definition of the shape function were given as
         # strings. We have to transform them to SymPy symbols for using
         # them in symbolic calculations.
-        symbol = sympy.Symbol(symbol, real=True)
+        symbol = sympy.Symbol(symbol)
         definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol))
 
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
@@ -467,10 +462,10 @@ class Shape(object):
             # `X` is an `order`x`order` matrix that will be assigned
             # the derivatives up to `order`-1 of some natural numbers
             # as rows (differing in each row)
-            X = sympy.zeros(order, real=True)
+            X = sympy.zeros(order)
 
             # `Y` is a vector of length `order` that will be assigned the derivatives of `order` of the natural number in the corresponding row of `X`
-            Y = sympy.zeros(order, 1, real=True)
+            Y = sympy.zeros(order, 1)
 
             # It is possible that by choosing certain natural numbers,
             # the system of equations will not be solvable, i.e. `X`
@@ -607,14 +602,14 @@ class Shape(object):
 
         _initial_values_sanity_checks()
 
-        symbol = sympy.Symbol(symbol, real=True)
+        symbol = sympy.Symbol(symbol)
         definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
         initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items() }
 
-        derivative_symbols = [ sympy.Symbol(str(symbol)+"__d"*i, real=True) for i in range(order) ]
+        derivative_symbols = [ sympy.Symbol(str(symbol)+"__d"*i) for i in range(order) ]
         if not symbol in all_variable_symbols:
             all_variable_symbols.extend(derivative_symbols)
-        all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", "__d"), real=True) for sym_name in all_variable_symbols ]
+        all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", "__d")) for sym_name in all_variable_symbols ]
 
         """# the purely linear part of the shape goes into `derivative_factors`
         derivative_factors = []
@@ -705,8 +700,16 @@ class Shape(object):
         print(str(definition))"""
 
         derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, all_variable_symbols)
-        derivative_factors = [ derivative_factors[all_variable_symbols.index(sym)] for sym in derivative_symbols ]
+        local_symbols_idx = [ all_variable_symbols.index(sym) for sym in derivative_symbols ]
+        local_derivative_factors = [ derivative_factors[i] for i in range(len(all_variable_symbols)) if i in local_symbols_idx ]
+        nonlocal_derivative_terms = [ derivative_factors[i] * all_variable_symbols[i] for i in range(len(all_variable_symbols)) if i not in local_symbols_idx ]
+        if nonlocal_derivative_terms:
+            diff_rhs_derivatives = diff_rhs_derivatives + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
+
+
+        if str(symbol) == "I_shape_gap1":
+            import pdb;pdb.set_trace()
         #derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, derivative_symbols)
 
-        return cls(symbol, order, initial_values, derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
+        return cls(symbol, order, initial_values, local_derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
 

@@ -87,7 +87,7 @@ class SystemOfShapes(object):
                 _node_is_lin = True
             else:
                 _node_is_lin = False
-            all_shape_symbols = [ sympy.Symbol(str(shape.symbol) + "__d" * i, real=True) for i in range(shape.order) ]
+            all_shape_symbols = [ sympy.Symbol(str(shape.symbol) + "__d" * i) for i in range(shape.order) ]
             for sym in all_shape_symbols:
                 node_is_lin[sym] = _node_is_lin
 
@@ -118,7 +118,7 @@ class SystemOfShapes(object):
         """Get the Jacobian matrix
         """
         N = len(self.x_)
-        J = sympy.zeros(N, N, real=True)
+        J = sympy.zeros(N, N)
         for i, sym in enumerate(self.x_):
             expr = self.C_[i]
             for v in self.A_[i, :]:
@@ -160,14 +160,14 @@ class SystemOfShapes(object):
         #   generate the propagator matrix
         #
 
-        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol, real=True)))
+        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
         
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
         #
 
-        P_sym = sympy.zeros(*P.shape, real=True)   # each entry in the propagator matrix is assigned its own symbol
+        P_sym = sympy.zeros(*P.shape)   # each entry in the propagator matrix is assigned its own symbol
         P_expr = {}     # the expression corresponding to each propagator symbol
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
         for row in range(P_sym.shape[0]):
@@ -233,9 +233,9 @@ class SystemOfShapes(object):
         """
 
         N = np.sum([shape.order for shape in shapes]).__index__()
-        x = sympy.zeros(N, 1, real=True)
-        A = sympy.zeros(N, N, real=True)
-        C = sympy.zeros(N, 1, real=True)
+        x = sympy.zeros(N, 1)
+        A = sympy.zeros(N, N)
+        C = sympy.zeros(N, 1)
 
         i = 0
         for shape in shapes:
@@ -246,7 +246,7 @@ class SystemOfShapes(object):
         i = 0
         for shape in shapes:
             print("* Shape: " + str(shape.symbol))
-            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (shape.order - 1), real=True)][0]
+            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
             shape_expr = shape.reconstitute_expr()
             print("  expr =  " + str(shape_expr))
 
@@ -264,8 +264,8 @@ class SystemOfShapes(object):
             #
 
             for order in range(shape.order - 1):
-                _idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (order + 1), real=True)][0]
-                print("\t\tThe symbol " + str(sympy.Symbol(str(shape.symbol) + "__d" * (order), real=True)) + " is at position " + str(_idx) + " in vector " + str(x) + ", writing in row " + str(_idx))
+                _idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (order + 1))][0]
+                print("\t\tThe symbol " + str(sympy.Symbol(str(shape.symbol) + "__d" * (order))) + " is at position " + str(_idx) + " in vector " + str(x) + ", writing in row " + str(_idx))
                 A[i + (shape.order - order - 1), _idx] = 1.     # the highest derivative is at row `i`, the next highest is below, and so on, until you reach the variable symbol without any "__d" suffixes
 
             i += shape.order

@@ -97,6 +97,7 @@ class AnalyticIntegrator():
     def reset(self):
         self.t_curr = 0.
         self.state_at_t_curr = self.initial_values.copy()
+        print("**************** RESETTING TO INITIAL_VALUES = " + str(self.initial_values))
 
 
     def get_variable_symbols(self):
@@ -104,7 +105,7 @@ class AnalyticIntegrator():
 
 
     def set_initial_values(self, vals):
-        """Set initial values, i.e. the state of the system at t = 0.
+        """Set initial values, i.e. the state of the system at t = 0. This will additionally cause the system state to be reset to t = 0.
 
         Parameters
         ----------
@@ -122,6 +123,8 @@ class AnalyticIntegrator():
             except TypeError:
                 msg = "Could not convert initial value expression to float. The following symbol(s) may be undeclared: " + ", ".join([str(expr_) for expr_ in expr.evalf(subs=subs_dict).free_symbols])
                 raise Exception(msg)
+        self.reset()
+        print("**************** SETTING INITIAL_VALUES = " + str(self.initial_values))
 
 
     def update_step(self, delta_t, initial_values, debug=True):
