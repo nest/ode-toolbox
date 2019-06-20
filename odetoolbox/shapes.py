@@ -202,22 +202,25 @@ class Shape(object):
 
 
     @classmethod
-    def from_json(cls, indict, all_variable_symbols=[], time_symbol=sympy.Symbol("t", real=True)):
+    def from_json(cls, indict, all_variable_symbols=[], time_symbol=sympy.Symbol("t", real=True), _debug=False):
         """Create a shape object from a JSON input dictionary
         """
+
+        #if _debug:
+        #    import pdb;pdb.set_trace()
 
         if not "expression" in indict:
             raise Exception("No `expression` keyword found in input")
 
-        lhs_match = re.search(".*=", indict["expression"])
-        if lhs_match is None:
-            raise Exception("Error while parsing expression \"" + indict["expression"] + "\"")
-        lhs = lhs_match.group()[:-1]
+        if not indict["expression"].count("=") == 1:
+            raise Exception("Expecting exactly one \"=\" symbol in defining expression: \"" + str(indict["expression"]) + "\"")
 
-        rhs_match = re.search("=.*", indict["expression"])
-        if rhs_match is None:
+        lhs, rhs = indict["expression"].split("=")
+        lhs_ = re.findall("\S+", lhs)
+        if not len(lhs_) == 1:
             raise Exception("Error while parsing expression \"" + indict["expression"] + "\"")
-        rhs = rhs_match.group()[1:]
+        lhs = lhs_[0]
+        rhs = rhs.strip()
 
         symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", lhs)
         if symbol_match is None:
@@ -289,9 +292,12 @@ class Shape(object):
         print("* Splitting expr = " + str(expr))
         expr = expr.expand()
         print("                 = " + str(expr))
+        print("  with known symbols = " + str(x))
         for j, sym in enumerate(x):
             # check if there is a linear part in `sym`
             print("\t* Symbol " + str(sym))
+            if str(sym) == "I_shape_ex" and len(x) == 7:
+                import pdb;pdb.set_trace()
             if expr.is_Add:
                 terms = expr.args
             else:
@@ -344,7 +350,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_function(cls, symbol, definition, max_t=100, max_order=4, time_symbol=sympy.Symbol("t", real=True), debug=False):
+    def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=[], time_symbol=sympy.Symbol("t", real=True), debug=False):
         """Create a Shape object given a function of time.
 
         The goal of the algorithm is to calculate the factors of the ODE,
@@ -390,12 +396,13 @@ class Shape(object):
         >>> Shape("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         """
 
+        all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
 
         # The symbol and the definition of the shape function were given as
         # strings. We have to transform them to SymPy symbols for using
         # them in symbolic calculations.
         symbol = sympy.Symbol(symbol, real=True)
-        definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol))
+        definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol))
 
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, time_symbol)]
@@ -560,6 +567,8 @@ class Shape(object):
 
         assert type(symbol) is str
 
+        all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
+
         order = len(initial_values)
 
         def _initial_values_sanity_checks():
@@ -599,8 +608,8 @@ class Shape(object):
         _initial_values_sanity_checks()
 
         symbol = sympy.Symbol(symbol, real=True)
-        definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
-        initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals) for k, v in initial_values.items() }
+        definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
+        initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items() }
 
         derivative_symbols = [ sympy.Symbol(str(symbol)+"__d"*i, real=True) for i in range(order) ]
         if not symbol in all_variable_symbols:
@@ -694,10 +703,10 @@ class Shape(object):
 
         print("In creating shape " + str(symbol))
         print(str(definition))"""
-        
-        #derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, all_variable_symbols)
-        #derivative_factors = [ derivative_factors[all_variable_symbols.index(sym)] for sym in derivative_symbols ]
-        derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, derivative_symbols)
+
+        derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, all_variable_symbols)
+        derivative_factors = [ derivative_factors[all_variable_symbols.index(sym)] for sym in derivative_symbols ]
+        #derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, derivative_symbols)
 
         return cls(symbol, order, initial_values, derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
 

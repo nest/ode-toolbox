@@ -122,11 +122,10 @@ class TestIntegration(unittest.TestCase):
     '''
 
     def test_integration_iaf_psc_alpha(self):
-        
         debug = True
 
         h = 1E-3    # [s]
-        T = 100E-3    # [s]
+        T = 20E-3    # [s]
 
         # neuron parameters
         tau = 20E-3    # [s]
@@ -147,28 +146,27 @@ class TestIntegration(unittest.TestCase):
         #
         #   compute numerical reference timeseries
         #
-        
+
         def f(t, y):
             #print("In f(t=" + str(t) + ", y=" + str(y) + ")")
             i_ex = y[0:2]
             V_abs = y[2]
 
             _d_i_ex = np.array([i_ex[1], -i_ex[0] / tau_syn**2 - 2 * i_ex[1] / tau_syn])
-            _d_V_abs_expr_ = -V_abs / tau + 2 * i_ex[0] / c_m    # XXX: factor 2 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory currents (which are of the exact same shape/magnitude at all times)
+            _d_V_abs_expr_ = -V_abs / tau + 3 * i_ex[0] / c_m    # factor 3 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory and gap currents (which are of the exact same shape/magnitude at all times)
             _delta_vec = np.concatenate((_d_i_ex, [_d_V_abs_expr_]))
             #print("\treturning " + str(_delta_vec))
 
             return _delta_vec
-        
+
         numerical_timevec = np.zeros((1, 0), dtype=np.float)
         numerical_sol = np.zeros((3, 0), dtype=np.float)
-        
+
         _init_value = [0., 0., v_abs_init]
-        
+
         numerical_timevec = np.hstack((numerical_timevec, np.array([0])[np.newaxis, :]))
         numerical_sol = np.hstack((numerical_sol, np.array(_init_value)[:, np.newaxis]))
-            
-        
+
         t = 0.
         spike_time_idx = 0
         while t < T:
@@ -226,11 +224,12 @@ class TestIntegration(unittest.TestCase):
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
 
-        ODE_INITIAL_VALUES = { "V_abs" : v_abs_init, "I_shape_ex" : 0., "I_shape_ex__d" : 0., "I_shape_in" : 0., "I_shape_in__d" : 0. }
+        ODE_INITIAL_VALUES = { "V_abs" : v_abs_init, "I_shape_ex" : 0., "I_shape_ex__d" : 0., "I_shape_in" : 0., "I_shape_in__d" : 0., "I_shape_gap1" : 0., "I_shape_gap2" : 0. }
 
         _parms = {"Tau" : tau,
                  "Tau_syn_in" : tau_syn,
                  "Tau_syn_ex" : tau_syn,
+                 "Tau_syn_gap" : tau_syn,
                  "C_m" : c_m,
                  "I_e" : 0.,
                  "currents" : 0.,
@@ -285,6 +284,7 @@ class TestIntegration(unittest.TestCase):
         # the two propagators should be very close...
         np.testing.assert_allclose(i_ex__[0, :], state["I_shape_ex"], atol=1E-9, rtol=1E-9)
         np.testing.assert_allclose(i_ex__[0, :], state["I_shape_in"], atol=1E-9, rtol=1E-9)
+        np.testing.assert_allclose(i_ex__[0, :], state["I_shape_syn"], atol=1E-9, rtol=1E-9)
         #np.testing.assert_allclose(i_ex__[1, :], state["I_shape_ex"]["I_shape_ex__d"], atol=1E-9, rtol=1E-9)    # XXX: cannot check this, as ode-toolbox conversion to lower triangular format changes the semantics/behaviour of I_shape_ex__d; see eq. 14 in Blundell et al. 2018 Front Neuroinformatics
 
         # the numerical value is compared with a bit more leniency... compare max-normalised timeseries with the given rel, abs tolerances

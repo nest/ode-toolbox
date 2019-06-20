@@ -85,7 +85,7 @@ def from_json_to_shapes(indict, default_config):
 
     # second run provides the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=input_time_symbol)
+        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=input_time_symbol, _debug=True)
         shapes.append(shape)
 
     return input_time_symbol, output_timestep_symbol, shapes, options_dict

@@ -28,7 +28,7 @@ from .shapes import Shape
 
 class AnalyticIntegrator():
     """integrate a dynamical system by means of the propagators returned by odetoolbox"""
-    
+
     def __init__(self, solver_dict, spike_times, enable_caching=True):
         """
         Parameters
@@ -43,6 +43,7 @@ class AnalyticIntegrator():
         self.t = 0.
 
         print("Initialised AnalyticIntegrator with spike times = " + str(spike_times))
+
 
         #
         #   define the necessary numerical state variables

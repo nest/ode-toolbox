@@ -42,7 +42,7 @@ class SystemOfShapes(object):
         A : sympy.Matrix
             Jacobian of the system (square matrix).
         """
-        print("Creating system of shapes with A = " + str(A) + " and C = " + str(C))
+        print("Creating system of shapes with \n\tx = " + str(x) + "\n\tA = " + str(A) + "\n\tC = " + str(C))
         assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
         self.x_ = x
         self.A_ = A
