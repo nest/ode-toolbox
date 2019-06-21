@@ -77,8 +77,14 @@ class StiffnessTester(object):
         #self.initial_values = { sym : str(self.get_initial_value(sym)) for sym in self._system_of_shapes.x_ }
         self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy()
         self._update_expr_wrapped = {}
+        self.all_variable_symbols = self.analytic_solver_dict["state_variables"] + list(self._system_of_shapes.x_)
+        self.all_variable_symbols = [ sympy.Symbol(str(sym)) for sym in self.all_variable_symbols ]
         for sym, expr in self._update_expr.items():
-            self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self._system_of_shapes.x_, backend="cython")
+            self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
+        self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=np.object)
+        for i in range(self.symbolic_jacobian_.shape[0]):
+            for j in range(self.symbolic_jacobian_.shape[1]):
+                self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals), args=self.all_variable_symbols, backend="cython")
         #self._update_expr = { sym : sympy.parsing.sympy_parser.parse_expr(expr, global_dict=Shape._sympy_globals) for sym, expr in self._system_of_shapes.generate_numeric_solver()["update_expressions"].items() }
 
     @property
@@ -202,13 +208,18 @@ class StiffnessTester(object):
             while t < t_next_spike:
                 t_end_requested = min(t + self.max_step_size, t_next_spike)
                 h_requested = t_end_requested - t
-                try:
+                #try:
+                if 1:
                     # h_suggested is NOT the reached step size but the suggested next step size!
+                    if not self.analytic_integrator is None:
+                        self.analytic_integrator.disable_cache_update()
                     t, h_suggested, y = evolve.apply(t, t_end_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
-                except Exception as e:
-                    print("     ===> Failure of %s at t=%.2f with h_requested = %.2f (y=%s)" % (gsl_stepper.name(), t, h_requested, y))
-                    if raise_errors:
-                        raise e
+                """except Exception as e:
+                    msg = "Failure of numerical integrator (method: %s) at t=%.2f with h_requested = %.2f (y=%s)" % (gsl_stepper.name(), t, h_requested, y)
+                    raise Exception(msg)"""
+
+                self.analytic_integrator.enable_cache_update()
+                self.analytic_integrator.get_value(t)
 
                 if debug:
                     t_log.append(t)
@@ -228,7 +239,7 @@ class StiffnessTester(object):
 
 
                 #
-                #	enforce upper and lower thresholds
+                #    enforce upper and lower thresholds
                 #
 
                 for shape in self._shapes:
@@ -362,6 +373,7 @@ class StiffnessTester(object):
         to y. `dfdt` is not computed and set to zero matrix now.
 
         """
+        print("begin evaulating jacobian")
         dimension = len(y)
         dfdy = np.zeros((dimension, dimension), np.float)
         dfdt = np.zeros((dimension,))
@@ -371,12 +383,16 @@ class StiffnessTester(object):
         if not self.analytic_integrator is None:
             self._locals.update(self.analytic_integrator.get_value(t))
 
+        # y holds the state of all the symbols in the numeric part of the system; add those for the analytic part
+        y = [ self._locals[str(sym)] for sym in self.all_variable_symbols ]
+
         # evaluate every entry of the `jacobian_matrix` and store the
         # result in the corresponding entry of the `dfdy`
         for row in range(0, dimension):
             for col in range(0, dimension):
-                dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))
-
+                dfdy[row, col] = self.symbolic_jacobian_wrapped[row, col](*y)
+                #dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))
+        print("end evaulating jacobian")
         return dfdy, dfdt
 
 
@@ -390,6 +406,7 @@ class StiffnessTester(object):
         :return: Updated state vector
         """
 
+        print("begin step, t = " + str(t))
         self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
         #
@@ -397,14 +414,21 @@ class StiffnessTester(object):
         #
 
         if not self.analytic_integrator is None:
+            print("\tbegin analytic get")
             self._locals.update(self.analytic_integrator.get_value(t))
+            print("\tend analytic get")
+
+        # y holds the state of all the symbols in the numeric part of the system; add those for the analytic part
+        y = [ self._locals[str(sym)] for sym in self.all_variable_symbols ]
 
         try:
             #return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]
-            return [ self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_ ]
+            _ret = [ self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_ ]
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")
             for k,v in self._locals.items():
                 print("    ", k, "=", v)
             raise
+        print("end step")
+        return _ret

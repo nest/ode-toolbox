@@ -176,12 +176,14 @@ class Shape(object):
         lin_const_coeff : bool
             True if and only if the shape is linear and constant coefficient in all known variable symbols in `shapes`
         """
+        print("--> is " + str(self.symbol) + " lin cc?")
         if not self in shapes:
             shapes = shapes + [self]
 
         all_symbols = []
         for shape in shapes:
             all_symbols.extend(shape.get_all_variable_symbols(differential_order_str="__d"))
+        print("    in syms: " + str(all_symbols))
 
         all_symbols = list(set(all_symbols))	# filter for unique symbols
         for sym in all_symbols:
@@ -189,6 +191,7 @@ class Shape(object):
                 expr = sympy.diff(df, sym)
                 if not sympy.sympify(expr).is_zero:
                     # the expression "sym * self.symbol" appears on right-hand side of this shape's definition
+                    print("    ---> False")
                     return False
 
             expr = sympy.diff(self.diff_rhs_derivatives, sym)
@@ -196,8 +199,10 @@ class Shape(object):
                 # the variable symbol `sym` appears on right-hand side of this expression. Check to see if it appears as a linear term by checking whether taking its derivative again, with respect to any known variable, yields 0
                 for sym_ in all_symbols:
                     if not sympy.sympify(sympy.diff(expr, sym_)).is_zero:
+                        print("    ---> False")
                         return False
 
+        print("    ---> True")
         return True
 
 
@@ -707,8 +712,6 @@ class Shape(object):
             diff_rhs_derivatives = diff_rhs_derivatives + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 
 
-        if str(symbol) == "I_shape_gap1":
-            import pdb;pdb.set_trace()
         #derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, derivative_symbols)
 
         return cls(symbol, order, initial_values, local_derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
