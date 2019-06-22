@@ -2,17 +2,25 @@ language: python
 
 sudo: required
 
+git:
+  depth: 1
+
+env:
+  - export WITH_GSL=0
+  - export WITH_GSL=1
+
 python:
-  - "2.7"
   - "3.5"
   - "3.6"
 
 before_install:
-  - wget http://ftp.wrz.de/pub/gnu/gsl/gsl-2.5.tar.gz
-  - tar -xvzf gsl-2.5.tar.gz
-  - cd gsl-2.5
-  - ./configure && make && sudo make install
-  - cd ..
+  - if [ $WITH_GSL == 1 ]; then
+    wget http://ftp.wrz.de/pub/gnu/gsl/gsl-2.5.tar.gz
+    tar -xvzf gsl-2.5.tar.gz
+    cd gsl-2.5
+    ./configure && make && sudo make install
+    cd ..
+    fi
   - export LD_LIBRARY_PATH=/usr/local/lib
 
 install:
@@ -21,3 +29,7 @@ install:
 script:
   - python setup.py install
   - python setup.py test
+
+after_success:
+  - pip install codecov
+  - codecov
