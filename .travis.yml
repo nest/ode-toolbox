@@ -24,6 +24,9 @@ before_install:
   - export LD_LIBRARY_PATH=/usr/local/lib
 
 install:
+  - if [ $WITH_GSL == 1 ]; then
+    pip install pygsl ;
+    fi
   - pip install -r requirements.txt
 
 script:
