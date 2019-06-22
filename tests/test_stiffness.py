@@ -22,14 +22,12 @@
 import json
 import os
 import unittest
+import odetoolbox
 
 try:
-    #from .context import odetoolbox
-    import odetoolbox
-    from odetoolbox.stiffness import StiffnessTester
+    import pygsl
     HAVE_STIFFNESS = True
 except ImportError:
-    print("No stiffness")
     HAVE_STIFFNESS = False
 
 
@@ -48,12 +46,12 @@ class TestStiffnessChecker(unittest.TestCase):
         indict = open_json("stiff_system.json")
 
         indict["parameters"]["a"] = "-100"
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=HAVE_STIFFNESS)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("implicit")
 
         indict["parameters"]["a"] = "-1"
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=HAVE_STIFFNESS)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("explicit")
 
@@ -62,12 +60,12 @@ class TestStiffnessChecker(unittest.TestCase):
         indict = open_json("morris_lecar.json")
 
         indict["options"]["integration_accuracy"] = 1E-9
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=HAVE_STIFFNESS)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("implicit")
 
         indict["options"]["integration_accuracy"] = 1E-3
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=HAVE_STIFFNESS)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("explicit")
 

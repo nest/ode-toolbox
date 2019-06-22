@@ -33,6 +33,12 @@ try:
 except:
     INTEGRATION_TEST_DEBUG_PLOTS = False
 
+try:
+    import pygsl
+    HAVE_STIFFNESS = True
+except ImportError:
+    HAVE_STIFFNESS = False
+
 #from .context import odetoolbox
 import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
@@ -108,7 +114,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
         #
 
         indict = open_json("test_analytic_integrator.json")
-        solver_dict = odetoolbox.analysis(indict)
+        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=HAVE_STIFFNESS)
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1
