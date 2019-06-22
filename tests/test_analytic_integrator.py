@@ -19,19 +19,19 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-INTEGRATION_TEST_DEBUG_PLOTS = True
-
 import json
 import os
 import unittest
 import sympy
 import numpy as np
 
-#np.seterr(under="warn")
-if INTEGRATION_TEST_DEBUG_PLOTS:
+try:
     import matplotlib as mpl
     mpl.use('Agg')
     import matplotlib.pyplot as plt
+    INTEGRATION_TEST_DEBUG_PLOTS = True
+except:
+    INTEGRATION_TEST_DEBUG_PLOTS = False
 
 #from .context import odetoolbox
 import odetoolbox

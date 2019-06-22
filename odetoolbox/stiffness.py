@@ -33,15 +33,17 @@ from .spike_generator import SpikeGenerator
 # Make NumPy warnings errors. Without this, we can't catch overflow errors that can occur in the step() function, which might indicate a problem with the ODE, the grid resolution or the stiffness testing framework itself.
 np.seterr(over='raise')
 
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-
-import time
+try:
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import matplotlib.pyplot as plt
+    INTEGRATION_TEST_DEBUG_PLOTS = True
+except:
+    INTEGRATION_TEST_DEBUG_PLOTS = False
 
 import sympy
 import sympy.utilities.autowrap
-#from sympy.parsing.sympy_parser import parse_expr
+import time
 
 try:
     import pygsl.odeiv as odeiv
@@ -304,31 +306,31 @@ class StiffnessTester(object):
             for i, sym in enumerate(self._system_of_shapes.x_):
                 idx_to_label[i] = sym
 
-            fig, ax = plt.subplots(y_log.shape[1] + analytic_dim + 1, sharex=True)
-            for i in range(y_log.shape[1]):
-                sym = idx_to_label[i]
-                ax[i].plot(t_log, y_log[:, i], label=sym, marker="o", color="blue")
-                if sym in self.spike_times.keys():
-                    for t_sp in self.spike_times[sym]:
-                        ax[i].plot((t_sp, t_sp), ax[i].get_ylim(), marker="o", color="grey", alpha=.7, linewidth=2.)
-            for i, sym in enumerate(analytic_syms):
-                ax[i + y_log.shape[1]].plot(t_log, analytic_y_log[sym], label=str(sym), marker="o", color="chartreuse")
+            if STIFFNESS_DEBUG_PLOT:
+                fig, ax = plt.subplots(y_log.shape[1] + analytic_dim + 1, sharex=True)
+                for i in range(y_log.shape[1]):
+                    sym = idx_to_label[i]
+                    ax[i].plot(t_log, y_log[:, i], label=sym, marker="o", color="blue")
+                    if sym in self.spike_times.keys():
+                        for t_sp in self.spike_times[sym]:
+                            ax[i].plot((t_sp, t_sp), ax[i].get_ylim(), marker="o", color="grey", alpha=.7, linewidth=2.)
+                for i, sym in enumerate(analytic_syms):
+                    ax[i + y_log.shape[1]].plot(t_log, analytic_y_log[sym], label=str(sym), marker="o", color="chartreuse")
 
-            ax[-1].semilogy(t_log[1:], h_log, linewidth=2, color="grey", marker="o", alpha=.7)
-            ax[-1].set_ylabel("suggested dt [s]")
+                ax[-1].semilogy(t_log[1:], h_log, linewidth=2, color="grey", marker="o", alpha=.7)
+                ax[-1].set_ylabel("suggested dt [s]")
 
-            for _ax in ax:
-                _ax.legend()
-                _ax.grid(True)
-                _ax.set_xlim(0., np.amax(t_log))
+                for _ax in ax:
+                    _ax.legend()
+                    _ax.grid(True)
+                    _ax.set_xlim(0., np.amax(t_log))
 
-            ax[-1].set_xlabel("Time [s]")
-            fig.suptitle(str(integrator))
-
-            #plt.show()
-            fn = "/tmp/remotefs2/stiffness_test_" + str(integrator) + ".png"
-            print("Saving to " + fn)
-            plt.savefig(fn, dpi=600)
+                ax[-1].set_xlabel("Time [s]")
+                fig.suptitle(str(integrator))
+                #plt.show()
+                fn = "/tmp/remotefs2/stiffness_test_" + str(integrator) + ".png"
+                print("Saving to " + fn)
+                plt.savefig(fn, dpi=600)
 
         print("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 
