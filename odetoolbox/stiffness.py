@@ -37,9 +37,9 @@ try:
     import matplotlib as mpl
     mpl.use('Agg')
     import matplotlib.pyplot as plt
-    INTEGRATION_TEST_DEBUG_PLOTS = True
+    STIFFNESS_DEBUG_PLOT = True
 except:
-    INTEGRATION_TEST_DEBUG_PLOTS = False
+    STIFFNESS_DEBUG_PLOT = False
 
 import sympy
 import sympy.utilities.autowrap
