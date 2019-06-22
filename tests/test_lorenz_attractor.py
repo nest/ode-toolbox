@@ -39,6 +39,12 @@ import scipy.special
 import scipy.linalg
 from scipy.integrate import solve_ivp
 
+try:
+    import pygsl
+    HAVE_STIFFNESS = True
+except ImportError:
+    HAVE_STIFFNESS = False
+
 
 def open_json(fname):
     absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
@@ -50,7 +56,7 @@ def open_json(fname):
 class TestLorenzAttractor(unittest.TestCase):
     def test_lorenz_attractor(self):
         indict = open_json("lorenz_attractor.json")
-        solver_dict = odetoolbox.analysis(indict)
+        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=HAVE_STIFFNESS)
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict,  indent=2))
         assert len(solver_dict) == 1

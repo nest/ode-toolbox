@@ -25,6 +25,12 @@ import unittest
 
 from .context import odetoolbox
 
+try:
+    import pygsl
+    HAVE_STIFFNESS = True
+except ImportError:
+    HAVE_STIFFNESS = False
+
 
 def open_json(fname):
     absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
@@ -36,9 +42,17 @@ def open_json(fname):
 
 class TestMixedAnalyticNumerical(unittest.TestCase):
 
-    def test_mixed_analytic_numerical(self):
-        indict = open_json("mixed_analytic_numerical.json")
-        solver_dict = odetoolbox.analysis(indict)
+    def test_mixed_analytic_numerical_no_stiffness(self):
+        indict = open_json("mixed_analytic_numerical_no_stiffness.json")
+        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=False)
+        assert len(solver_dict) == 2
+        assert (solver_dict[0]["solver"] == "analytical" and solver_dict[1]["solver"][:7] == "numeric") \
+         or (solver_dict[1]["solver"] == "analytical" and solver_dict[0]["solver"][:7] == "numeric")
+
+    @pytest.mark.skipif(not HAVE_STIFFNESS, reason="Cannot run stiffness test if GSL is not installed.")
+    def test_mixed_analytic_numerical_with_stiffness(self):
+        indict = open_json("mixed_analytic_numerical_with_stiffness.json")
+        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=True)
         assert len(solver_dict) == 2
         assert (solver_dict[0]["solver"] == "analytical" and solver_dict[1]["solver"][:7] == "numeric") \
          or (solver_dict[1]["solver"] == "analytical" and solver_dict[0]["solver"][:7] == "numeric")
