@@ -22,6 +22,7 @@
 import json
 import os
 import unittest
+import pytest
 
 from .context import odetoolbox
 
