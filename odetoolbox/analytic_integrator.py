@@ -111,8 +111,19 @@ class AnalyticIntegrator():
         #   perform substtitution in update expressions ahead of time to save time later
         #
 
+        print("subs_dict = " + str(self.subs_dict))
         for k, v in self.update_expressions.items():
-            self.update_expressions[k] = self.update_expressions[k].subs(self.subs_dict)
+            self.update_expressions[k] = self.update_expressions[k].subs(self.subs_dict).subs(self.subs_dict)
+
+
+        #
+        #    autowrap
+        #
+
+        self.update_expressions_wrapped = {}
+        for k, v in self.update_expressions.items():
+            print("Wrapping " + str(k) + " (expr = " + str(v) + ") with args " + str([sympy.Symbol("__h")] + [sympy.Symbol(sym) for sym in self.solver_dict["state_variables"]]))
+            self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v, args=[sympy.Symbol("__h")] + [sympy.Symbol(sym) for sym in self.solver_dict["state_variables"]], backend="cython")
 
 
     def enable_cache_update(self):
@@ -157,15 +168,17 @@ class AnalyticIntegrator():
 
 
     def update_step(self, delta_t, initial_values, debug=True):
-        new_state = { k : np.nan for k in initial_values.keys() }
+        #new_state = { k : np.nan for k in initial_values.keys() }
+        new_state = {}
 
         #
         #    replace expressions by their numeric values
         #
 
-        self.subs_dict["__h"] = delta_t
+        """self.subs_dict["__h"] = delta_t
         for state_variable2 in self.solver_dict["state_variables"]:
-            self.subs_dict[state_variable2] = initial_values[state_variable2]
+            self.subs_dict[state_variable2] = initial_values[state_variable2]"""
+        y = [delta_t] + [initial_values[sym] for sym in self.solver_dict["state_variables"]]
 
 
         #
@@ -173,17 +186,9 @@ class AnalyticIntegrator():
         #
 
         for state_variable, expr in self.update_expressions.items():
-            #if debug:
-                ##print("\t* state_variable_name = " + state_variable)
-                #print("\t* update expression = " + str(expr))
-
-            #import pdb;pdb.set_trace()
-            expr = float(expr.evalf(subs=self.subs_dict))
-
-            #if debug:
-                #print("\t* update expression evaluates to = " + str(expr))
-
-            new_state[state_variable] = expr
+            #expr = float(expr.evalf(subs=self.subs_dict))
+            #new_state[state_variable] = expr
+            new_state[state_variable] = self.update_expressions_wrapped[state_variable](*y)
 
         return new_state
 

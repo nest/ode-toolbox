@@ -77,7 +77,9 @@ class StiffnessTester(object):
         #self.initial_values = { sym : str(self.get_initial_value(sym)) for sym in self._system_of_shapes.x_ }
         self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy()
         self._update_expr_wrapped = {}
-        self.all_variable_symbols = self.analytic_solver_dict["state_variables"] + list(self._system_of_shapes.x_)
+        self.all_variable_symbols = list(self._system_of_shapes.x_)
+        if not self.analytic_solver_dict is None:
+            self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
         self.all_variable_symbols = [ sympy.Symbol(str(sym)) for sym in self.all_variable_symbols ]
         for sym, expr in self._update_expr.items():
             self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
@@ -218,8 +220,9 @@ class StiffnessTester(object):
                     msg = "Failure of numerical integrator (method: %s) at t=%.2f with h_requested = %.2f (y=%s)" % (gsl_stepper.name(), t, h_requested, y)
                     raise Exception(msg)"""
 
-                self.analytic_integrator.enable_cache_update()
-                self.analytic_integrator.get_value(t)
+                if not self.analytic_integrator is None:
+                    self.analytic_integrator.enable_cache_update()
+                    self.analytic_integrator.get_value(t)
 
                 if debug:
                     t_log.append(t)

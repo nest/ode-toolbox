@@ -96,8 +96,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
 
     '''
 
-    def test_integration_iaf_psc_alpha(self):
-        
+    def test_analytic_integrator_iaf_psc_alpha(self):
         debug = True
 
         h = 1E-3    # [s]
@@ -175,4 +174,3 @@ class TestAnalyticIntegrator(unittest.TestCase):
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__])
-    

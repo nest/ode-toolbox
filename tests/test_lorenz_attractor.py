@@ -28,6 +28,8 @@ import numpy as np
 
 from .context import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
+from odetoolbox.shapes import Shape
+import sympy.parsing.sympy_parser
 
 from math import e
 from sympy import exp, sympify
@@ -51,10 +53,15 @@ class TestLorenzAttractor(unittest.TestCase):
         solver_dict = odetoolbox.analysis(indict)
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict,  indent=2))
-        assert len(solver_dict) == 2
+        assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
-        assert solver_dict["solver"] == "analytical"
-
+        assert solver_dict["solver"].startswith("numeric")
+        assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["x"], global_dict=Shape._sympy_globals).simplify() \
+         == sympy.parsing.sympy_parser.parse_expr("sigma*(-x + y)", global_dict=Shape._sympy_globals).simplify()
+        assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["y"], global_dict=Shape._sympy_globals).simplify() \
+         == sympy.parsing.sympy_parser.parse_expr("rho*x - x*z - y", global_dict=Shape._sympy_globals).simplify()
+        assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["z"], global_dict=Shape._sympy_globals).simplify() \
+         == sympy.parsing.sympy_parser.parse_expr("-beta*z + x*y", global_dict=Shape._sympy_globals).simplify()
 
 if __name__ == '__main__':
     unittest.main()
