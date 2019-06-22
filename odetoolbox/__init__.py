@@ -29,7 +29,13 @@ from .system_of_shapes import SystemOfShapes
 from odetoolbox.shapes import Shape
 
 from .shapes import Shape
-from .dependency_graph_plotter import DependencyGraphPlotter
+
+try:
+    import graphviz
+    PLOT_DEPENDENCY_GRAPH = True
+    from .dependency_graph_plotter import DependencyGraphPlotter
+except:
+    PLOT_DEPENDENCY_GRAPH = False
 
 try:
     from . import stiffness
@@ -53,9 +59,11 @@ def dependency_analysis(shape_sys, shapes):
     print("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
     node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges)
-    DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_lin_cc.dot")
+    if PLOT_DEPENDENCY_GRAPH:
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_lin_cc.dot")
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
-    DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
+    if PLOT_DEPENDENCY_GRAPH:
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
     return dependency_edges, node_is_lin
 
 
