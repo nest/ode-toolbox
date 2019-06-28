@@ -55,7 +55,8 @@ except ImportError as ie:
 
 class StiffnessTester(object):
 
-    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, stimuli=[], random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=100.):
+    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, stimuli=[], random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=100., alias_spikes=False):
+        self.alias_spikes = alias_spikes
         self.max_step_size = max_step_size
         self.integration_accuracy = integration_accuracy
         self.sim_time = sim_time
@@ -67,7 +68,6 @@ class StiffnessTester(object):
         self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self._parameters.items() }
         self._locals = self._parameters.copy()
         self._stimuli = stimuli
-
         self.random_seed = random_seed
 
         self.analytic_solver_dict = analytic_solver_dict
@@ -90,6 +90,7 @@ class StiffnessTester(object):
             for j in range(self.symbolic_jacobian_.shape[1]):
                 self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals), args=self.all_variable_symbols, backend="cython")
         #self._update_expr = { sym : sympy.parsing.sympy_parser.parse_expr(expr, global_dict=Shape._sympy_globals) for sym, expr in self._system_of_shapes.generate_numeric_solver()["update_expressions"].items() }
+
 
     @property
     def random_seed(self):
@@ -198,29 +199,40 @@ class StiffnessTester(object):
         idx_next_spike = 0
         while t < self.sim_time:
 
-            #
-            # simulate until the time of the next upcoming spike
-            #
+            if self.alias_spikes:
 
-            if idx_next_spike >= len(self.all_spike_times):
-                t_next_spike = self.sim_time
-                syms_next_spike = []
+                #
+                #    simulate by one timestep
+                #
+
+                t_target = t + self.max_step_size
+
             else:
-                t_next_spike = self.all_spike_times[idx_next_spike]
-                syms_next_spike = self.all_spike_times_sym[idx_next_spike]
 
-            while t < t_next_spike:
-                t_end_requested = min(t + self.max_step_size, t_next_spike)
-                h_requested = t_end_requested - t
-                #try:
-                if 1:
-                    # h_suggested is NOT the reached step size but the suggested next step size!
+                #
+                #    simulate until the time of the next upcoming spike
+                #
+
+                if idx_next_spike >= len(self.all_spike_times):
+                    t_target = self.sim_time
+                    syms_next_spike = []
+                else:
+                    t_target = self.all_spike_times[idx_next_spike]
+                    syms_next_spike = self.all_spike_times_sym[idx_next_spike]
+
+                idx_next_spike += 1		# "queue" the next upcoming spike for the next iteration of the while loop
+
+            while t < t_target:
+                t_target_requested = min(t + self.max_step_size, t_target)
+                h_requested = t_target_requested - t
+                try:
                     if not self.analytic_integrator is None:
                         self.analytic_integrator.disable_cache_update()
-                    t, h_suggested, y = evolve.apply(t, t_end_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
-                """except Exception as e:
-                    msg = "Failure of numerical integrator (method: %s) at t=%.2f with h_requested = %.2f (y=%s)" % (gsl_stepper.name(), t, h_requested, y)
-                    raise Exception(msg)"""
+
+                    t, h_suggested, y = evolve.apply(t, t_target_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
+                except FloatingPointError as e:
+                    msg = "Failure of numerical integrator (method: %s) at t=%.2f with requested timestep = %.2f (y = %s)" % (gsl_stepper.name(), t, h_requested, y)
+                    raise FloatingPointError(msg)
 
                 if not self.analytic_integrator is None:
                     self.analytic_integrator.enable_cache_update()
@@ -233,12 +245,14 @@ class StiffnessTester(object):
 
                 if h_suggested < h_requested:     # ignore small requested step sizes; look only at actually obtained step sizes
                     h_min = min(h_min, h_suggested)
+
                 if h_min < h_min_lower_bound:
                     estr = "Integration step below %.e (s=%.f). Please check your ODE." % (h_min_lower_bound, h_min)
                     if raise_errors:
                         raise Exception(estr)
                     else:
                         print(estr)
+
                 h_sum += h_suggested
                 n_timesteps_taken += 1
 
@@ -255,9 +269,6 @@ class StiffnessTester(object):
                             y[idx] = _initial_values[idx]
 
 
-            idx_next_spike += 1
-
-
             #
             #	evaluate to numeric values for the ODEs that are solved analytically
             #
@@ -268,15 +279,25 @@ class StiffnessTester(object):
                 self._locals.update(self.analytic_integrator.get_value(t))
 
 
-
             #
             #   apply the spikes, i.e. add the "initial values" to the system dynamical state vector
             #
 
-            for sym in syms_next_spike:
-                if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
-                    idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
-                    y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._locals))
+            if self.alias_spikes:
+                t_next_spike = self.all_spike_times[idx_next_spike]
+                while t_next_spike <= t:
+                    syms_next_spike = self.all_spike_times_sym[idx_next_spike]
+                    for sym in syms_next_spike:
+                        if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
+                            idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
+                            y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._locals))
+                    idx_next_spike += 1
+                    t_next_spike = self.all_spike_times[idx_next_spike]
+            else:
+                for sym in syms_next_spike:
+                    if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
+                        idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
+                        y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._locals))
 
         h_avg = h_sum / n_timesteps_taken
         runtime = time.time() - time_start
@@ -340,9 +361,9 @@ class StiffnessTester(object):
     def draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, avg_step_size_ratio=6):
         """Decide which is the best integrator to use for a certain system of ODEs
 
-        1. If the ODE system is stiff the average step size of the implicit method tends to be larger. This indicates that the ODE system is possibly stiff (and that it could be even more stiff for minor changes in stepsize and parameters). 
+        1. If the minimal step size is close to machine precision for one of the methods but not for the other, this suggest that the other is more stable and should be used instead.
 
-        2. If the minimal step size is close to machine precision for one of the methods but not for the other, this suggest that the other is more stable and should be used instead.
+        2. If the ODE system is stiff the average step size of the implicit method tends to be larger. This indicates that the ODE system is possibly stiff (and that it could be even more stiff for minor changes in stepsize and parameters). 
 
         :param step_min_imp: data measured during solving
         :param step_min_exp: data measured during solving
