@@ -21,7 +21,7 @@
     "max_step_size": ".1",
     "integration_accuracy" : "1E-5"
   },
-  
+
   "stimuli": [
     {
       "variables" : ["y1"],

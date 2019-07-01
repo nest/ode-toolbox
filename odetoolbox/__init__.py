@@ -37,11 +37,12 @@ try:
 except:
     PLOT_DEPENDENCY_GRAPH = False
 
-try:
+#try:
+if 1:
     from . import stiffness
     HAVE_STIFFNESS = True
-except:
-    HAVE_STIFFNESS = False
+#except:
+#    HAVE_STIFFNESS = False
 
 
 class MalformedInput(Exception): pass
