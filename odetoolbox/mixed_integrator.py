@@ -54,7 +54,7 @@ except ImportError as ie:
 class MixedIntegrator(object):
     '''Mixed numeric+analytic integrator. Supply with a result from odetoolbox analysis; returns numeric approximation of the solution.'''
 
-    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, spike_times=[], random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=100., alias_spikes=False):
+    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, spike_times=[], random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=1., alias_spikes=False):
         """
         :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
         """
@@ -83,8 +83,9 @@ class MixedIntegrator(object):
         self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy()
         self._update_expr_wrapped = {}
         self.all_variable_symbols = list(self._system_of_shapes.x_)
-        if not self.analytic_solver_dict is None:
-            self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
+        #import pdb;pdb.set_trace()
+        #if not self.analytic_solver_dict is None:
+        #    self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
         self.all_variable_symbols = [ sympy.Symbol(str(sym)) for sym in self.all_variable_symbols ]
         for sym, expr in self._update_expr.items():
             self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
@@ -101,8 +102,9 @@ class MixedIntegrator(object):
 
         self.all_spike_times = []
         self.all_spike_times_sym = []
-        for sym in self.spike_times.keys():
-            for t_sp in self.spike_times[sym]:
+        for sym, spike_times in self.spike_times.items():
+            assert str(sym) in [str(_sym) for _sym in self.all_variable_symbols], "Tried to set a spike time of unknown symbol \"" + str(sym) + "\""
+            for t_sp in spike_times:
                 if t_sp in self.all_spike_times:
                     idx = self.all_spike_times.index(t_sp)
                     self.all_spike_times_sym[idx].extend([sym])
@@ -115,7 +117,7 @@ class MixedIntegrator(object):
         self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
 
 
-    def integrate_ode(self,  h_min_lower_bound=5E-9, sym_receiving_spikes=[], raise_errors=True, debug=True):
+    def integrate_ode(self, initial_values={}, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
         """
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
 
@@ -124,17 +126,23 @@ class MixedIntegrator(object):
         :return: Average and minimal step size.
         """
 
+        assert all([type(k) == sympy.Symbol for k in initial_values.keys()]), 'Initial value dictionary keys should be of type sympy.Symbol'
+
+
         #
         #  initialise analytic integrator
         #
 
         if not self.analytic_solver_dict is None:
             self.analytic_integrator = AnalyticIntegrator(self.analytic_solver_dict, self.spike_times)
-            #analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
+            analytic_integrator_initial_values = { sym : iv for sym, iv in initial_values.items() if sym in self.analytic_integrator.all_variable_symbols() }
+            self.analytic_integrator.set_initial_values(analytic_integrator_initial_values)
 
-        #N = len(self._system_of_shapes.x_)
-        _initial_values = [ float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._parameters)) for sym in self._system_of_shapes.x_ ]
-        y = _initial_values.copy()
+        for sym in self._system_of_shapes.x_:
+            if not sym in initial_values.keys():
+                initial_values[sym] = float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._parameters))
+
+        y = np.array([ initial_values[sym] for sym in self._system_of_shapes.x_ ])
 
         if debug:
             y_log = [y]
@@ -156,7 +164,6 @@ class MixedIntegrator(object):
             h_min = np.inf
             #simulation_slices = int(round(sim_time / max_step_size))
 
-
             #
             #    grab starting wall clock time
             #
@@ -173,7 +180,7 @@ class MixedIntegrator(object):
             t = 0.
             idx_next_spike = 0
             while t < self.sim_time:
-
+                print("In MixedIntegrator main loop: t = " + str(t))
                 if self.alias_spikes:
 
                     #
@@ -193,11 +200,18 @@ class MixedIntegrator(object):
                         syms_next_spike = []
                     else:
                         t_target = self.all_spike_times[idx_next_spike]
-                        syms_next_spike = self.all_spike_times_sym[idx_next_spike]
+                        if t_target >= self.sim_time:
+                            t_target = self.sim_time
+                            syms_next_spike = []
+                        else:
+                            syms_next_spike = self.all_spike_times_sym[idx_next_spike]
 
                     idx_next_spike += 1        # "queue" the next upcoming spike for the next iteration of the while loop
 
+                print("\tt_target = " + str(t_target))
+
                 while t < t_target:
+                    print("\t  In MixedIntegrator inner loop: t = " + str(t))
                     t_target_requested = min(t + self.max_step_size, t_target)
                     h_requested = t_target_requested - t
                     try:
@@ -241,7 +255,7 @@ class MixedIntegrator(object):
                             idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(shape.symbol))
                             upper_bound_numeric = float(shape.upper_bound.evalf(subs=self._locals))
                             if y[idx] > upper_bound_numeric:
-                                y[idx] = _initial_values[idx]
+                                y[idx] = initial_values[shape.symbol]
 
 
                 #
@@ -258,7 +272,6 @@ class MixedIntegrator(object):
                 #   apply the spikes, i.e. add the "initial values" to the system dynamical state vector
                 #
 
-                print("WARRRRRRRR = " + str(self.alias_spikes))
                 if self.alias_spikes:
 
                     #
@@ -279,7 +292,7 @@ class MixedIntegrator(object):
                     print("applying spike at " + str(t))
                     for sym in syms_next_spike:
                         if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
-                            idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
+                            idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(sym))
                             y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._locals))
 
             h_avg = h_sum / n_timesteps_taken
@@ -298,12 +311,17 @@ class MixedIntegrator(object):
 
         print("For integrator = " + str(self.numeric_integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 
-        return h_min, h_avg, runtime
+        sym_list = self._system_of_shapes.x_
+
+        if debug:
+            return h_min, h_avg, runtime, t_log, h_log, y_log, sym_list
+        else:
+            return h_min, h_avg, runtime
 
 
     def integrator_debug_plot(self, t_log, h_log, y_log):
         if not self.analytic_integrator is None:
-            analytic_syms = self.analytic_integrator.get_value(t).keys()
+            analytic_syms = self.analytic_integrator.get_value(0.).keys()
             analytic_dim = len(analytic_syms)
             analytic_y_log = { sym : [] for sym in analytic_syms }
             for t in t_log:
@@ -316,6 +334,7 @@ class MixedIntegrator(object):
 
         idx_to_label = {}
         for sym, spike_density in self.spike_times.items():
+            sym = str(sym)
             syms = [str(sym) for sym in list(self._system_of_shapes.x_)]
             if sym.replace("'", "__d") in syms:
                 idx = syms.index(sym.replace("'", "__d"))
@@ -394,7 +413,7 @@ class MixedIntegrator(object):
         :return: Updated state vector
         """
 
-        print("begin step, t = " + str(t))
+        print("in step(): t = " + str(t))
         self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
         #
@@ -418,5 +437,7 @@ class MixedIntegrator(object):
             for k,v in self._locals.items():
                 print("    ", k, "=", v)
             raise
-        print("end step")
+
+
+        print("end step()")
         return _ret

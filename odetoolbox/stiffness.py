@@ -139,8 +139,8 @@ class StiffnessTester(object):
          integration_accuracy=self.integration_accuracy,
          sim_time=self.sim_time,
          alias_spikes=self.alias_spikes)
-        h_min, h_avg, runtime = mixed_integrator.integrate_ode(
-         h_min_lower_bound=5E-9, raise_errors=raise_errors, debug=debug)
+        h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(
+         h_min_lower_bound=5E-9, raise_errors=raise_errors, debug=debug))
 
         print("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 

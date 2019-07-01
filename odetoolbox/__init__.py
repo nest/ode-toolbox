@@ -37,13 +37,14 @@ try:
 except:
     PLOT_DEPENDENCY_GRAPH = False
 
-#try:
-if 1:
-    from . import stiffness
+try:
+    import pygsl.odeiv as odeiv
     HAVE_STIFFNESS = True
-#except:
-#    HAVE_STIFFNESS = False
+except ImportError:
+    HAVE_STIFFNESS = False
 
+if HAVE_STIFFNESS:
+    from .stiffness import StiffnessTester
 
 class MalformedInput(Exception): pass
 
@@ -224,8 +225,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
             for sym, expr in solver_json["propagators"].items():
                 solver_json["propagators"][sym] = str(expr)
 
-    return solvers_json
-
+    return solvers_json, shape_sys, shapes
 
 def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False):
     """The main entry point of the analysis.
@@ -245,5 +245,5 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
 
     :return: The result of the analysis, again as a dictionary.
     """
-    d = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver)
+    d, _, _ = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver)
     return d

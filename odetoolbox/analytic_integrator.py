@@ -52,7 +52,7 @@ class AnalyticIntegrator():
 
         self.dim = len(self.solver_dict["state_variables"])
         self.initial_values = self.solver_dict["initial_values"].copy()
-        self.set_initial_values(self.initial_values.copy())
+        self.set_initial_values(self.initial_values)
         self.shape_starting_values = self.solver_dict["initial_values"].copy()
         for k, v in self.shape_starting_values.items():
             expr = sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals)
@@ -81,8 +81,9 @@ class AnalyticIntegrator():
 
         self.all_spike_times = []
         self.all_spike_times_sym = []
-        for sym in self.spike_times.keys():
-            for t_sp in self.spike_times[sym]:
+        for sym, spike_times in self.spike_times.items():
+            assert str(sym) in self.solver_dict["state_variables"], "Tried to set a spike time of unknown symbol \"" + str(sym) + "\""
+            for t_sp in spike_times:
                 if t_sp in self.all_spike_times:
                     idx = self.all_spike_times.index(t_sp)
                     self.all_spike_times_sym[idx].extend([sym])
@@ -95,6 +96,7 @@ class AnalyticIntegrator():
         self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
         print("Initialised AnalyticIntegrator with all_spike_times = " + str(self.all_spike_times))
         print("Initialised AnalyticIntegrator with all_spike_times_sym = " + str(self.all_spike_times_sym))
+
 
         #
         #   in the update expression, replace symbolic variables with their numerical values
@@ -126,6 +128,10 @@ class AnalyticIntegrator():
             self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v, args=[sympy.Symbol("__h")] + [sympy.Symbol(sym) for sym in self.solver_dict["state_variables"]], backend="cython")
 
 
+    def all_variable_symbols(self):
+        return [sympy.Symbol(sym) for sym in self.solver_dict["state_variables"]]
+
+
     def enable_cache_update(self):
         self.enable_cache_update_ = True
 
@@ -153,6 +159,7 @@ class AnalyticIntegrator():
             New initial values.
         """
         for k, v in vals.items():
+            k = str(k)
             assert k in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
             expr = sympy.parsing.sympy_parser.parse_expr(str(v), global_dict=Shape._sympy_globals)
             subs_dict = {}
@@ -235,7 +242,8 @@ class AnalyticIntegrator():
             #
 
             for spike_sym in spike_syms:
-                #print("\t\tincrementing " + str(spike_sym))
+                print("\t\tincrementing? " + str(spike_sym))
+                spike_sym = str(spike_sym)
                 if spike_sym.replace("'", "__d") in self.initial_values.keys():
                     state_at_t_curr[spike_sym.replace("'", "__d")] += self.shape_starting_values[spike_sym.replace("'", "__d")]
                     print("\t\tincrementing " + str(spike_sym.replace("'", "__d")) + " by " + str(self.shape_starting_values[spike_sym.replace("'", "__d")]))
