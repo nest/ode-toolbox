@@ -351,6 +351,7 @@ class Shape(object):
 
     @classmethod
     def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=[], time_symbol=sympy.Symbol("t"), debug=False):
+        debug=99
         """Create a Shape object given a function of time.
 
         The goal of the algorithm is to calculate the factors of the ODE,
@@ -487,7 +488,7 @@ class Shape(object):
                     for j in range(order):
                         X[i, j] = derivatives[j].subs(time_symbol, substitute)
 
-                if sympy.det(X) != 0:
+                if not sympy.simplify(sympy.det(X)).is_zero:
                     invertible = True
                     break
 
@@ -506,6 +507,7 @@ class Shape(object):
             if debug > 1:
                 print("\tinv()...")
             derivative_factors = sympy.simplify(X.inv() * Y)
+            #derivative_factors = X.inv() * Y
 
 
             #

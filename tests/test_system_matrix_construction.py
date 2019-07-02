@@ -29,7 +29,6 @@ import numpy as np
 from .context import odetoolbox
 from odetoolbox import from_json_to_shapes, default_config
 from odetoolbox.system_of_shapes import SystemOfShapes
-from odetoolbox.analytic_integrator import AnalyticIntegrator
 
 from math import e
 from sympy import exp, sympify

@@ -38,7 +38,13 @@ class AnalyticIntegrator():
         """
 
         self.solver_dict = solver_dict
+
+        self.all_variable_symbols = self.solver_dict["state_variables"]
+        self.all_variable_symbols = [sympy.Symbol(s) for s in self.all_variable_symbols]    # from str to sympy.Symbol
+
         self.spike_times = spike_times
+        self.set_spike_times(spike_times)
+
         self.enable_caching = enable_caching
         self.enable_cache_update_ = True
         self.t = 0.
@@ -50,7 +56,7 @@ class AnalyticIntegrator():
         #   define the necessary numerical state variables
         #
 
-        self.dim = len(self.solver_dict["state_variables"])
+        self.dim = len(self.all_variable_symbols)
         self.initial_values = self.solver_dict["initial_values"].copy()
         self.set_initial_values(self.initial_values)
         self.shape_starting_values = self.solver_dict["initial_values"].copy()
@@ -75,27 +81,6 @@ class AnalyticIntegrator():
         self.reset()
 
 
-        #
-        #   make a sorted list of all spike times for all symbols
-        #
-
-        self.all_spike_times = []
-        self.all_spike_times_sym = []
-        for sym, spike_times in self.spike_times.items():
-            assert str(sym) in self.solver_dict["state_variables"], "Tried to set a spike time of unknown symbol \"" + str(sym) + "\""
-            for t_sp in spike_times:
-                if t_sp in self.all_spike_times:
-                    idx = self.all_spike_times.index(t_sp)
-                    self.all_spike_times_sym[idx].extend([sym])
-                else:
-                    self.all_spike_times.append(t_sp)
-                    self.all_spike_times_sym.append([sym])
-
-        idx = np.argsort(self.all_spike_times)
-        self.all_spike_times = [ self.all_spike_times[i] for i in idx ]
-        self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
-        print("Initialised AnalyticIntegrator with all_spike_times = " + str(self.all_spike_times))
-        print("Initialised AnalyticIntegrator with all_spike_times_sym = " + str(self.all_spike_times_sym))
 
 
         #
@@ -124,12 +109,60 @@ class AnalyticIntegrator():
 
         self.update_expressions_wrapped = {}
         for k, v in self.update_expressions.items():
-            print("Wrapping " + str(k) + " (expr = " + str(v) + ") with args " + str([sympy.Symbol("__h")] + [sympy.Symbol(sym) for sym in self.solver_dict["state_variables"]]))
-            self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v, args=[sympy.Symbol("__h")] + [sympy.Symbol(sym) for sym in self.solver_dict["state_variables"]], backend="cython")
+            print("Wrapping " + str(k) + " (expr = " + str(v) + ") with args " + str([sympy.Symbol("__h")] + self.all_variable_symbols))
+            self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v, args=[sympy.Symbol("__h")] + self.all_variable_symbols, backend="cython")
 
 
-    def all_variable_symbols(self):
-        return [sympy.Symbol(sym) for sym in self.solver_dict["state_variables"]]
+    def sympyfy_keys(self, d):
+        d_out = {}
+        for k, v in d.items():
+            assert type(k) in [sympy.Symbol, str]
+            if type(k) is sympy.Symbol:
+                d_out[k] = v
+
+            if type(k) is str:
+                d_out[sympy.Symbol(k)] = v
+
+        return d_out
+
+
+
+    def set_spike_times(self, spike_times):
+        """
+        Internally converts to a global, sorted list of spike times.
+
+        Parameters
+        ----------
+        spike_times : dict(sympy.Symbol -> List[Float] **or** dict(str -> List[Float]
+            For each variable, used as a key, the list of spike times associated with it.
+        """
+
+        spike_times = self.sympyfy_keys(spike_times)
+
+        assert all([type(sym) is sympy.Symbol for sym in spike_times.keys()]), "Spike time keys need to be of type sympy.Symbol"
+
+        self.all_spike_times = []
+        self.all_spike_times_sym = []
+        for sym, spike_times in self.spike_times.items():
+            assert type(sym) is sympy.Symbol
+            assert sym in self.all_variable_symbols, "Tried to set a spike time of unknown symbol \"" + str(sym) + "\""
+            for t_sp in spike_times:
+                if t_sp in self.all_spike_times:
+                    idx = self.all_spike_times.index(t_sp)
+                    self.all_spike_times_sym[idx].extend([sym])
+                else:
+                    self.all_spike_times.append(t_sp)
+                    self.all_spike_times_sym.append([sym])
+
+        idx = np.argsort(self.all_spike_times)
+        self.all_spike_times = [ self.all_spike_times[i] for i in idx ]
+        self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
+        print("Initialised AnalyticIntegrator with all_spike_times = " + str(self.all_spike_times))
+        print("Initialised AnalyticIntegrator with all_spike_times_sym = " + str(self.all_spike_times_sym))
+
+
+    def get_all_variable_symbols(self):
+        return self.all_variable_symbols
 
 
     def enable_cache_update(self):
@@ -183,9 +216,9 @@ class AnalyticIntegrator():
         #
 
         """self.subs_dict["__h"] = delta_t
-        for state_variable2 in self.solver_dict["state_variables"]:
+        for state_variable2 in self.all_variable_symbols:
             self.subs_dict[state_variable2] = initial_values[state_variable2]"""
-        y = [delta_t] + [initial_values[sym] for sym in self.solver_dict["state_variables"]]
+        y = [delta_t] + [initial_values[str(sym)] for sym in self.all_variable_symbols]
 
 
         #

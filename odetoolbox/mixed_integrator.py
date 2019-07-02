@@ -128,20 +128,26 @@ class MixedIntegrator(object):
 
         assert all([type(k) == sympy.Symbol for k in initial_values.keys()]), 'Initial value dictionary keys should be of type sympy.Symbol'
 
-
         #
         #  initialise analytic integrator
         #
 
         if not self.analytic_solver_dict is None:
-            self.analytic_integrator = AnalyticIntegrator(self.analytic_solver_dict, self.spike_times)
-            analytic_integrator_initial_values = { sym : iv for sym, iv in initial_values.items() if sym in self.analytic_integrator.all_variable_symbols() }
+            analytic_integrator_spike_times = { sym : st for sym, st in self.spike_times.items() if str(sym) in self.analytic_solver_dict["state_variables"] }
+            self.analytic_integrator = AnalyticIntegrator(self.analytic_solver_dict, analytic_integrator_spike_times)
+            analytic_integrator_initial_values = { sym : iv for sym, iv in initial_values.items() if sym in self.analytic_integrator.get_all_variable_symbols() }
             self.analytic_integrator.set_initial_values(analytic_integrator_initial_values)
+
+
+        #
+        #    convert initial value expressions to floats
+        #
 
         for sym in self._system_of_shapes.x_:
             if not sym in initial_values.keys():
                 initial_values[sym] = float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._parameters))
 
+        upper_bound_crossed = False
         y = np.array([ initial_values[sym] for sym in self._system_of_shapes.x_ ])
 
         if debug:
@@ -247,7 +253,7 @@ class MixedIntegrator(object):
 
 
                     #
-                    #    enforce upper and lower thresholds
+                    #    enforce bounds/thresholds
                     #
 
                     for shape in self._shapes:
@@ -255,6 +261,7 @@ class MixedIntegrator(object):
                             idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(shape.symbol))
                             upper_bound_numeric = float(shape.upper_bound.evalf(subs=self._locals))
                             if y[idx] > upper_bound_numeric:
+                                upper_bound_crossed = True
                                 y[idx] = initial_values[shape.symbol]
 
 
@@ -275,19 +282,25 @@ class MixedIntegrator(object):
                 if self.alias_spikes:
 
                     #
-                    #    apply all the spikes from <t - dt, dt]
+                    #    apply all the spikes from <t - dt, t]
                     #
 
-                    t_next_spike = self.all_spike_times[idx_next_spike]
+                    if idx_next_spike < len(self.all_spike_times):
+                        t_next_spike = self.all_spike_times[idx_next_spike]
+                    else:
+                        t_next_spike = np.inf
                     while t_next_spike <= t:
-                        print("spplying spike at " + str(t_next_spike))
                         syms_next_spike = self.all_spike_times_sym[idx_next_spike]
                         for sym in syms_next_spike:
                             if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
-                                idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(sym)
+                                print("spplying spike at " + str(t_next_spike))
+                                idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(sym))
                                 y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._locals))
                         idx_next_spike += 1
-                        t_next_spike = self.all_spike_times[idx_next_spike]
+                        if idx_next_spike < len(self.all_spike_times):
+                            t_next_spike = self.all_spike_times[idx_next_spike]
+                        else:
+                            t_next_spike = np.inf
                 else:
                     print("applying spike at " + str(t))
                     for sym in syms_next_spike:
@@ -314,7 +327,7 @@ class MixedIntegrator(object):
         sym_list = self._system_of_shapes.x_
 
         if debug:
-            return h_min, h_avg, runtime, t_log, h_log, y_log, sym_list
+            return h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list
         else:
             return h_min, h_avg, runtime
 
@@ -413,7 +426,7 @@ class MixedIntegrator(object):
         :return: Updated state vector
         """
 
-        print("in step(): t = " + str(t))
+        print("\tin step(): t = " + str(t))
         self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
         #
@@ -421,9 +434,9 @@ class MixedIntegrator(object):
         #
 
         if not self.analytic_integrator is None:
-            print("\tbegin analytic get")
+            print("\t\tbegin analytic get")
             self._locals.update(self.analytic_integrator.get_value(t))
-            print("\tend analytic get")
+            print("\t\tend analytic get")
 
         # y holds the state of all the symbols in the numeric part of the system; add those for the analytic part
         y = [ self._locals[str(sym)] for sym in self.all_variable_symbols ]
@@ -439,5 +452,5 @@ class MixedIntegrator(object):
             raise
 
 
-        print("end step()")
+        print("\tend step()")
         return _ret

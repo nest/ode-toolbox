@@ -27,7 +27,6 @@ import numpy as np
 #np.seterr(under="warn")
 
 from .context import odetoolbox
-from odetoolbox.analytic_integrator import AnalyticIntegrator
 from odetoolbox.shapes import Shape
 import sympy.parsing.sympy_parser
 
