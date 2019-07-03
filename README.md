@@ -1,17 +1,17 @@
-# NEST ODE-toolbox
+# NEST ode-toolbox
 
 [![Build Status](https://travis-ci.org/nest/ode-toolbox.svg?branch=master)](https://travis-ci.org/nest/ode-toolbox)
 
-In the computer simulation of dynamical systems, choosing the most suitable differential equation solver might depend on many factors. ODE-toolbox assists in picking the optimal solver for a given set of dynamical equations (also known as "ordinary differential equations" or "initial value problems"). ODE-toolbox will generate propagator matrices for the subset of dynamics that is linear and constant coefficient, which can be used to solve the equations up to machine precision. For those equations that are not analytically tractable, an optimal numerical integrator (e.g. explicit vs. implicit) is recommended based on several user-configurable heuristics.
+Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and generates propagator matrices for that part of the dynamics that can be solved analytically. Based on the benchmarks, an optimal numerical integrator is recommended based on a set of user-configurable heuristics.
 
-ODE-toolbox is written in Python and relies on SymPy for the symbolic manipulation of equations. It was initially developed in the context of the [NESTML](https://github.com/nest/nestml) project, in which the main focus was on the class of spiking neurons presently available in the [NEST](https://github.com/nest/nest-simulator) simulator. It can, however, be used standalone and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
+ode-toolbox is written in Python and relies on SymPy for the symbolic manipulation of equations. It was initially developed in the context of the [NESTML](https://github.com/nest/nestml) project, in which the main focus was on the class of spiking neurons presently available in the [NEST](https://github.com/nest/nest-simulator) simulator. It can, however, be used standalone and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
 
 
 ## Installation
 
 ### Prerequisites
 
-ODE-toolbox depends on the Python packages SymPy, SciPy and NumPy and (optionally) matplotlib and graphviz for visualisation, and pytest for self-tests. The stiffness tester additionally depends on an an installation of [PyGSL](http://pygsl.sourceforge.net/). If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations.
+ode-toolbox depends on the Python packages SymPy, SciPy and NumPy and (optionally) matplotlib and graphviz for visualisation, and pytest for self-tests. The stiffness tester additionally depends on an an installation of [PyGSL](http://pygsl.sourceforge.net/). If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations.
 
 The required packages can be installed by running 
 
@@ -20,7 +20,7 @@ pip install sympy scipy numpy
 ```
 
 
-### Installing ODE-toolbox
+### Installing ode-toolbox
 
 To install, run the following commands in a terminal:
 
@@ -28,14 +28,14 @@ To install, run the following commands in a terminal:
 python setup.py install
 ```
 
-If you wish to install ODE-toolbox into your home directory, add the option `--user` to the above call.
+If you wish to install ode-toolbox into your home directory, add the option `--user` to the above call.
 
 For further installation hints, please see [.travis.yml](.travis.yml).
 
 
 ### Testing
 
-To run the unit and integration tests that come with ODE-toolbox, you can run the following command:
+To run the unit and integration tests that come with ode-toolbox, you can run the following command:
 
 ```
 python setup.py test
