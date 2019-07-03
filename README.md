@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/nest/ode-toolbox.svg?branch=master)](https://travis-ci.org/nest/ode-toolbox)
 
-Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends a solver on the basis of benchmarks and a set of user-configurable heuristics. It generates propagator matrices for that part of the dynamics that can be solved analytically.
+Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends a solver on the basis of a set of user-configurable heuristics. If a subset of the dynamics is found to be analytically tractable, ode-toolbox generates corresponding propagator matrices, that allow solution up to machine precision.
 
 ode-toolbox is written in Python and relies on SymPy for the symbolic manipulation of equations. It was initially developed in the context of the [NESTML](https://github.com/nest/nestml) project, in which the main focus was on the class of spiking neurons presently available in the [NEST](https://github.com/nest/nest-simulator) simulator. It can, however, be used standalone and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
 
