@@ -158,6 +158,7 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
             fn = os.path.join(basedir, "test_mixed_integrator_numeric_" + fn_snip + ".png")
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)
+            plt.close(fig)
 
 if __name__ == '__main__':
     unittest.main()

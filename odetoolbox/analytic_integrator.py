@@ -121,7 +121,7 @@ class AnalyticIntegrator():
                 d_out[k] = v
 
             if type(k) is str:
-                d_out[sympy.Symbol(k)] = v
+                d_out[sympy.Symbol(k.replace("'", "__d"))] = v
 
         return d_out
 
@@ -137,9 +137,9 @@ class AnalyticIntegrator():
             For each variable, used as a key, the list of spike times associated with it.
         """
 
-        spike_times = self.sympyfy_keys(spike_times)
+        self.spike_times = self.sympyfy_keys(spike_times)
 
-        assert all([type(sym) is sympy.Symbol for sym in spike_times.keys()]), "Spike time keys need to be of type sympy.Symbol"
+        assert all([type(sym) is sympy.Symbol for sym in self.spike_times.keys()]), "Spike time keys need to be of type sympy.Symbol"
 
         self.all_spike_times = []
         self.all_spike_times_sym = []

@@ -1,13 +1,13 @@
 {
   "dynamics": [
     {
-      "expression" : "g_in = (e/tau_syn_in/10000)*t*exp(-1/tau_syn_in*t)"
+      "expression" : "g_in = (e/tau_syn_in/100000)*t*exp(-1/tau_syn_in*t)"
     },
     {
-      "expression": "g_ex = (e/tau_syn_ex/10000)*t*exp(-1/tau_syn_ex*t)"
+      "expression": "g_ex = (e/tau_syn_ex/1000000)*t*exp(-1/tau_syn_ex*t)"
     },
     {
-      "expression": "V_m' = (-(g_L*(V_m-E_L))-(g_ex*(V_m-E_ex))-(g_in*(V_m-E_in))+I_stim+I_e)/C_m",
+      "expression": "V_m' = (-(g_L * (V_m - E_L)) - (g_ex * (V_m - E_ex)) - (g_in * (V_m - E_in)) + I_stim + I_e)/C_m",
       "initial_value": "1/exp(tau_syn_ex)",
       "upper_bound": "V_th"
     }

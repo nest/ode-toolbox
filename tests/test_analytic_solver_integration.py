@@ -288,9 +288,11 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
             ax[-1].set_xlabel("Time [ms]")
 
             #plt.show()
-            fn = "/tmp/remotefs2/propagators.png"
+            base_dir = "/tmp/remotefs2"
+            fn = os.path.join(base_dir, "test_analytic_solver_integration.png")
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)
+            plt.close(fig)
 
         # the two propagators should be very close...
         np.testing.assert_allclose(i_ex__[0, :], state["I_shape_ex"], atol=1E-9, rtol=1E-9)

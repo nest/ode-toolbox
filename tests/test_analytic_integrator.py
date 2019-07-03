@@ -155,10 +155,10 @@ class TestAnalyticIntegrator(unittest.TestCase):
         if INTEGRATION_TEST_DEBUG_PLOTS:
             fig, ax = plt.subplots(2, sharex=True)
 
-            ax[0].plot(1E3 * timevec, state[True]["I"], linewidth=2, linestyle=":", marker="o", label="I (caching)")
-            ax[0].plot(1E3 * timevec, state[False]["I"], linewidth=2, linestyle=":", marker="o", label="I")
-            ax[1].plot(1E3 * timevec, state[True]["I__d"], linewidth=2, linestyle=":", marker="o", label="I' (caching)")
-            ax[1].plot(1E3 * timevec, state[False]["I__d"], linewidth=2, linestyle=":", marker="o", label="I'")
+            ax[0].plot(1E3 * timevec, state[True]["I"], linewidth=2, linestyle='--', dashes=(5, 1), marker="x", label="I (caching)", alpha=.8)
+            ax[0].plot(1E3 * timevec, state[False]["I"], linewidth=2, linestyle=":", marker="o", label="I", alpha=.8)
+            ax[1].plot(1E3 * timevec, state[True]["I__d"], linewidth=2, linestyle='--', dashes=(5, 1), marker="x", label="I' (caching)", alpha=.8)
+            ax[1].plot(1E3 * timevec, state[False]["I__d"], linewidth=2, linestyle=":", marker="o", label="I'", alpha=.8)
 
             for _ax in ax:
                 _ax.legend()
@@ -171,6 +171,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
             fn = "/tmp/remotefs2/test_analytic_integrator.png"
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)
+            plt.close(fig)
 
         np.testing.assert_allclose(state[True]["timevec"], timevec)
         np.testing.assert_allclose(state[True]["timevec"], state[False]["timevec"])

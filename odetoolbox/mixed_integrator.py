@@ -82,11 +82,15 @@ class MixedIntegrator(object):
         #self.initial_values = { sym : str(self.get_initial_value(sym)) for sym in self._system_of_shapes.x_ }
         self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy()
         self._update_expr_wrapped = {}
+
         self.all_variable_symbols = list(self._system_of_shapes.x_)
+        if not self.analytic_solver_dict is None:
+            self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
+        self.all_variable_symbols = [ sympy.Symbol(str(sym).replace("'", "__d")) for sym in self.all_variable_symbols ]
+
         #import pdb;pdb.set_trace()
         #if not self.analytic_solver_dict is None:
         #    self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
-        self.all_variable_symbols = [ sympy.Symbol(str(sym)) for sym in self.all_variable_symbols ]
         for sym, expr in self._update_expr.items():
             self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
         self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=np.object)
@@ -99,6 +103,8 @@ class MixedIntegrator(object):
         #
         #   make a sorted list of all spike times for all symbols
         #
+
+        self.spike_times = { sympy.Symbol(str(k).replace("'", "__d")) : v for k, v in self.spike_times.items() }
 
         self.all_spike_times = []
         self.all_spike_times_sym = []
@@ -376,9 +382,10 @@ class MixedIntegrator(object):
         ax[-1].set_xlabel("Time [s]")
         fig.suptitle(str(self.numeric_integrator))
         #plt.show()
-        fn = "/tmp/remotefs2/stiffness_test_" + str(self.numeric_integrator) + ".png"
+        fn = "/tmp/remotefs2/mixed_integrator_[run=" + str(hash(self)) + "]_[run=" + str(self.numeric_integrator) + "].png"
         print("Saving to " + fn)
         plt.savefig(fn, dpi=600)
+        plt.close(fig)
 
 
     def numerical_jacobian(self, t, y, params):
