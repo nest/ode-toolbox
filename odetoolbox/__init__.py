@@ -22,6 +22,9 @@
 from __future__ import print_function
 
 import sympy
+from odetoolbox.sympy_printer import SympyPrinter
+
+sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
 
 from .system_of_shapes import SystemOfShapes
 #from odetoolbox.analytic import compute_analytical_solution
@@ -106,6 +109,10 @@ def from_json_to_shapes(indict, default_config):
 
 def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False):
 
+    print("In ode-toolbox: analysing indict = ")
+    import json
+    print(json.dumps(indict, indent=4, sort_keys=True))
+
     if "dynamics" not in indict:
         print("Warning: empty input (no dynamical equations found); returning empty output")
         solvers_json = {}
@@ -182,7 +189,10 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
             all_shape_symbols = [ str(sympy.Symbol(str(shape.symbol) + "__d" * i)) for i in range(shape.order) ]
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
+                    #if shape.get_initial_value(sym.replace("__d", "'")) is None:
+                    #    import pdb;pdb.set_trace()
                     solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace("__d", "'")))
+
 
 
     #
