@@ -161,7 +161,7 @@ class SystemOfShapes(object):
         #
 
         P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
-        
+
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -181,7 +181,7 @@ class SystemOfShapes(object):
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) + " + " + str(self.C_[row])
             update_expr[str(self.x_[row])] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals))
-                    
+
         all_variable_symbols = [ str(sym) for sym in self.x_ ]
 
         initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_variable_symbols }
@@ -191,6 +191,7 @@ class SystemOfShapes(object):
                        "state_variables" : all_variable_symbols,
                        "initial_values" : initial_values}
 
+#        import pdb;pdb.set_trace()
         return solver_dict
 
 

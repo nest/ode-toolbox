@@ -75,7 +75,8 @@ class Shape(object):
                      "atanh" : sympy.atanh,
                      "e" : sympy.exp(1),
                      "E" : sympy.exp(1),
-                     "t" : sympy.Symbol("t")
+                     "t" : sympy.Symbol("t"),
+                     "DiracDelta" : sympy.DiracDelta
                      }
 
 
@@ -108,13 +109,16 @@ class Shape(object):
         for iv_name, iv in initial_values.items():
             assert is_sympy_type(iv), "initial value for %s is not a SymPy expression: \"%r\"" % (iv_name, iv)
         self.initial_values = initial_values
+        """for sym in initial_values.keys():
+            if "__d" in str(sym):
+                print("!!!")
+                import pdb;pdb.set_trace()"""
 
         assert len(derivative_factors) == order, "length of derivative_factors != order"
         for df in derivative_factors:
             assert is_sympy_type(df), "derivative factor is not a SymPy expression: \"%r\"" % iv
         self.derivative_factors = derivative_factors
 
-        # Compute the state variables for ODE the shape satisfies
         self.state_variables = []
         for i in range(self.order):
             if i > 0:
@@ -151,7 +155,7 @@ class Shape(object):
             string representation of a sympy symbol, e.g. `"V_m'"`
         """
         assert type(sym) is str
-        if not sym in self.initial_values:
+        if not sym in self.initial_values.keys():
             return None
         return self.initial_values[sym]
 
@@ -244,11 +248,15 @@ class Shape(object):
             if not order == 1:
                 raise Exception("Single initial value specified for equation that is not first order in equation with variable symbol \"" + symbol + "\"")
             initial_values[symbol] = indict["initial_value"]
+            #if "__d" in str(symbol):
+            #    print("!!!")
+            #    import pdb;pdb.set_trace()
 
         if "initial_values" in indict.keys():
             if not len(indict["initial_values"]) == order:
                 raise Exception("Wrong number of initial values specified for order " + str(order) + " equation with variable symbol \"" + symbol + "\"")
 
+            initial_val_specified = [False] * order
             for iv_lhs, iv_rhs in indict["initial_values"].items():
                 symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", iv_lhs)
                 if symbol_match is None:
@@ -257,7 +265,15 @@ class Shape(object):
                 if not iv_symbol == symbol:
                     raise Exception("Initial value variable symbol \"" + iv_symbol + "\" does not match equation variable symbol \"" + symbol + "\"")
                 iv_order = len(re.findall("'", iv_lhs))
+                if iv_order >= order:
+                    raise Exception("In defintion of initial value for variable \"" + iv_symbol + "\": differential order (" + str(iv_order) + ") exceeds that of overall equation order (" + str(order) + ")")
+                if initial_val_specified[iv_order]:
+                    raise Exception("Initial value for order " + str(iv_order) + " specified more than once")
+                initial_val_specified[iv_order] = True
                 initial_values[iv_symbol + iv_order * "'"] = iv_rhs
+
+            if not all(initial_val_specified):
+                raise Exception("Initial value not specified for all differential orders for variable \"" + iv_symbol + "\"")
 
         lower_bound = None
         if "lower_bound" in indict.keys():
@@ -403,6 +419,7 @@ class Shape(object):
         # strings. We have to transform them to SymPy symbols for using
         # them in symbolic calculations.
         symbol = sympy.Symbol(symbol)
+        definition = definition.replace("delta", "DiracDelta")
         definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol))
 
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
@@ -422,7 +439,7 @@ class Shape(object):
         #
 
         t_val = None
-        for t_ in range(1, max_t):
+        for t_ in range(0, max_t):
             if not definition.subs(time_symbol, t_).is_zero:
                 t_val = t_
                 break
@@ -568,46 +585,11 @@ class Shape(object):
         """
 
         assert type(symbol) is str
+        assert type(initial_values) is dict
 
         all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
 
         order = len(initial_values)
-
-        def _initial_values_sanity_checks():
-            assert type(initial_values) is dict, "Initial values should be specified as a dictionary"
-            _order_from_definition = 1
-            _re_search = re.compile(symbol + "'+").findall(definition)
-
-            for match in _re_search:
-                __re_search = re.compile("'+").search(match)
-                _order = 0
-                if not __re_search is None:
-                    _order = len(__re_search.group())
-                _order_from_definition = max(_order + 1, _order_from_definition)
-
-            assert _order_from_definition == order, "Wrong number of initial values specified, expected " + str(_order_from_definition) + ", got " + str(order)
-
-            initial_val_specified = [False] * order
-            for k, v in initial_values.items():
-                if not k[0:len(symbol)] == symbol:
-                    raise Exception("In definition for " + str(symbol) + ": Initial value specified for unknown variable symbol \"" + k + "\"")
-                _order = 0
-                _re_search = re.compile("'+").search(k)
-                if not _re_search is None:
-                    _order = len(_re_search.group())
-                    if _order >= order:
-                        raise Exception("In defintion of initial value for variable \"" + k + "\": differential order (" + str(_order) + ") exceeds that of overall equation order (" + str(order) + ")")
-                    initial_val_specified[_order] = True
-                else:
-                    # _order == 0
-                    if initial_val_specified[_order]:
-                        raise Exception("Initial value for zero-th order specified more than once")
-                    initial_val_specified[_order] = True
-
-            if not all(initial_val_specified):
-                raise Exception("Initial value not specified for all differential orders")
-
-        _initial_values_sanity_checks()
 
         symbol = sympy.Symbol(symbol)
         definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
@@ -715,6 +697,7 @@ class Shape(object):
 
 
         #derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, derivative_symbols)
+   #     import pdb;pdb.set_trace()
 
         return cls(symbol, order, initial_values, local_derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
 
