@@ -29,22 +29,21 @@ models."""
 
 setup (
     name = "odetoolbox",
-    version = "1.0",
+    version = "2.0",
     author = "The NEST Initiative",
     classifiers = [
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering'
     ],
     description = "The NEST ODE toolbox",
-    keywords = "computational neuroscience modeling connectivity",
-    license = "GPLv3",
+    keywords = "computational neuroscience model ordinary differential equation ode dynamical dynamic simulation",
+    license = "GNU General Public License v2 (GPLv2)",
     long_description = long_description,
     packages = ['odetoolbox'],
     package_dir={'odetoolbox': 'odetoolbox'},
