@@ -162,6 +162,8 @@ class SystemOfShapes(object):
 
         P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
 
+        if sympy.I in sympy.preorder_traversal(P):
+            raise Exception("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -191,7 +193,6 @@ class SystemOfShapes(object):
                        "state_variables" : all_variable_symbols,
                        "initial_values" : initial_values}
 
-#        import pdb;pdb.set_trace()
         return solver_dict
 
 
