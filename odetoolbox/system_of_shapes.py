@@ -31,6 +31,18 @@ import numpy as np
 
 from .shapes import Shape
 
+def _is_zero(x):
+    """In the ideal case, we would like to use sympy.simplify() to do simplification of an expression before comparing it to zero. However, for expressions of moderate size (e.g. a few dozen terms involving exp() functions), it becomes unbearably slow. We therefore use this internal function, so that the simplification function can be easily switched over.
+    
+    Tests by expand_mul only, suitable for polynomials and rational functions.
+    
+    Ref.: https://github.com/sympy/sympy PR #13877 by @normalhuman et al. merged on Jan 27, 2018
+    """
+    return bool(sympy.expand_mul(x).is_zero)
+
+
+
+
 class SystemOfShapes(object):
     """
     """
@@ -63,11 +75,11 @@ class SystemOfShapes(object):
         
         for i, sym1 in enumerate(self.x_):
             for j, sym2 in enumerate(self.x_):
-                if not sympy.simplify(self.A_[j, i]).is_zero:
+                if not _is_zero(self.A_[j, i]):
                     E.append((sym2, sym1))
                     #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
                 else:
-                    if not sympy.simplify(sympy.diff(self.C_[j], sym1)).is_zero:
+                    if not _is_zero(sympy.diff(self.C_[j], sym1)):
                         E.append((sym2, sym1))
                         #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
 

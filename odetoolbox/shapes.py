@@ -97,26 +97,49 @@ class Shape(object):
             The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
         diff_rhs_derivatives : 
         """
-        assert type(symbol) is sympy.Symbol, "symbol is not a SymPy symbol: \"%r\"" % symbol
+        if not type(symbol) is sympy.Symbol:
+            raise Exception("symbol is not a SymPy symbol: \"%r\"" % symbol)
+
         self.symbol = symbol
 
-        assert not str(symbol) in Shape._sympy_globals.keys(), "The symbol name " + str(symbol) + " clashes with a predefined symbol by the same name"
+        if str(symbol) in Shape._sympy_globals.keys():
+            raise Exception("The symbol name " + str(symbol) + " clashes with a predefined symbol by the same name")
 
-        assert type(order) is int, "order is not an integer: \"%d\"" % order
+        if not type(order) is int:
+            raise Exception("order is not an integer: \"%d\"" % order)
+
         self.order = order
 
-        assert len(initial_values) == order, "length of initial_values != order"
+        if not len(initial_values) == order:
+            raise Exception(str(len(initial_values)) + " initial values specified, while " + str(order) + " were expected based on differential equation definition")
         for iv_name, iv in initial_values.items():
-            assert is_sympy_type(iv), "initial value for %s is not a SymPy expression: \"%r\"" % (iv_name, iv)
+            if not is_sympy_type(iv):
+                raise Exception("initial value for %s is not a SymPy expression: \"%r\"" % (iv_name, iv))
+            differential_order = iv_name.count("'")
+            if differential_order > 0:
+                iv_basename = iv_name[:-differential_order]
+            else:
+                iv_basename = iv_name
+            if not iv_basename == str(symbol):
+                raise Exception("Initial value specified for unknown variable \"" + str(iv_basename) + "\" in differential equation for variable \"" + str(symbol) + "\"")
+            
+            if differential_order >= self.order:
+                raise Exception("Initial value \"" + str(iv_name) + "\" specifies initial value for degree " + str(differential_order) + ", which is too high in order-" + str(self.order) + " differential equation")
+
         self.initial_values = initial_values
+
         """for sym in initial_values.keys():
             if "__d" in str(sym):
                 print("!!!")
                 import pdb;pdb.set_trace()"""
 
-        assert len(derivative_factors) == order, "length of derivative_factors != order"
+        if not len(derivative_factors) == order:
+            raise Exception(str(len(derivative_factors)) + " derivative factors specified, while " + str(order) + " were expected based on differential equation definition")
+
         for df in derivative_factors:
-            assert is_sympy_type(df), "derivative factor is not a SymPy expression: \"%r\"" % iv
+            if not is_sympy_type(df):
+                raise Exception("Derivative factor \"%r\" is not a SymPy expression" % df)
+
         self.derivative_factors = derivative_factors
 
         self.state_variables = []
@@ -146,7 +169,7 @@ class Shape(object):
         return s
 
 
-    def get_initial_value(self, sym):
+    def get_initial_value(self, sym: str):
         """get the initial value corresponding to the symbol
 
         Parameters
@@ -154,7 +177,6 @@ class Shape(object):
         sym : str
             string representation of a sympy symbol, e.g. `"V_m'"`
         """
-        assert type(sym) is str
         if not sym in self.initial_values.keys():
             return None
         return self.initial_values[sym]

@@ -1,4 +1,5 @@
 {
+  "__info" : "Note that the alpha function can also be written as: f' = g - f / tau; g' = -g / tau, which reproduces the alpha shape in f, but produces a different dynamics for g; this can be relevant e.g. when g is to be incremented upon the arrival of a spike",
   "dynamics": [
     {
       "expression": "I_shape_in = (e/Tau_syn_in) * t * exp(-t/Tau_syn_in)"

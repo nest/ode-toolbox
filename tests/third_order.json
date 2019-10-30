@@ -34,6 +34,6 @@
   ],
   "options":
   {
-    "output_timestep_symbol_name": "__h"
+    "output_timestep_symbol": "__h"
   }
 }
