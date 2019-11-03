@@ -226,7 +226,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         indict = open_json("test_integration.json")
         solver_dict = odetoolbox.analysis(indict)
         print("Got solver_dict from ode-toolbox: ")
-        print(json.dumps(solver_dict,  indent=2))
+        print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"

@@ -61,7 +61,7 @@ default_config = {
 
 def dependency_analysis(shape_sys, shapes):
     """perform dependency analysis, plot dependency graph"""
-    print("Dependency analysis...")
+    print("* Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
     node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges)
     if PLOT_DEPENDENCY_GRAPH:
@@ -170,8 +170,9 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
                 kwargs["analytic_solver_dict"] = analytic_solver_json
             tester = stiffness.StiffnessTester(sub_sys, shapes, **kwargs)
             solver_type = tester.check_stiffness()
-            solver_json["solver"] += "-" + solver_type
-            print(solver_type + " scheme")
+            if not solver_type is None:
+                solver_json["solver"] += "-" + solver_type
+                print(solver_type + " scheme")
 
         solvers_json.append(solver_json)
 
@@ -189,7 +190,6 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
                     #if shape.get_initial_value(sym.replace("__d", "'")) is None:
                     #    import pdb;pdb.set_trace()
                     solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace("__d", "'")))
-
 
 
     #
@@ -231,6 +231,10 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
         if "propagators" in solver_json.keys():
             for sym, expr in solver_json["propagators"].items():
                 solver_json["propagators"][sym] = str(expr)
+
+    print("In ode-toolbox: returning outdict = ")
+    import json
+    print(json.dumps(solvers_json, indent=4, sort_keys=True))
 
     return solvers_json, shape_sys, shapes
 

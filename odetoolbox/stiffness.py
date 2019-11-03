@@ -27,6 +27,7 @@ import random
 import numpy as np
 import numpy.random
 from .mixed_integrator import MixedIntegrator
+from .mixed_integrator import ParametersIncompleteException
 from .shapes import Shape
 from .spike_generator import SpikeGenerator
 
@@ -97,9 +98,12 @@ class StiffnessTester(object):
 
         It is important to note here, that this analysis depends significantly on the parameters that are assigned for an ODE system. If these are changed significantly in magnitude, the result of the analysis can also change significantly.
         """
-
-        step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
-        step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
+        try:
+            step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
+            step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
+        except ParametersIncompleteException:
+            print("Stiffness test not possible because numerical values were not specified for all parameters.")
+            return None
 
         #print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 

@@ -31,6 +31,7 @@ from .analytic_integrator import AnalyticIntegrator
 from .spike_generator import SpikeGenerator
 import sympy
 import sympy.utilities.autowrap
+from sympy.utilities.autowrap import CodeGenArgumentListError
 import time
 
 
@@ -49,6 +50,11 @@ except ImportError as ie:
     print("Warning: PyGSL is not available. The stiffness test will be skipped.")
     print("Warning: " + str(ie), end="\n\n\n")
     raise
+
+
+class ParametersIncompleteException(Exception):
+    def __init__(self, message):
+        self.message = message
 
 
 class MixedIntegrator(object):
@@ -88,11 +94,13 @@ class MixedIntegrator(object):
             self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
         self.all_variable_symbols = [ sympy.Symbol(str(sym).replace("'", "__d")) for sym in self.all_variable_symbols ]
 
-        #import pdb;pdb.set_trace()
         #if not self.analytic_solver_dict is None:
         #    self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
         for sym, expr in self._update_expr.items():
-            self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
+            try:
+                self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
+            except CodeGenArgumentListError:
+                raise ParametersIncompleteException("Integration not possible because numerical values were not specified for all parameters.")
         self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=np.object)
         for i in range(self.symbolic_jacobian_.shape[0]):
             for j in range(self.symbolic_jacobian_.shape[1]):

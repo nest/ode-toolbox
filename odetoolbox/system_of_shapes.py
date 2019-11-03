@@ -31,6 +31,7 @@ import numpy as np
 
 from .shapes import Shape
 
+
 def _is_zero(x):
     """In the ideal case, we would like to use sympy.simplify() to do simplification of an expression before comparing it to zero. However, for expressions of moderate size (e.g. a few dozen terms involving exp() functions), it becomes unbearably slow. We therefore use this internal function, so that the simplification function can be easily switched over.
     
@@ -87,15 +88,15 @@ class SystemOfShapes(object):
 
 
     def get_lin_cc_symbols(self, E):
-        """retrieve the variable symbols of those shapes than are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with "__d" suffixes up to the order of the shape."""
-        
+        """retrieve the variable symbols of those shapes that are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with "__d" suffixes up to the order of the shape."""
+
         #
         # initial pass: is a node linear and constant coefficient by itself?
         #
-        
+
         node_is_lin = {}
         for shape in self.shapes_:
-            if shape.is_lin_const_coeff(self.shapes_):
+            if shape.is_lin_const_coeff(self.shapes_) and shape.is_homogeneous(self.shapes_):
                 _node_is_lin = True
             else:
                 _node_is_lin = False
@@ -246,7 +247,11 @@ class SystemOfShapes(object):
         where :math:`x` and :math:`C` are column vectors of length :math:`N` and :math:`A` is an :math:`N \times N` matrix.
         """
 
-        N = np.sum([shape.order for shape in shapes]).__index__()
+        if len(shapes) == 0:
+            N = 0
+        else:
+            N = np.sum([shape.order for shape in shapes]).__index__()
+
         x = sympy.zeros(N, 1)
         A = sympy.zeros(N, N)
         C = sympy.zeros(N, 1)

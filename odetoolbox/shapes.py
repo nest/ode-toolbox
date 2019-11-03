@@ -164,6 +164,66 @@ class Shape(object):
             print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
 
 
+    def is_homogeneous(self, shapes=[]):
+        """
+        Returns False if and only if the shape has a nonzero right-hand side.
+        """
+        print("--> is " + str(self.symbol) + " homogeneous? defining expr = " + str(self.diff_rhs_derivatives))
+
+        if self.diff_rhs_derivatives.is_zero:
+            # trivial case: right-hand side is zero
+            return True
+
+        if not self in shapes:
+            shapes = shapes + [self]
+
+        all_symbols = []
+        for shape in shapes:
+            all_symbols.extend(shape.get_all_variable_symbols(differential_order_str="__d"))
+        print("    in syms: " + str(all_symbols))
+
+        all_symbols = list(set(all_symbols))	# filter for unique symbols
+
+        for term in sympy.Add.make_args(self.diff_rhs_derivatives):
+            print("\tTerm " + str(term))
+            term_is_const = True
+            for sym in all_symbols:
+                expr = sympy.diff(term, sym)
+                if not sympy.sympify(expr).is_zero:
+                    # this term is of the form "sym * expr", hence it cannot be a constant term
+                    print("\t   deriv = " + str(sympy.diff(term, sym)) + " --> term " +str(sympy.diff(term, sym)) + " is not const")
+                    term_is_const = False
+
+                    #break
+                else:
+                    print("\t   deriv = " + str(sympy.diff(term, sym)) + " --> term " +str(sympy.diff(term, sym)) + " is const")
+
+            if term_is_const:
+                print("\tTerm " +str(term) + " is const!!")
+                return False
+
+            """expr = sympy.diff(term, sym)
+            if not sympy.sympify(expr).is_zero:
+                # the variable symbol `sym` appears on right-hand side of this expression. Check to see if it appears as a linear term by checking whether taking its derivative again, with respect to any known variable, yields 0
+                for sym_ in all_symbols:
+                    if not sympy.sympify(sympy.diff(expr, sym_)).is_zero:
+                        print("    ---> False")
+                        return False
+
+        print("    ---> True")"""
+        return True
+
+
+
+
+
+
+
+
+        print(" --> shape " + str(self.symbol) + " is homogeneous? self.diff_rhs_derivatives = " + str(self.diff_rhs_derivatives) + " --> " + str(bool(self.diff_rhs_derivatives.is_zero)))
+        return bool(self.diff_rhs_derivatives.is_zero)
+
+
     def __str__(self):
         s = "Shape \"" + str(self.symbol) + "\" of order " + str(self.order)
         return s
