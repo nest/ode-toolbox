@@ -22,10 +22,11 @@
 from __future__ import print_function
 
 from inspect import getmembers
+import logging
 import math
-import random
 import numpy as np
 import numpy.random
+import random
 from .mixed_integrator import MixedIntegrator
 from .mixed_integrator import ParametersIncompleteException
 from .shapes import Shape
@@ -146,7 +147,7 @@ class StiffnessTester(object):
         h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(
          h_min_lower_bound=1E-12, raise_errors=raise_errors, debug=debug))
 
-        print("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
+        logging.info("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 
         return h_min, h_avg, runtime
 

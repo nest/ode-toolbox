@@ -49,7 +49,7 @@ class AnalyticIntegrator():
         self.enable_cache_update_ = True
         self.t = 0.
 
-        print("Initialised AnalyticIntegrator with spike times = " + str(spike_times))
+        logging.debug("Initialised AnalyticIntegrator with spike times = " + str(spike_times))
 
 
         #
@@ -98,7 +98,6 @@ class AnalyticIntegrator():
         #   perform substtitution in update expressions ahead of time to save time later
         #
 
-        print("subs_dict = " + str(self.subs_dict))
         for k, v in self.update_expressions.items():
             self.update_expressions[k] = self.update_expressions[k].subs(self.subs_dict).subs(self.subs_dict)
 
@@ -109,7 +108,6 @@ class AnalyticIntegrator():
 
         self.update_expressions_wrapped = {}
         for k, v in self.update_expressions.items():
-            print("Wrapping " + str(k) + " (expr = " + str(v) + ") with args " + str([sympy.Symbol("__h")] + self.all_variable_symbols))
             self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v, args=[sympy.Symbol("__h")] + self.all_variable_symbols, backend="cython")
 
 
@@ -157,8 +155,6 @@ class AnalyticIntegrator():
         idx = np.argsort(self.all_spike_times)
         self.all_spike_times = [ self.all_spike_times[i] for i in idx ]
         self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
-        print("Initialised AnalyticIntegrator with all_spike_times = " + str(self.all_spike_times))
-        print("Initialised AnalyticIntegrator with all_spike_times_sym = " + str(self.all_spike_times_sym))
 
 
     def get_all_variable_symbols(self):
@@ -176,7 +172,6 @@ class AnalyticIntegrator():
     def reset(self):
         self.t_curr = 0.
         self.state_at_t_curr = self.initial_values.copy()
-        print("**************** RESETTING (old t = " +str(self.t_curr) +") TO INITIAL_VALUES = " + str(self.initial_values))
 
 
     def get_variable_symbols(self):
@@ -204,7 +199,6 @@ class AnalyticIntegrator():
                 msg = "Could not convert initial value expression to float. The following symbol(s) may be undeclared: " + ", ".join([str(expr_) for expr_ in expr.evalf(subs=subs_dict).free_symbols])
                 raise Exception(msg)
         self.reset()
-        print("**************** SETTING INITIAL_VALUES = " + str(self.initial_values))
 
 
     def update_step(self, delta_t, initial_values, debug=True):
@@ -235,14 +229,9 @@ class AnalyticIntegrator():
 
     def get_value(self, t, debug=True):
 
-        print("Analytic integrator: state requested at t = " + str(t) + ", last cached state = " + str(self.t_curr))
-
         if (not self.enable_caching) \
          or t < self.t_curr:
-            #print("\treset state")
             self.reset()
-
-        print("\tCurrent state: t_curr = " + str(self.t_curr) + ", state = " + str(self.state_at_t_curr))
 
         t_curr = self.t_curr
         state_at_t_curr = self.state_at_t_curr
@@ -259,8 +248,6 @@ class AnalyticIntegrator():
             if spike_t > t:
                 break
 
-            print("\tpropagating till next spike time: " + str(spike_t))
-
 
             #
             #   apply propagator to update the state from `t_curr` to `spike_t`
@@ -275,15 +262,12 @@ class AnalyticIntegrator():
             #
 
             for spike_sym in spike_syms:
-                print("\t\tincrementing? " + str(spike_sym))
                 spike_sym = str(spike_sym)
                 if spike_sym.replace("'", "__d") in self.initial_values.keys():
                     state_at_t_curr[spike_sym.replace("'", "__d")] += self.shape_starting_values[spike_sym.replace("'", "__d")]
-                    print("\t\tincrementing " + str(spike_sym.replace("'", "__d")) + " by " + str(self.shape_starting_values[spike_sym.replace("'", "__d")]))
 
             t_curr = spike_t
 
-        #print("\tCurrent state: t_curr = " + str(self.t_curr) + ", state = " + str(self.state_at_t_curr))
 
         #
         #   update cache with the value at the last spike time (if we update with the value at the last requested time (`t`), we would accumulate roundoff errors)
@@ -297,7 +281,6 @@ class AnalyticIntegrator():
         #   apply propagator to update the state from `t_curr` to `t`
         #
 
-        print("\tpropagating till requested time: " + str(t))
         delta_t = t - t_curr
         if delta_t > 0:
             state_at_t_curr = self.update_step(delta_t, state_at_t_curr)

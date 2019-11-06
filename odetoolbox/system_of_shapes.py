@@ -55,7 +55,6 @@ class SystemOfShapes(object):
         A : sympy.Matrix
             Jacobian of the system (square matrix).
         """
-        print("Creating system of shapes with \n\tx = " + str(x) + "\n\tA = " + str(A) + "\n\tC = " + str(C))
         assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
         self.x_ = x
         self.A_ = A
@@ -120,7 +119,6 @@ class SystemOfShapes(object):
                 dependent_neighbours = [ n1 for (n1, n2) in E if n2 == n ]    # nodes that depend on n
                 for n_neigh in dependent_neighbours:
                     if node_is_lin[n_neigh]:
-                        #print("\t\tMarking dependent node " + str(n_neigh))
                         node_is_lin[n_neigh] = False
                         queue.append(n_neigh)
 
@@ -264,10 +262,8 @@ class SystemOfShapes(object):
 
         i = 0
         for shape in shapes:
-            print("* Shape: " + str(shape.symbol))
             highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
             shape_expr = shape.reconstitute_expr()
-            print("  expr =  " + str(shape_expr))
 
 
             #
@@ -284,7 +280,6 @@ class SystemOfShapes(object):
 
             for order in range(shape.order - 1):
                 _idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (order + 1))][0]
-                print("\t\tThe symbol " + str(sympy.Symbol(str(shape.symbol) + "__d" * (order))) + " is at position " + str(_idx) + " in vector " + str(x) + ", writing in row " + str(_idx))
                 A[i + (shape.order - order - 1), _idx] = 1.     # the highest derivative is at row `i`, the next highest is below, and so on, until you reach the variable symbol without any "__d" suffixes
 
             i += shape.order

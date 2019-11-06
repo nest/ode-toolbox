@@ -21,6 +21,7 @@
 
 from __future__ import print_function
 
+import logging
 import sympy
 from odetoolbox.sympy_printer import SympyPrinter
 
@@ -61,7 +62,7 @@ default_config = {
 
 def dependency_analysis(shape_sys, shapes):
     """perform dependency analysis, plot dependency graph"""
-    print("* Dependency analysis...")
+    logging.info("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
     node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges)
     if PLOT_DEPENDENCY_GRAPH:
@@ -77,7 +78,7 @@ def from_json_to_shapes(indict, default_config):
 
     shapes = []
 
-    print("Processing input shapes...")
+    logging.info("Processing input shapes...")
     input_time_symbol = default_config["input_time_symbol"]
     output_timestep_symbol = default_config["output_timestep_symbol"]
     if "options" in indict.keys():
@@ -94,7 +95,7 @@ def from_json_to_shapes(indict, default_config):
     for shape_json in indict["dynamics"]:
         shape = Shape.from_json(shape_json, time_symbol=input_time_symbol)
         all_variable_symbols.extend(shape.get_all_variable_symbols())
-    print("from first run: all_variable_symbols = " + str(all_variable_symbols))
+    logging.debug("from first run: all_variable_symbols = " + str(all_variable_symbols))
 
     # second run with the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
@@ -106,12 +107,12 @@ def from_json_to_shapes(indict, default_config):
 
 def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False):
 
-    print("In ode-toolbox: analysing indict = ")
+    logging.info("In ode-toolbox: analysing indict = ")
     import json
     print(json.dumps(indict, indent=4, sort_keys=True))
 
     if "dynamics" not in indict:
-        print("Warning: empty input (no dynamical equations found); returning empty output")
+        logging.info("Warning: empty input (no dynamical equations found); returning empty output")
         solvers_json = {}
         return solvers_json
 
@@ -132,7 +133,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
         analytic_syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
 
     if len(analytic_syms) > 0:
-        print("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
+        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
         analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
         analytic_solver_json["solver"] = "analytical"
@@ -145,7 +146,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
 
     if len(analytic_syms) < len(shape_sys.x_):
         numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
-        print("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
+        logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
         sub_sys = shape_sys.get_sub_system(numeric_syms)
         solver_json = sub_sys.generate_numeric_solver()
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
@@ -153,7 +154,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
             if not HAVE_STIFFNESS:
                 raise Exception("Stiffness test requested, but PyGSL not available")
 
-            print("Performing stiffness test...")
+            logging.info("Performing stiffness test...")
             kwargs = {}
             if "options" in indict.keys() and "random_seed" in indict["options"].keys():
                 random_seed = int(indict["options"]["random_seed"])
@@ -172,7 +173,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
             solver_type = tester.check_stiffness()
             if not solver_type is None:
                 solver_json["solver"] += "-" + solver_type
-                print(solver_type + " scheme")
+                logging.info(solver_type + " scheme")
 
         solvers_json.append(solver_json)
 
@@ -232,11 +233,12 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
             for sym, expr in solver_json["propagators"].items():
                 solver_json["propagators"][sym] = str(expr)
 
-    print("In ode-toolbox: returning outdict = ")
+    logging.info("In ode-toolbox: returning outdict = ")
     import json
     print(json.dumps(solvers_json, indent=4, sort_keys=True))
 
     return solvers_json, shape_sys, shapes
+
 
 def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False):
     """The main entry point of the analysis.
@@ -256,5 +258,6 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
 
     :return: The result of the analysis, again as a dictionary.
     """
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
     d, _, _ = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver)
     return d

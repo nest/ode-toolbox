@@ -23,6 +23,7 @@ from __future__ import print_function
 
 from inspect import getmembers
 import math
+import logging
 import random
 import numpy as np
 import numpy.random
@@ -40,6 +41,7 @@ try:
     mpl.use('Agg')
     import matplotlib.pyplot as plt
     INTEGRATOR_DEBUG_PLOT = True
+    INTEGRATOR_DEBUG_PLOT_DIR = "/tmp"
 except:
     INTEGRATOR_DEBUG_PLOT = False
 
@@ -200,7 +202,6 @@ class MixedIntegrator(object):
             t = 0.
             idx_next_spike = 0
             while t < self.sim_time:
-                print("In MixedIntegrator main loop: t = " + str(t))
                 if self.alias_spikes:
 
                     #
@@ -228,10 +229,7 @@ class MixedIntegrator(object):
 
                     idx_next_spike += 1        # "queue" the next upcoming spike for the next iteration of the while loop
 
-                print("\tt_target = " + str(t_target))
-
                 while t < t_target:
-                    print("\t  In MixedIntegrator inner loop: t = " + str(t))
                     t_target_requested = min(t + self.max_step_size, t_target)
                     h_requested = t_target_requested - t
                     try:
@@ -307,7 +305,6 @@ class MixedIntegrator(object):
                         syms_next_spike = self.all_spike_times_sym[idx_next_spike]
                         for sym in syms_next_spike:
                             if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
-                                print("spplying spike at " + str(t_next_spike))
                                 idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(sym))
                                 y[idx] += float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._locals))
                         idx_next_spike += 1
@@ -316,7 +313,6 @@ class MixedIntegrator(object):
                         else:
                             t_next_spike = np.inf
                 else:
-                    print("applying spike at " + str(t))
                     for sym in syms_next_spike:
                         if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
                             idx = [str(sym) for sym in list(self._system_of_shapes.x_)].index(str(sym))
@@ -334,9 +330,9 @@ class MixedIntegrator(object):
             y_log = np.array(y_log)
 
             if INTEGRATOR_DEBUG_PLOT:
-                self.integrator_debug_plot(t_log, h_log, y_log)
+                self.integrator_debug_plot(t_log, h_log, y_log, dir=INTEGRATOR_DEBUG_PLOT_DIR)
 
-        print("For integrator = " + str(self.numeric_integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
+        logging.info("For integrator = " + str(self.numeric_integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 
         sym_list = self._system_of_shapes.x_
 
@@ -346,7 +342,7 @@ class MixedIntegrator(object):
             return h_min, h_avg, runtime
 
 
-    def integrator_debug_plot(self, t_log, h_log, y_log):
+    def integrator_debug_plot(self, t_log, h_log, y_log, dir):
         if not self.analytic_integrator is None:
             analytic_syms = self.analytic_integrator.get_value(0.).keys()
             analytic_dim = len(analytic_syms)
@@ -390,8 +386,7 @@ class MixedIntegrator(object):
         ax[-1].set_xlabel("Time [s]")
         fig.suptitle(str(self.numeric_integrator))
         #plt.show()
-        fn = "/tmp/remotefs2/mixed_integrator_[run=" + str(hash(self)) + "]_[run=" + str(self.numeric_integrator) + "].png"
-        print("Saving to " + fn)
+        fn = os.path.join(dir, "mixed_integrator_[run=" + str(hash(self)) + "]_[run=" + str(self.numeric_integrator) + "].png")
         plt.savefig(fn, dpi=600)
         plt.close(fig)
 
@@ -408,7 +403,6 @@ class MixedIntegrator(object):
         to y. `dfdt` is not computed and set to zero matrix now.
 
         """
-        print("begin evaulating jacobian")
         dimension = len(y)
         dfdy = np.zeros((dimension, dimension), np.float)
         dfdt = np.zeros((dimension,))
@@ -427,7 +421,7 @@ class MixedIntegrator(object):
             for col in range(0, dimension):
                 dfdy[row, col] = self.symbolic_jacobian_wrapped[row, col](*y)
                 #dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))
-        print("end evaulating jacobian")
+
         return dfdy, dfdt
 
 
@@ -441,7 +435,6 @@ class MixedIntegrator(object):
         :return: Updated state vector
         """
 
-        print("\tin step(): t = " + str(t))
         self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
         #
@@ -449,9 +442,7 @@ class MixedIntegrator(object):
         #
 
         if not self.analytic_integrator is None:
-            print("\t\tbegin analytic get")
             self._locals.update(self.analytic_integrator.get_value(t))
-            print("\t\tend analytic get")
 
         # y holds the state of all the symbols in the numeric part of the system; add those for the analytic part
         y = [ self._locals[str(sym)] for sym in self.all_variable_symbols ]
@@ -466,6 +457,4 @@ class MixedIntegrator(object):
                 print("    ", k, "=", v)
             raise
 
-
-        print("\tend step()")
         return _ret

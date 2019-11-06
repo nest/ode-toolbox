@@ -20,6 +20,7 @@
 #
 
 import functools
+import logging
 import numpy as np
 import re
 import sympy
@@ -160,15 +161,14 @@ class Shape(object):
             self.upper_bound = sympy.simplify(self.upper_bound)
 
         #if debug:
-        if True:
-            print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
+            #print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
 
 
     def is_homogeneous(self, shapes=[]):
         """
         Returns False if and only if the shape has a nonzero right-hand side.
         """
-        print("--> is " + str(self.symbol) + " homogeneous? defining expr = " + str(self.diff_rhs_derivatives))
+        #print("--> is " + str(self.symbol) + " homogeneous? defining expr = " + str(self.diff_rhs_derivatives))
 
         if self.diff_rhs_derivatives.is_zero:
             # trivial case: right-hand side is zero
@@ -180,26 +180,26 @@ class Shape(object):
         all_symbols = []
         for shape in shapes:
             all_symbols.extend(shape.get_all_variable_symbols(differential_order_str="__d"))
-        print("    in syms: " + str(all_symbols))
+        #print("    in syms: " + str(all_symbols))
 
         all_symbols = list(set(all_symbols))	# filter for unique symbols
 
         for term in sympy.Add.make_args(self.diff_rhs_derivatives):
-            print("\tTerm " + str(term))
+            #print("\tTerm " + str(term))
             term_is_const = True
             for sym in all_symbols:
                 expr = sympy.diff(term, sym)
                 if not sympy.sympify(expr).is_zero:
                     # this term is of the form "sym * expr", hence it cannot be a constant term
-                    print("\t   deriv = " + str(sympy.diff(term, sym)) + " --> term " +str(sympy.diff(term, sym)) + " is not const")
+                    #print("\t   deriv = " + str(sympy.diff(term, sym)) + " --> term " +str(sympy.diff(term, sym)) + " is not const")
                     term_is_const = False
 
                     #break
-                else:
-                    print("\t   deriv = " + str(sympy.diff(term, sym)) + " --> term " +str(sympy.diff(term, sym)) + " is const")
+                #else:
+                    #print("\t   deriv = " + str(sympy.diff(term, sym)) + " --> term " +str(sympy.diff(term, sym)) + " is const")
 
             if term_is_const:
-                print("\tTerm " +str(term) + " is const!!")
+                #print("\tTerm " +str(term) + " is const!!")
                 return False
 
             """expr = sympy.diff(term, sym)
@@ -212,16 +212,6 @@ class Shape(object):
 
         print("    ---> True")"""
         return True
-
-
-
-
-
-
-
-
-        print(" --> shape " + str(self.symbol) + " is homogeneous? self.diff_rhs_derivatives = " + str(self.diff_rhs_derivatives) + " --> " + str(bool(self.diff_rhs_derivatives.is_zero)))
-        return bool(self.diff_rhs_derivatives.is_zero)
 
 
     def __str__(self):
@@ -262,14 +252,14 @@ class Shape(object):
         lin_const_coeff : bool
             True if and only if the shape is linear and constant coefficient in all known variable symbols in `shapes`
         """
-        print("--> is " + str(self.symbol) + " lin cc?")
+        #print("--> is " + str(self.symbol) + " lin cc?")
         if not self in shapes:
             shapes = shapes + [self]
 
         all_symbols = []
         for shape in shapes:
             all_symbols.extend(shape.get_all_variable_symbols(differential_order_str="__d"))
-        print("    in syms: " + str(all_symbols))
+        #print("    in syms: " + str(all_symbols))
 
         all_symbols = list(set(all_symbols))	# filter for unique symbols
         for sym in all_symbols:
@@ -277,7 +267,7 @@ class Shape(object):
                 expr = sympy.diff(df, sym)
                 if not sympy.sympify(expr).is_zero:
                     # the expression "sym * self.symbol" appears on right-hand side of this shape's definition
-                    print("    ---> False")
+                    #print("    ---> False")
                     return False
 
             expr = sympy.diff(self.diff_rhs_derivatives, sym)
@@ -285,10 +275,10 @@ class Shape(object):
                 # the variable symbol `sym` appears on right-hand side of this expression. Check to see if it appears as a linear term by checking whether taking its derivative again, with respect to any known variable, yields 0
                 for sym_ in all_symbols:
                     if not sympy.sympify(sympy.diff(expr, sym_)).is_zero:
-                        print("    ---> False")
+                        #print("    ---> False")
                         return False
 
-        print("    ---> True")
+        #print("    ---> True")
         return True
 
 
@@ -389,20 +379,20 @@ class Shape(object):
 
         lin_factors = []
 
-        print("* Splitting expr = " + str(expr))
+        ##print("* Splitting expr = " + str(expr))
         expr = expr.expand()
-        print("                 = " + str(expr))
-        print("  with known symbols = " + str(x))
+        #print("                 = " + str(expr))
+        #print("  with known symbols = " + str(x))
         for j, sym in enumerate(x):
             # check if there is a linear part in `sym`
-            print("\t* Symbol " + str(sym))
+            #print("\t* Symbol " + str(sym))
             if expr.is_Add:
                 terms = expr.args
             else:
                 terms = [expr]
             # a term is linear in `sym` if `term/sym` contains only free symbols that are not in all_known_symbols, i.e. if the sets are disjoint
             linear_terms = [term for term in terms if (term / sym).free_symbols.isdisjoint(x)]
-            print("\t  linear_terms = " + str(linear_terms))
+            #print("\t  linear_terms = " + str(linear_terms))
             #all_linear_terms.append(linear_term)
             if linear_terms:
                 linear_factors = [term / sym for term in linear_terms]
@@ -413,17 +403,17 @@ class Shape(object):
                 linear_factor = sympy.Float(0)
                 linear_term = sympy.Float(0)
 
-            print("\t  linear_term = " + str(linear_term))
+            #print("\t  linear_term = " + str(linear_term))
             lin_factors.append(linear_factor)
-            print("\t   Old expr = " + str(expr))
+            #print("\t   Old expr = " + str(expr))
             expr = expr - linear_term
-            print("\t   New expr = " + str(expr))
+            #print("\t   New expr = " + str(expr))
 
         lin_factors = np.array(lin_factors)
         nonlin_term = expr
         assert len(lin_factors) == len(x)
-        print("\t--> lin_factors = " + str(lin_factors))
-        print("\t--> nonlin_term = " + str(nonlin_term))
+        #print("\t--> lin_factors = " + str(lin_factors))
+        #print("\t--> nonlin_term = " + str(nonlin_term))
 
         return lin_factors, nonlin_term
 
@@ -507,13 +497,7 @@ class Shape(object):
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, time_symbol)]
 
-        #
-        #   we first check if the shape satisfies satisfies a linear homogeneous ODE of order 1.
-        #
-
-        order = 1
-        if debug:
-            print("\nProcessing shape " + str(symbol) + ", defining expression = " + str(definition))
+        logging.info("\nProcessing shape " + str(symbol) + " with defining expression = " + str(definition))
 
 
         #
@@ -526,8 +510,7 @@ class Shape(object):
                 t_val = t_
                 break
 
-        if debug > 1:
-            print("Found t: " + str(t_val))
+        logging.debug("Found t: " + str(t_val))
 
         if t_val is None:
 
@@ -543,8 +526,9 @@ class Shape(object):
         #   first handle the case for an ODE of order 1, i.e. of the form I' = a0 * I
         #
 
-        if debug > 1:
-            print("\tFinding ode for order 1...")
+        order = 1
+
+        logging.debug("\tFinding ode for order 1...")
 
         derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(time_symbol, t_val)]
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
@@ -558,8 +542,7 @@ class Shape(object):
             # Set the potential order for the iteration
             order += 1
 
-            if debug > 1:
-                print("\tFinding ode for order " + str(order) + "...")
+            logging.debug("\tFinding ode for order " + str(order) + "...")
 
             # Add the next higher derivative to the list
             derivatives.append(sympy.diff(derivatives[-1], time_symbol))
@@ -577,8 +560,6 @@ class Shape(object):
             # is not invertible. This is unlikely but we check for
             # invertibility of `X` for varying sets of natural
             # numbers.
-            if debug > 1:
-                print("\tFinding invertibility...")
             invertible = False
             for t_ in range(1, max_t):
                 for i in range(order):
@@ -603,10 +584,7 @@ class Shape(object):
             #   calculate `derivative_factors`
             #
 
-            if debug > 1:
-                print("\tinv()...")
             derivative_factors = sympy.simplify(X.inv() * Y)
-            #derivative_factors = X.inv() * Y
 
 
             #
@@ -614,21 +592,18 @@ class Shape(object):
             #
 
             diff_rhs_lhs = 0
-            if debug > 1:
-                print("\tchecking whether shape definition is satisfied...")
+            logging.debug("\tchecking whether shape definition is satisfied...")
             for k in range(order):
                 diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
             diff_rhs_lhs += derivatives[order]
 
-            if debug > 1:
-                print("\tsimplify...")
+            # N.B. do not try to simplify huge formulas (1000 as conservative cutoff)
             if len(str(diff_rhs_lhs)) < 1000 and sympy.simplify(diff_rhs_lhs).is_zero:
                 found_ode = True
                 break
 
         if not found_ode:
-            msg = "Shape does not satisfy any ODE of order <= " + str(max_order)
-            raise Exception(msg)
+            raise Exception("Shape does not satisfy any ODE of order <= " + str(max_order))
 
         derivative_factors = [sympy.simplify(df) for df in derivative_factors]
 
