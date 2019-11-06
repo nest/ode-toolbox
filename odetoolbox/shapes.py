@@ -54,6 +54,9 @@ class Shape(object):
 
     """
 
+    EXPRESSION_SIMPLIFICATION_THRESHOLD = 1000
+    
+    
     # a minimal subset of sympy classes and functions to avoid "from sympy import *"
     _sympy_globals = {"Symbol" : sympy.Symbol,
                      "Integer" : sympy.Integer,
@@ -150,7 +153,11 @@ class Shape(object):
             else:
                 self.state_variables.insert(0, symbol)
 
-        self.diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
+        if len(str(diff_rhs_derivatives)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+            logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds sympy simplification threshold")
+            self.diff_rhs_derivatives = diff_rhs_derivatives
+        else:
+            self.diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
 
         self.lower_bound = lower_bound
         if not self.lower_bound is None:
@@ -597,8 +604,7 @@ class Shape(object):
                 diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
             diff_rhs_lhs += derivatives[order]
 
-            # N.B. do not try to simplify huge formulas (1000 as conservative cutoff)
-            if len(str(diff_rhs_lhs)) < 1000 and sympy.simplify(diff_rhs_lhs).is_zero:
+            if len(str(diff_rhs_lhs)) < Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD and sympy.simplify(diff_rhs_lhs).is_zero:
                 found_ode = True
                 break
 

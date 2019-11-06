@@ -19,15 +19,15 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
 import functools
+import json
+import logging
+import numpy as np
+import sympy
+import sympy.matrices
 from sympy import diff, exp, Matrix, simplify, sqrt, Symbol, sympify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.matrices import zeros
-import sympy
-import sympy.matrices
-import numpy
-import numpy as np
 
 from .shapes import Shape
 
@@ -55,6 +55,7 @@ class SystemOfShapes(object):
         A : sympy.Matrix
             Jacobian of the system (square matrix).
         """
+        logging.info("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", C = " + str(C))
         assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
         self.x_ = x
         self.A_ = A
@@ -152,7 +153,10 @@ class SystemOfShapes(object):
         C_old = self.C_.copy()
         for _idx in idx:
             C_old[_idx] += self.A_[_idx, idx_compl].dot(self.x_[idx_compl, :])
-            C_old[_idx] = sympy.simplify(C_old[_idx])
+            if len(str(C_old[_idx])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+                logging.warning("Skipping simplification of an expression that exceeds sympy simplification threshold")
+            else:
+                C_old[_idx] = sympy.simplify(C_old[_idx])
         
         C_sub = C_old[idx, :]
         
@@ -222,13 +226,20 @@ class SystemOfShapes(object):
 
 
     def reconstitute_expr(self):
+        """Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + C)"""
         update_expr = {}
+
         for row, x in enumerate(self.x_):
             update_expr_terms = []
             for col, y in enumerate(self.x_):
                 update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.C_[row]) + ")"
-            update_expr[str(x)] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals))
+            update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
+            if len(str(update_expr[str(x)])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+                logging.warning("Shape \"" + str(x) + "\" initialised with an expression that exceeds sympy simplification threshold")
+            else:
+                update_expr[str(x)] = sympy.simplify(update_expr[str(x)])
+
         return update_expr
 
 
