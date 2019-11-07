@@ -28,11 +28,13 @@ install:
     pip install pygsl ;
     fi
   - pip install -r requirements.txt
+  - pip install codecov pytest-cov
 
 script:
   - python setup.py install
-  - python setup.py test
+  #- coverage run -m pytest -s --pdb tests
+  - python -m pytest -s --pdb --cov=./ tests
 
 after_success:
-  - pip install codecov
+  - codecov report -m
   - codecov
