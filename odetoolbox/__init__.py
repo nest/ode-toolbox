@@ -27,6 +27,14 @@ from odetoolbox.sympy_printer import SympyPrinter
 
 sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
 
+try:
+    import pygsl.odeiv as odeiv
+    PYGSL_AVAILABLE = True
+except ImportError as ie:
+    print("Warning: PyGSL is not available. The stiffness test will be skipped.")
+    print("Warning: " + str(ie), end="\n\n\n")
+    PYGSL_AVAILABLE = False
+
 from .system_of_shapes import SystemOfShapes
 #from odetoolbox.analytic import compute_analytical_solution
 #from odetoolbox.numeric import compute_numeric_solution
@@ -258,6 +266,9 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
 
     :return: The result of the analysis, again as a dictionary.
     """
+    if enable_stiffness_check:
+        assert PYGSL_AVAILABLE
+
     logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
     d, _, _ = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver)
     return d

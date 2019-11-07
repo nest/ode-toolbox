@@ -752,6 +752,7 @@ class Shape(object):
         print(str(definition))"""
 
         derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, all_variable_symbols)
+        print(all_variable_symbols)
         local_symbols_idx = [ all_variable_symbols.index(sym) for sym in derivative_symbols ]
         local_derivative_factors = [ derivative_factors[i] for i in range(len(all_variable_symbols)) if i in local_symbols_idx ]
         nonlocal_derivative_terms = [ derivative_factors[i] * all_variable_symbols[i] for i in range(len(all_variable_symbols)) if i not in local_symbols_idx ]

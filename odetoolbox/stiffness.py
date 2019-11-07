@@ -49,10 +49,11 @@ import time
 
 try:
     import pygsl.odeiv as odeiv
+    PYGSL_AVAILABLE = True
 except ImportError as ie:
     print("Warning: PyGSL is not available. The stiffness test will be skipped.")
     print("Warning: " + str(ie), end="\n\n\n")
-    raise
+    PYGSL_AVAILABLE = False
 
 
 class StiffnessTester(object):
@@ -99,6 +100,8 @@ class StiffnessTester(object):
 
         It is important to note here, that this analysis depends significantly on the parameters that are assigned for an ODE system. If these are changed significantly in magnitude, the result of the analysis can also change significantly.
         """
+        assert PYGSL_AVAILABLE
+        
         try:
             step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
             step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
@@ -122,6 +125,7 @@ class StiffnessTester(object):
         :param y: The 'state variables' in f(y)=y'
         :return: Average and minimal step size.
         """
+        assert PYGSL_AVAILABLE
 
         np.random.seed(self.random_seed)
 

@@ -33,13 +33,7 @@ try:
 except:
     INTEGRATION_TEST_DEBUG_PLOTS = False
 
-try:
-    import pygsl
-    HAVE_STIFFNESS = True
-except ImportError:
-    HAVE_STIFFNESS = False
 
-#from .context import odetoolbox
 import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
 
@@ -51,12 +45,6 @@ import scipy.special
 import scipy.linalg
 from scipy.integrate import solve_ivp
 from odetoolbox.spike_generator import SpikeGenerator
-
-try:
-    import pygsl.odeiv as odeiv
-except ImportError as ie:
-    print("Warning: PyGSL is not available. The integration test will be skipped.")
-    print("Warning: " + str(ie))
 
 
 def open_json(fname):
@@ -114,7 +102,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
         #
 
         indict = open_json("test_analytic_integrator.json")
-        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=HAVE_STIFFNESS)
+        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=False)
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1

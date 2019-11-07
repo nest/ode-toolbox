@@ -19,6 +19,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import sympy
 import sympy.matrices
 import numpy as np

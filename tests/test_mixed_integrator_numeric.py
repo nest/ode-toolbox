@@ -51,9 +51,9 @@ from scipy.integrate import solve_ivp
 
 try:
     import pygsl.odeiv as odeiv
-    GSL_AVAILABLE = True
+    PYGSL_AVAILABLE = True
 except ImportError as ie:
-    GSL_AVAILABLE = False
+    PYGSL_AVAILABLE = False
 
 
 def open_json(fname):
@@ -69,7 +69,7 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
     Simulate a conductance-based integrate-and-fire neuron which is receiving spikes. Check for a match of the final system state with a numerical reference value that was validated by hand.
     '''
 
-    @pytest.mark.skipif(not GSL_AVAILABLE, reason="Need GSL integrator to perform test")
+    @pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Need GSL integrator to perform test")
     def test_mixed_integrator_numeric(self):
         debug = True
 

@@ -48,10 +48,11 @@ except:
 
 try:
     import pygsl.odeiv as odeiv
+    PYGSL_AVAILABLE = True
 except ImportError as ie:
     print("Warning: PyGSL is not available. The stiffness test will be skipped.")
     print("Warning: " + str(ie), end="\n\n\n")
-    raise
+    PYGSL_AVAILABLE = False
 
 
 class ParametersIncompleteException(Exception):
@@ -66,6 +67,8 @@ class MixedIntegrator(object):
         """
         :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
         """
+        assert PYGSL_AVAILABLE
+
         self.numeric_integrator = numeric_integrator
         self.alias_spikes = alias_spikes
         self.max_step_size = max_step_size
