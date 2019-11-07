@@ -51,11 +51,11 @@ except:
 
 try:
     import pygsl.odeiv as odeiv
-    HAVE_STIFFNESS = True
+    PYGSL_AVAILABLE = True
 except ImportError:
-    HAVE_STIFFNESS = False
+    PYGSL_AVAILABLE = False
 
-if HAVE_STIFFNESS:
+if PYGSL_AVAILABLE:
     from .stiffness import StiffnessTester
 
 class MalformedInput(Exception): pass
@@ -159,7 +159,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
         solver_json = sub_sys.generate_numeric_solver()
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
         if enable_stiffness_check:
-            if not HAVE_STIFFNESS:
+            if not PYGSL_AVAILABLE:
                 raise Exception("Stiffness test requested, but PyGSL not available")
 
             logging.info("Performing stiffness test...")
@@ -266,9 +266,6 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
 
     :return: The result of the analysis, again as a dictionary.
     """
-    if enable_stiffness_check:
-        assert PYGSL_AVAILABLE
-
     logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
     d, _, _ = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver)
     return d

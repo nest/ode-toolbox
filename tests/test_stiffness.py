@@ -26,9 +26,9 @@ import odetoolbox
 
 try:
     import pygsl
-    HAVE_STIFFNESS = True
+    PYGSL_AVAILABLE = True
 except ImportError:
-    HAVE_STIFFNESS = False
+    PYGSL_AVAILABLE = False
 
 
 def open_json(filename):
@@ -38,7 +38,7 @@ def open_json(filename):
     return indict
 
 
-@unittest.skipIf(not HAVE_STIFFNESS,
+@unittest.skipIf(not PYGSL_AVAILABLE,
                  "Stiffness tests not supported on this system")
 class TestStiffnessChecker(unittest.TestCase):
 
@@ -46,12 +46,12 @@ class TestStiffnessChecker(unittest.TestCase):
         indict = open_json("stiff_system.json")
 
         indict["parameters"]["a"] = "-100"
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=HAVE_STIFFNESS)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=PYGSL_AVAILABLE)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("implicit")
 
         indict["parameters"]["a"] = "-1"
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=HAVE_STIFFNESS)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=PYGSL_AVAILABLE)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("explicit")
 
@@ -60,12 +60,12 @@ class TestStiffnessChecker(unittest.TestCase):
         indict = open_json("morris_lecar.json")
 
         indict["options"]["integration_accuracy"] = 1E-9
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=HAVE_STIFFNESS)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=PYGSL_AVAILABLE)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("implicit")
 
         indict["options"]["integration_accuracy"] = 1E-3
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=HAVE_STIFFNESS)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=PYGSL_AVAILABLE)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("explicit")
 
