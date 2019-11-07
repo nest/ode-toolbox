@@ -22,18 +22,20 @@
 from __future__ import print_function
 
 from inspect import getmembers
-import math
 import logging
-import random
+import math
 import numpy as np
 import numpy.random
-from .shapes import Shape
-from .analytic_integrator import AnalyticIntegrator
-from .spike_generator import SpikeGenerator
+import os
+import random
 import sympy
 import sympy.utilities.autowrap
 from sympy.utilities.autowrap import CodeGenArgumentListError
 import time
+
+from .shapes import Shape
+from .analytic_integrator import AnalyticIntegrator
+from .spike_generator import SpikeGenerator
 
 
 try:

@@ -1,8 +1,8 @@
-# NEST ode-toolbox
+# ode-toolbox
 
 [![Build status](https://travis-ci.org/nest/ode-toolbox.svg?branch=master)](https://travis-ci.org/nest/ode-toolbox) [![Testing coverage](https://codecov.io/gh/nest/ode-toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/nest/ode-toolbox)
 
-Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends a solver on the basis of a set of user-configurable heuristics. If some or all of the dynamical equations are found to be analytically tractable, ode-toolbox generates corresponding propagator matrices, that allow a solution to be calculated at machine precision.
+Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends a solver on the basis of a set of user-configurable heuristics. If some or all of the dynamical equations are found to be analytically solvable, ode-toolbox generates corresponding propagator matrices, that allow a solution to be calculated at machine precision.
 
 ode-toolbox is written in Python and leverages SymPy for the symbolic manipulation of equations. It was initially developed in the context of the [NESTML](https://github.com/nest/nestml) project, in which the main focus was on the class of spiking neurons presently available in the [NEST](https://github.com/nest/nest-simulator) simulator. It can, however, be used standalone and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
 
@@ -52,6 +52,10 @@ The `ode-toolbox` can be used in two ways:
 ```
 ode_analyzer.py <json_file>
 ```
+
+## Analytic solution
+
+Example propagators for an alpha shape
 
 
 ## Solver selection criteria
@@ -175,5 +179,33 @@ TODO
 
 The analysis output is returned in the form of a Python dictionary, or an equivalent JSON file.
 
-TODO
+During analysis, ode-toolbox rewrites the differential notation from single quotation marks into characters that are typically compatible with variable names; by default every quotation mark is rewritten into the string "__d".
+
+TODO: JSON format overview
+ode-toolbox will return a list of solvers. Each solver has the following keys:
+- `state_variables`: an unordered list containing all variable symbols.
+- `initial_values`: a dictionary that maps each variable symbol (in string form) to a sympy expression. For example "g" : "e / tau".
+- `parameters`: only present when parameters were supplied in the input. The input parameters are copied into the output for convenience.
+- `solver`: a string containing the solver recommendation. Either "analytical" or "numeric".
+
+
+Analytic solvers have the following extra entries:
+
+- `update_expressions` : a dictionary that maps each variable symbol (in string form) to a sympy propagator expression. The interpretation of an entry "g" : "g * __P__g__g + h * __P__g__h" is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:`t` to the next step :math:`t + \Delta t`, we assign the new value "g * __P__g__g + h * __P__g__h" to the variable `g`. Note that the expression is always evaluated at the old time :math:`t`; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
+
+- `propagators` : a dictionary that maps each propagator matrix entry to its defining expression; for example "__P__g__h" : "__h*exp(-__h/tau)"
+
+
+Numeric solvers have the following extra entries:
+- `update_expressions`: a dictionary that maps each variable symbol (in string form) to a sympy expression that is its Jacobian, that is, for a symbol :math:`x`, the expression is equal to :math:`\frac{\delta x}{\delta t}`.
+
+
+## Internal representation
+
+For users who want to modify/extend ode-toolbox: internal representation x' = Ax + C
+
+
+## Working with large expressions
+
+Performance issues with sympy; Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD
 
