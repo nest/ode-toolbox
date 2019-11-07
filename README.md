@@ -101,11 +101,9 @@ Expressions can refer to variables defined in other expressions. For example, a 
 [
     {
         "expression": "g' = h",
-        "initial_value": "0"
     },
     {
         "expression": "h' = -g / tau**2 - 2 * h / tau",
-        "initial_value": "e / tau"
     }
 ]
 ```
@@ -184,16 +182,16 @@ During analysis, ode-toolbox rewrites the differential notation from single quot
 TODO: JSON format overview
 ode-toolbox will return a list of solvers. Each solver has the following keys:
 - `state_variables`: an unordered list containing all variable symbols.
-- `initial_values`: a dictionary that maps each variable symbol (in string form) to a sympy expression. For example "g" : "e / tau".
+- `initial_values`: a dictionary that maps each variable symbol (in string form) to a sympy expression. For example `"g" : "e / tau"`.
 - `parameters`: only present when parameters were supplied in the input. The input parameters are copied into the output for convenience.
 - `solver`: a string containing the solver recommendation. Either "analytical" or "numeric".
 
 
 Analytic solvers have the following extra entries:
 
-- `update_expressions` : a dictionary that maps each variable symbol (in string form) to a sympy propagator expression. The interpretation of an entry "g" : "g * __P__g__g + h * __P__g__h" is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:`t` to the next step :math:`t + \Delta t`, we assign the new value "g * __P__g__g + h * __P__g__h" to the variable `g`. Note that the expression is always evaluated at the old time :math:`t`; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
+- `update_expressions` : a dictionary that maps each variable symbol (in string form) to a sympy propagator expression. The interpretation of an entry `"g" : "g * __P__g__g + h * __P__g__h"` is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:`t` to the next step :math:`t + \Delta t`, we assign the new value `"g * __P__g__g + h * __P__g__h"` to the variable `g`. Note that the expression is always evaluated at the old time :math:`t`; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
 
-- `propagators` : a dictionary that maps each propagator matrix entry to its defining expression; for example "__P__g__h" : "__h*exp(-__h/tau)"
+- `propagators` : a dictionary that maps each propagator matrix entry to its defining expression; for example `"__P__g__h" : "__h*exp(-__h/tau)"`
 
 
 Numeric solvers have the following extra entries:
