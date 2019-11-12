@@ -65,7 +65,7 @@ class ParametersIncompleteException(Exception):
 class MixedIntegrator(object):
     '''Mixed numeric+analytic integrator. Supply with a result from odetoolbox analysis; returns numeric approximation of the solution.'''
 
-    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, spike_times=[], random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=1., alias_spikes=False):
+    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=1., alias_spikes=False):
         """
         :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
         """
@@ -80,11 +80,17 @@ class MixedIntegrator(object):
         self._system_of_shapes = system_of_shapes
         self.symbolic_jacobian_ = self._system_of_shapes.get_jacobian_matrix()
         self._shapes = shapes
-        self._parameters = parameters
+        if parameters is None:
+            self._parameters = {}
+        else:
+            self._parameters = parameters
         self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() if not isinstance(v, tuple(sympy.core.all_classes)) else v for k, v in self._parameters.items() }
         self._locals = self._parameters.copy()
         self.random_seed = random_seed
-        self.spike_times = spike_times.copy()
+        if spike_times is None:
+            self.spike_times = []
+        else:
+            self.spike_times = spike_times.copy()
 
         self.analytic_solver_dict = analytic_solver_dict
         if not self.analytic_solver_dict is None:
@@ -138,7 +144,7 @@ class MixedIntegrator(object):
         self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
 
 
-    def integrate_ode(self, initial_values={}, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
+    def integrate_ode(self, initial_values=None, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
         """
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
 
@@ -146,6 +152,9 @@ class MixedIntegrator(object):
         :param y: The 'state variables' in f(y)=y'
         :return: Average and minimal step size.
         """
+
+        if initial_values is None:
+            initial_values = {}
 
         assert all([type(k) == sympy.Symbol for k in initial_values.keys()]), 'Initial value dictionary keys should be of type sympy.Symbol'
 

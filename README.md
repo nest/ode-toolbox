@@ -57,6 +57,8 @@ ode_analyzer.py <json_file>
 
 Example propagators for an alpha shape
 
+homogeneous ODEs only
+
 
 ## Solver selection criteria
 
@@ -117,7 +119,7 @@ As many initial values have to be specified as the differential order requires, 
 "dynamics":
 [
     {
-        "expression": "g = (e / tau) * t * exp(-t / tau)"
+        "expression": "g'' = -1 / tau**2 * g - 2/tau * g'"
         "initial_values":
         {
             "g" : "0",

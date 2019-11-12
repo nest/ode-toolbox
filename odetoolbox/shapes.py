@@ -30,7 +30,7 @@ def is_sympy_type(var):
     return isinstance(var, tuple(sympy.core.all_classes))
 
 
-class Shape(object):
+class Shape():
     """Canonical representation of a shape function.
 
     Description
@@ -171,7 +171,7 @@ class Shape(object):
             #print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
 
 
-    def is_homogeneous(self, shapes=[]):
+    def is_homogeneous(self, shapes=None):
         """
         Returns False if and only if the shape has a nonzero right-hand side.
         """
@@ -181,15 +181,7 @@ class Shape(object):
             # trivial case: right-hand side is zero
             return True
 
-        if not self in shapes:
-            shapes = shapes + [self]
-
-        all_symbols = []
-        for shape in shapes:
-            all_symbols.extend(shape.get_all_variable_symbols(differential_order_str="__d"))
-        #print("    in syms: " + str(all_symbols))
-
-        all_symbols = list(set(all_symbols))	# filter for unique symbols
+        all_symbols = self.get_all_variable_symbols(shapes, differential_order_str="__d")
 
         for term in sympy.Add.make_args(self.diff_rhs_derivatives):
             #print("\tTerm " + str(term))
@@ -239,20 +231,34 @@ class Shape(object):
         return self.initial_values[sym]
 
 
-    def get_all_variable_symbols(self, differential_order_str="'"):
-        """Get all variable symbols for this shape
+    def get_all_variable_symbols(self, shapes=None, differential_order_str="'"):
+        """Get all variable symbols for this shape and all other shapes in `shapes`.
 
         Return
         ------
         all_symbols : list of sympy.Symbol
         """
         all_symbols = []
-        for order in range(self.order):
-            all_symbols.append(sympy.Symbol(str(self.symbol) + differential_order_str * order))
+        all_shapes = []
+
+        if not shapes is None:
+            all_shapes = shapes
+
+        if not self in all_shapes:
+            all_shapes += [self]
+
+        for shape in shapes:
+            for order in range(shape.order):
+                all_symbols.append(sympy.Symbol(str(shape.symbol) + differential_order_str * order))
+
+        all_symbols = list(set(all_symbols))	# filter for unique symbols
+
         return all_symbols
 
 
-    def is_lin_const_coeff(self, shapes=[]):
+
+
+    def is_lin_const_coeff(self, shapes=None):
         """
         Returns
         -------
@@ -260,15 +266,9 @@ class Shape(object):
             True if and only if the shape is linear and constant coefficient in all known variable symbols in `shapes`
         """
         #print("--> is " + str(self.symbol) + " lin cc?")
-        if not self in shapes:
-            shapes = shapes + [self]
 
-        all_symbols = []
-        for shape in shapes:
-            all_symbols.extend(shape.get_all_variable_symbols(differential_order_str="__d"))
-        #print("    in syms: " + str(all_symbols))
+        all_symbols = self.get_all_variable_symbols(shapes, differential_order_str="__d")
 
-        all_symbols = list(set(all_symbols))	# filter for unique symbols
         for sym in all_symbols:
             for df in self.derivative_factors:
                 expr = sympy.diff(df, sym)
@@ -290,7 +290,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_json(cls, indict, all_variable_symbols=[], time_symbol=sympy.Symbol("t"), _debug=False):
+    def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), _debug=False):
         """Create a shape object from a JSON input dictionary
         """
 
@@ -445,7 +445,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=[], time_symbol=sympy.Symbol("t"), debug=False):
+    def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), debug=False):
         debug=99
         """Create a Shape object given a function of time.
 
@@ -491,6 +491,9 @@ class Shape(object):
         --------
         >>> Shape("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         """
+
+        if all_variable_symbols is None:
+            all_variable_symbols = []
 
         all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
 
@@ -624,7 +627,7 @@ class Shape(object):
 
 
     @classmethod
-    def from_ode(cls, symbol, definition, initial_values, all_variable_symbols=[], lower_bound=None, upper_bound=None, debug=False, **kwargs):
+    def from_ode(cls, symbol, definition, initial_values, all_variable_symbols=None, lower_bound=None, upper_bound=None, debug=False, **kwargs):
         """Create a Shape object given an ODE and initial values.
 
         Note that shapes are only aware of their own state variables: if an equation for x depends on another state variable of another shape y, then y will appear in the nonlinear part of x.
@@ -638,6 +641,8 @@ class Shape(object):
             The definition of the ODE
         initial_values : dict
             A dictionary mapping initial values to expressions.
+        all_variable_symbols : None or list of string
+            ...
 
 
         Examples
@@ -649,6 +654,9 @@ class Shape(object):
 
         assert type(symbol) is str
         assert type(initial_values) is dict
+
+        if all_variable_symbols is None:
+            all_variable_symbols = []
 
         all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
 
@@ -759,9 +767,7 @@ class Shape(object):
         if nonlocal_derivative_terms:
             diff_rhs_derivatives = diff_rhs_derivatives + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 
-
         #derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, derivative_symbols)
-   #     import pdb;pdb.set_trace()
+        import pdb;pdb.set_trace()
 
         return cls(symbol, order, initial_values, local_derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
-

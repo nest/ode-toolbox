@@ -21,11 +21,18 @@
 
 from __future__ import print_function
 
+import json
 import logging
-import sympy
-from odetoolbox.sympy_printer import SympyPrinter
 
+import sympy
 sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
+
+from .sympy_printer import SympyPrinter
+from .system_of_shapes import SystemOfShapes
+#from odetoolbox.analytic import compute_analytical_solution
+#from odetoolbox.numeric import compute_numeric_solution
+from .shapes import Shape
+
 
 try:
     import pygsl.odeiv as odeiv
@@ -35,38 +42,25 @@ except ImportError as ie:
     print("Warning: " + str(ie), end="\n\n\n")
     PYGSL_AVAILABLE = False
 
-from .system_of_shapes import SystemOfShapes
-#from odetoolbox.analytic import compute_analytical_solution
-#from odetoolbox.numeric import compute_numeric_solution
-from odetoolbox.shapes import Shape
-
-from .shapes import Shape
+if PYGSL_AVAILABLE:
+    from .stiffness import StiffnessTester
 
 try:
     import graphviz
     PLOT_DEPENDENCY_GRAPH = True
-    from .dependency_graph_plotter import DependencyGraphPlotter
 except:
     PLOT_DEPENDENCY_GRAPH = False
 
-try:
-    import pygsl.odeiv as odeiv
-    PYGSL_AVAILABLE = True
-except ImportError:
-    PYGSL_AVAILABLE = False
-
-if PYGSL_AVAILABLE:
-    from .stiffness import StiffnessTester
-
-class MalformedInput(Exception): pass
-
-class ShapeNotLinHom(Exception): pass
+if PLOT_DEPENDENCY_GRAPH:
+    from .dependency_graph_plotter import DependencyGraphPlotter
 
 
-default_config = {
-    "input_time_symbol" : "t",
-    "output_timestep_symbol" : "__h"
-}
+class MalformedInput(Exception):
+    pass
+
+class ShapeNotLinHom(Exception):
+    pass
+
 
 def dependency_analysis(shape_sys, shapes):
     """perform dependency analysis, plot dependency graph"""
@@ -115,9 +109,13 @@ def from_json_to_shapes(indict, default_config):
 
 def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False):
 
+    default_config = {
+        "input_time_symbol" : "t",
+        "output_timestep_symbol" : "__h"
+    }
+
     logging.info("In ode-toolbox: analysing indict = ")
-    import json
-    print(json.dumps(indict, indent=4, sort_keys=True))
+    logging.info(json.dumps(indict, indent=4, sort_keys=True))
 
     if "dynamics" not in indict:
         logging.info("Warning: empty input (no dynamical equations found); returning empty output")
@@ -140,8 +138,8 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
     else:
         analytic_syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
 
-    if len(analytic_syms) > 0:
-        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in node_is_lin.items() if v == True]))
+    if analytic_syms:
+        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in analytic_syms]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
         analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
         analytic_solver_json["solver"] = "analytical"
@@ -177,7 +175,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
                     kwargs[key] = float(options_dict[key])
             if not analytic_solver_json is None:
                 kwargs["analytic_solver_dict"] = analytic_solver_json
-            tester = stiffness.StiffnessTester(sub_sys, shapes, **kwargs)
+            tester = StiffnessTester(sub_sys, shapes, **kwargs)
             solver_type = tester.check_stiffness()
             if not solver_type is None:
                 solver_json["solver"] += "-" + solver_type
@@ -196,8 +194,6 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
             all_shape_symbols = [ str(sympy.Symbol(str(shape.symbol) + "__d" * i)) for i in range(shape.order) ]
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
-                    #if shape.get_initial_value(sym.replace("__d", "'")) is None:
-                    #    import pdb;pdb.set_trace()
                     solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace("__d", "'")))
 
 
@@ -242,8 +238,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
                 solver_json["propagators"][sym] = str(expr)
 
     logging.info("In ode-toolbox: returning outdict = ")
-    import json
-    print(json.dumps(solvers_json, indent=4, sort_keys=True))
+    logging.info(json.dumps(solvers_json, indent=4, sort_keys=True))
 
     return solvers_json, shape_sys, shapes
 

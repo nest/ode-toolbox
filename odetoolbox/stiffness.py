@@ -58,7 +58,7 @@ except ImportError as ie:
 
 class StiffnessTester(object):
 
-    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters={}, stimuli=[], random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=100., alias_spikes=False):
+    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, stimuli=None, random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=100., alias_spikes=False):
         self.alias_spikes = alias_spikes
         self.max_step_size = max_step_size
         self.integration_accuracy = integration_accuracy
@@ -67,10 +67,16 @@ class StiffnessTester(object):
         self.symbolic_jacobian_ = self._system_of_shapes.get_jacobian_matrix()
         self.shapes = shapes
         self.system_of_shapes = system_of_shapes
-        self.parameters = parameters
+        if parameters is None:
+            self.parameters = {}
+        else:
+            self.parameters = parameters
         self.parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self.parameters.items() }
         self._locals = self.parameters.copy()
-        self._stimuli = stimuli
+        if stimuli is None:
+            self._stimuli = []
+        else:
+            self._stimuli = stimuli
         self.random_seed = random_seed
 
         self.analytic_solver_dict = analytic_solver_dict
@@ -114,7 +120,7 @@ class StiffnessTester(object):
         return self.draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
-    def evaluate_integrator(self, integrator, h_min_lower_bound=5E-9, sym_receiving_spikes=[], raise_errors=True, debug=True):
+    def evaluate_integrator(self, integrator, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
         """
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
 
@@ -148,8 +154,7 @@ class StiffnessTester(object):
          integration_accuracy=self.integration_accuracy,
          sim_time=self.sim_time,
          alias_spikes=self.alias_spikes)
-        h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(
-         h_min_lower_bound=1E-12, raise_errors=raise_errors, debug=debug))
+        h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(h_min_lower_bound=1E-12, raise_errors=raise_errors, debug=debug))
 
         logging.info("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 
