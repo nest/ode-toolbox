@@ -269,15 +269,15 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
             ax[0].plot(1E3 * state["timevec"], state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
 
             ax[1].plot(1E3 * numerical_timevec.squeeze(), i_ex[0, :], linewidth=2, label="i (num)")
-            ax[1].plot(1E3 * state["timevec"], state["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)")
-            ax[1].plot(1E3 * state["timevec"], state["I_shape_in"], linewidth=2, linestyle=":", marker="o", label="i_in (prop)")
-            ax[1].plot(1E3 * state["timevec"], state["I_shape_gap1"], linewidth=2, linestyle=":", marker="o", label="i_gap (prop)")
+            ax[1].plot(1E3 * state["timevec"], state["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)", fillstyle="none")
+            ax[1].plot(1E3 * state["timevec"], state["I_shape_in"], linewidth=2, linestyle=":", marker="D", label="i_in (prop)", fillstyle="none")
+            ax[1].plot(1E3 * state["timevec"], state["I_shape_gap1"], linewidth=2, linestyle=":", marker="^", label="i_gap (prop)", fillstyle="none")
             ax[1].plot(1E3 * timevec, i_ex__[0, :], linewidth=2, linestyle="-.", marker="x", label="i_ex (prop ref)")
 
             ax[2].plot(1E3 * numerical_timevec.squeeze(), i_ex[1, :], linewidth=2, label="i_ex' (num)")
-            ax[2].plot(1E3 * state["timevec"], state["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)")
-            ax[2].plot(1E3 * state["timevec"], state["I_shape_in__d"], linewidth=2, linestyle=":", marker="o", label="i_in' (prop)")
-            ax[2].plot(1E3 * state["timevec"], state["I_shape_gap2"], linewidth=2, linestyle=":", marker="o", label="i_gap' (prop)")
+            ax[2].plot(1E3 * state["timevec"], state["I_shape_ex__d"], linewidth=2, linestyle=":", marker="o", label="i_ex' (prop)", fillstyle="none")
+            ax[2].plot(1E3 * state["timevec"], state["I_shape_in__d"], linewidth=2, linestyle=":", marker="D", label="i_in' (prop)", fillstyle="none")
+            ax[2].plot(1E3 * state["timevec"], state["I_shape_gap2"], linewidth=2, linestyle=":", marker="^", label="i_gap' (prop)", fillstyle="none")
             ax[2].plot(1E3 * timevec, i_ex__[1, :], linewidth=2, linestyle="-.", marker="x", label="i_ex' (prop ref)")
 
             for _ax in ax:

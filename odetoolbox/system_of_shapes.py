@@ -100,7 +100,7 @@ class SystemOfShapes(object):
                 _node_is_lin = True
             else:
                 _node_is_lin = False
-            all_shape_symbols = [ sympy.Symbol(str(shape.symbol) + "__d" * i) for i in range(shape.order) ]
+            all_shape_symbols = shape.get_state_variables(derivative_symbol="__d")
             for sym in all_shape_symbols:
                 node_is_lin[sym] = _node_is_lin
 
@@ -180,6 +180,7 @@ class SystemOfShapes(object):
         if sympy.I in sympy.preorder_traversal(P):
             raise Exception("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
+
         #
         #   generate symbols for each nonzero entry of the propagator matrix
         #
@@ -199,13 +200,13 @@ class SystemOfShapes(object):
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) + " + " + str(self.C_[row])
             update_expr[str(self.x_[row])] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals))
 
-        all_variable_symbols = [ str(sym) for sym in self.x_ ]
+        all_state_symbols = [ str(sym) for sym in self.x_ ]
 
-        initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_variable_symbols }
+        initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_state_symbols }
 
         solver_dict = {"propagators" : P_expr,
                        "update_expressions" : update_expr,
-                       "state_variables" : all_variable_symbols,
+                       "state_variables" : all_state_symbols,
                        "initial_values" : initial_values}
 
         return solver_dict
@@ -215,11 +216,11 @@ class SystemOfShapes(object):
         """
         """
         update_expr = self.reconstitute_expr()
-        all_variable_symbols = [ str(sym) for sym in self.x_ ]
-        initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_variable_symbols }
+        all_state_symbols = [ str(sym) for sym in self.x_ ]
+        initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_state_symbols }
 
         solver_dict = {"update_expressions" : update_expr,
-                       "state_variables" : all_variable_symbols,
+                       "state_variables" : all_state_symbols,
                        "initial_values" : initial_values}
 
         return solver_dict
@@ -268,7 +269,7 @@ class SystemOfShapes(object):
         i = 0
         for shape in shapes:
             for j in range(shape.order):
-                x[i] = shape.state_variables[j]
+                x[i] = shape.get_state_variables(derivative_symbol="__d")[j]
                 i += 1
 
         i = 0
@@ -285,13 +286,14 @@ class SystemOfShapes(object):
             A[highest_diff_sym_idx, :] = lin_factors[np.newaxis, :]
             C[highest_diff_sym_idx] = nonlin_term
 
+
             #
-            # for higher-order shapes: mark subsequent derivatives x_i' = x_(i+1)
+            #   for higher-order shapes: mark derivatives x_i' = x_(i+1) for i < shape.order
             #
 
             for order in range(shape.order - 1):
-                _idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (order + 1))][0]
-                A[i + (shape.order - order - 1), _idx] = 1.     # the highest derivative is at row `i`, the next highest is below, and so on, until you reach the variable symbol without any "__d" suffixes
+                #_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * order)][0]
+                A[i + order, i + order + 1] = 1.     # the n-th order derivative is at row n, starting at 0, until you reach the variable symbol without any "__d" suffixes
 
             i += shape.order
 

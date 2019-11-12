@@ -102,8 +102,8 @@ def from_json_to_shapes(indict, default_config):
     all_variable_symbols = []
     for shape_json in indict["dynamics"]:
         shape = Shape.from_json(shape_json, time_symbol=input_time_symbol)
-        all_variable_symbols.extend(shape.get_all_variable_symbols())
-    logging.debug("from first run: all_variable_symbols = " + str(all_variable_symbols))
+        all_variable_symbols.extend(shape.get_state_variables())
+    logging.debug("From first run: all_variable_symbols = " + str(all_variable_symbols))
 
     # second run with the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
@@ -268,6 +268,7 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False,
     """
     d, _, _ = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver, debug=debug)
     return d
+
 
 def init_logging(debug: bool):
     if debug:

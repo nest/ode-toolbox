@@ -33,8 +33,7 @@ install:
 script:
   - python setup.py install
   #- coverage run -m pytest -s --pdb tests
-  - python -m pytest -s --pdb --cov=./ tests
+  - python -m pytest -s --pdb -o log_cli=true -o log_cli_level="DEBUG" --cov=./ tests
 
 after_success:
-  - codecov report -m
   - codecov
