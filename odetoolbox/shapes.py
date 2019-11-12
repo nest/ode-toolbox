@@ -247,15 +247,13 @@ class Shape():
         if not self in all_shapes:
             all_shapes += [self]
 
-        for shape in shapes:
+        for shape in all_shapes:
             for order in range(shape.order):
                 all_symbols.append(sympy.Symbol(str(shape.symbol) + differential_order_str * order))
 
         all_symbols = list(set(all_symbols))	# filter for unique symbols
 
         return all_symbols
-
-
 
 
     def is_lin_const_coeff(self, shapes=None):
