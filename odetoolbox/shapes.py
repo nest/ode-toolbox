@@ -768,6 +768,5 @@ class Shape():
             diff_rhs_derivatives = diff_rhs_derivatives + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 
         #derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, derivative_symbols)
-        import pdb;pdb.set_trace()
 
         return cls(symbol, order, initial_values, local_derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
