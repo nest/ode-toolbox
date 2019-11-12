@@ -62,16 +62,22 @@ class ShapeNotLinHom(Exception):
     pass
 
 
+default_config = {
+    "input_time_symbol" : "t",
+    "output_timestep_symbol" : "__h"
+}
+    
+    
 def dependency_analysis(shape_sys, shapes):
     """perform dependency analysis, plot dependency graph"""
     logging.info("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
     node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges)
     if PLOT_DEPENDENCY_GRAPH:
-        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_lin_cc.dot")
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph_lin_cc.dot")
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
     if PLOT_DEPENDENCY_GRAPH:
-        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/remotefs/ode_dependency_graph_analytically_solvable.dot")
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph_analytically_solvable.dot")
     return dependency_edges, node_is_lin
 
 
@@ -107,12 +113,11 @@ def from_json_to_shapes(indict, default_config):
     return input_time_symbol, output_timestep_symbol, shapes, options_dict
 
 
-def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False):
+def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False, debug=False):
 
-    default_config = {
-        "input_time_symbol" : "t",
-        "output_timestep_symbol" : "__h"
-    }
+    global default_config
+
+    init_logging(debug)
 
     logging.info("In ode-toolbox: analysing indict = ")
     logging.info(json.dumps(indict, indent=4, sort_keys=True))
@@ -139,7 +144,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
         analytic_syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
 
     if analytic_syms:
-        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k, v in analytic_syms]))
+        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
         analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
         analytic_solver_json["solver"] = "analytical"
@@ -243,7 +248,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
     return solvers_json, shape_sys, shapes
 
 
-def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False):
+def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False, debug=True):
     """The main entry point of the analysis.
 
     This function expects a single dictionary with the keys `odes`,
@@ -261,6 +266,11 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False)
 
     :return: The result of the analysis, again as a dictionary.
     """
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
-    d, _, _ = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver)
+    d, _, _ = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver, debug=debug)
     return d
+
+def init_logging(debug: bool):
+    if debug:
+        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')

@@ -1,5 +1,5 @@
 {
-  "__info" : "This file corresponds to `test_integration.py` and is a copy of the integrate-and-fire neuron with alpha-shaped postsynaptic currents expressed in two different ways (differentially and directly as a function)",
+  "__info" : "This file corresponds to `test_integration.py` and shows three equivalent ways to define an alpha shape function: as a direct function of time (`I_shape_in`), as a second-order differential equation (`I_shape_ex`), and as a coupled system of first-order differential equations (`I_shape_gap1`, `I_shape_gap2`).",
 
   "dynamics": [
     {

@@ -130,7 +130,7 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
                      h_log,
                      y_log,
                      sym_list=sym_list,
-                     basedir="/tmp/remotefs2",
+                     basedir="/tmp",
                      fn_snip="_[alias=" + str(alias_spikes) + "]_" + str(integrator),
                      title_snip=" alias spikes: " + str(alias_spikes) + ", " + str(integrator))
 
@@ -140,7 +140,7 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
                     assert not upper_bound_crossed
 
 
-    def _timeseries_plot(self, t_log, h_log, y_log, sym_list, basedir="/tmp/remotefs2", fn_snip="", title_snip=""):
+    def _timeseries_plot(self, t_log, h_log, y_log, sym_list, basedir="/tmp", fn_snip="", title_snip=""):
         if 1:
             fig, ax = plt.subplots(len(y_log[0]), sharex=True)
             for i, sym in enumerate(sym_list):

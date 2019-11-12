@@ -288,7 +288,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
             ax[-1].set_xlabel("Time [ms]")
 
             #plt.show()
-            base_dir = "/tmp/remotefs2"
+            base_dir = "/tmp"
             fn = os.path.join(base_dir, "test_analytic_solver_integration.png")
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)

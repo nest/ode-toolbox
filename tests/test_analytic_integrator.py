@@ -156,7 +156,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
             ax[-1].set_xlabel("Time [ms]")
 
             #plt.show()
-            fn = "/tmp/remotefs2/test_analytic_integrator.png"
+            fn = "/tmp/test_analytic_integrator.png"
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)
             plt.close(fig)
