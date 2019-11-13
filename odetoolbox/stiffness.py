@@ -37,7 +37,7 @@ np.seterr(over='raise')
 
 try:
     import matplotlib as mpl
-    mpl.use('Agg')
+    mpl.use('Agg', warn=False)
     import matplotlib.pyplot as plt
     STIFFNESS_DEBUG_PLOT = True
 except:

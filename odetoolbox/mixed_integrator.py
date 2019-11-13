@@ -40,7 +40,7 @@ from .spike_generator import SpikeGenerator
 
 try:
     import matplotlib as mpl
-    mpl.use('Agg')
+    mpl.use('Agg', warn=False)
     import matplotlib.pyplot as plt
     INTEGRATOR_DEBUG_PLOT = True
     INTEGRATOR_DEBUG_PLOT_DIR = "/tmp"
