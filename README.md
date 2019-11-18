@@ -59,7 +59,7 @@ The JSON file and Python dictionary are completely equivalent in content and for
 
 If an ODE is homogeneous and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analyically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
 
-For example, consider an integrate-and-fire neuron with three postsynaptic currents: excitatory, inhibitory and gap junction. The inhibitory kernel is nonlinear, whereas the other kernels and membrane potential are homogeneous and linear, and thereby analytically solvable. First, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node /a/ to /b/ indicates that /a/ depends on the value of /b/. In addition, each variable is labeled according to whether it can be analytically solved, indicated by a green colour:
+For example, consider an integrate-and-fire neuron with three postsynaptic currents: excitatory, inhibitory and gap junction. The inhibitory kernel is nonlinear, whereas the other kernels and membrane potential are homogeneous and linear, and thereby analytically solvable. First, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node *a* to *b* indicates that *a* depends on the value of *b*. In addition, each variable is labeled according to whether it can be analytically solved, indicated by a green colour:
 
 ![Dependency graph with membrane potential and excitatory and gap junction kernels marked green](https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_1.png)
 
