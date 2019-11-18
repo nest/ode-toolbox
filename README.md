@@ -59,18 +59,34 @@ The JSON file and Python dictionary are completely equivalent in content and for
 
 If an ODE is homogeneous and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analyically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
 
-For example, consider an integrate-and-fire neuron with three postsynaptic currents: excitatory, inhibitory and gap junction. The inhibitory kernel is nonlinear, whereas the other kernels and membrane potential are homogeneous and linear, and thereby analytically solvable. First, a dependency graph is generated, where each shape is labeled according to whether it can be analytically solved, indicated by a green colour:
+For example, consider an integrate-and-fire neuron with three postsynaptic currents: excitatory, inhibitory and gap junction. The inhibitory kernel is nonlinear, whereas the other kernels and membrane potential are homogeneous and linear, and thereby analytically solvable. First, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node /a/ to /b/ indicates that /a/ depends on the value of /b/. In addition, each variable is labeled according to whether it can be analytically solved, indicated by a green colour:
 
 ![Dependency graph with membrane potential and excitatory and gap junction kernels marked green](https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_1.png)
 
-In the second step, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable:
+Second, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable. In this example, `V_abs` is unmarked as it depends on the nonlinear excitatory kernel:
 
 ![Dependency graph with excitatory and gap junction kernels marked green](https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_2.png)
+
+The analytic solution is computed in the form of a propagator matrix.
+
+TODO: propagator matrix maths
 
 
 ## Solver selection criteria
 
-TODO
+Solver selection is performed on the basis of a set of rules, defined in `StiffnessTester.draw_decision()`. The logic is as follows:
+
+ * If the minimum step size recommended by all solvers is smaller than `machine_precision_dist_ratio` times the machine precision, a warning is issued.
+ * If the minimum step size for the implicit solver is smaller than `machine_precision_dist_ratio` times the machine precision, recommend the explicit solver.
+ * If the minimum step size for the explicit solver is smaller than `machine_precision_dist_ratio` times the machine precision, recommend the implicit solver.
+ * If the average step size for the implicit solver is at least `avg_step_size_ratio` times as large as the average step size for the explicit solver, recommend the implicit solver.
+ * Otherwise, recommend the explicit solver.
+
+
+| Name        | Default           | Description  |
+| ------------- | ------------- | ----- |
+| `avg_step_size_ratio` | 6 | Ratio between average step sizes of implicit and explicit solver. Larger means that the explicit solver is more likely to be selected. |
+| `machine_precision_dist_ratio` | 10 | Disqualify a solver if its minimum step size comes closer than this ratio to the machine precision. |
 
 
 ## Input
