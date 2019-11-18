@@ -38,26 +38,34 @@ For further installation hints, please see [.travis.yml](.travis.yml).
 To run the unit and integration tests that come with ode-toolbox, you can run the following command:
 
 ```
-python setup.py test
+python -m pytest
 ```
 
 Please note that this requires the [pytest](https://docs.pytest.org) package to be installed.
 
+To increase the verbosity, append the command-line parameters `-s -o log_cli=true -o log_cli_level="DEBUG"`.
+
 
 ## Usage
 
-The `ode-toolbox` can be used in two ways:
-1. as a Python module. See [the tests](tests/test_ode_analyzer.py) for examples of the exact usage of the functions.
-2. as command line application. In this case, the input is stored in a `json` file, whose file format will be explained in the next section. The command line invocation in this case looks like this:
-```
-ode_analyzer.py <json_file>
-```
+ode-toolbox can be used in two ways:
+1. As a Python module. Import the `odetoolbox` module, and then call `odetoolbox.analysis(indict)` where `indict` is the JSON-like input in Python dictionary format. See the tests (e.g. [test_lorenz_attractor.py](tests/test_lorenz_attractor.py)) for an example.
+2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line as `ode_analyzer.py my_model.json`
+
+The JSON file and Python dictionary are completely equivalent in content and form, described in the "Input" section below.
+
 
 ## Analytic solution
 
-Example propagators for an alpha shape
+If an ODE is homogeneous and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analyically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
 
-homogeneous ODEs only
+For example, consider an integrate-and-fire neuron with three postsynaptic currents: excitatory, inhibitory and gap junction. The inhibitory kernel is nonlinear, whereas the other kernels and membrane potential are homogeneous and linear, and thereby analytically solvable. First, a dependency graph is generated, where each shape is labeled according to whether it can be analytically solved, indicated by a green colour:
+
+![Dependency graph with membrane potential and excitatory and gap junction kernels marked green](https://octodex.github.com/images/yaktocat.png)
+
+In the second step, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable:
+
+![Dependency graph with excitatory and gap junction kernels marked green](https://octodex.github.com/images/yaktocat.png)
 
 
 ## Solver selection criteria
