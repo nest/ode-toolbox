@@ -61,11 +61,11 @@ If an ODE is homogeneous and linear, an analytic solution can be computed. Analy
 
 For example, consider an integrate-and-fire neuron with three postsynaptic currents: excitatory, inhibitory and gap junction. The inhibitory kernel is nonlinear, whereas the other kernels and membrane potential are homogeneous and linear, and thereby analytically solvable. First, a dependency graph is generated, where each shape is labeled according to whether it can be analytically solved, indicated by a green colour:
 
-![Dependency graph with membrane potential and excitatory and gap junction kernels marked green](https://octodex.github.com/images/yaktocat.png)
+![Dependency graph with membrane potential and excitatory and gap junction kernels marked green](https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_1.png)
 
 In the second step, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable:
 
-![Dependency graph with excitatory and gap junction kernels marked green](https://octodex.github.com/images/yaktocat.png)
+![Dependency graph with excitatory and gap junction kernels marked green](https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_2.png)
 
 
 ## Solver selection criteria
