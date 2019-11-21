@@ -2,7 +2,9 @@
 
 [![Build status](https://travis-ci.org/nest/ode-toolbox.svg?branch=master)](https://travis-ci.org/nest/ode-toolbox) [![Testing coverage](https://codecov.io/gh/nest/ode-toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/nest/ode-toolbox)
 
-Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends a solver on the basis of a set of user-configurable heuristics. If some or all of the dynamical equations are found to be analytically solvable, ode-toolbox generates corresponding propagator matrices, that allow a solution to be calculated at machine precision.
+Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends solvers on the basis of a set of user-configurable heuristics. For all dynamical equations that admit an analytic solution, ode-toolbox generates propagator matrices that allow the solution to be calculated at machine precision.
+
+![Flow diagram](https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/flow_diagram.png)
 
 ode-toolbox is written in Python and leverages SymPy for the symbolic manipulation of equations. It was initially developed in the context of the [NESTML](https://github.com/nest/nestml) project, in which the main focus was on the class of spiking neurons presently available in the [NEST](https://github.com/nest/nest-simulator) simulator. It can, however, be used standalone and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
 
@@ -55,7 +57,7 @@ ode-toolbox can be used in two ways:
 The JSON file and Python dictionary are completely equivalent in content and form, described in the "Input" section below.
 
 
-## Analytic solution
+## Analytic solver selection criteria
 
 If an ODE is homogeneous and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analyically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
 
@@ -72,7 +74,7 @@ The analytic solution is computed in the form of a propagator matrix.
 TODO: propagator matrix maths
 
 
-## Solver selection criteria
+## Numeric solver selection criteria
 
 Solver selection is performed on the basis of a set of rules, defined in `StiffnessTester.draw_decision()`. The logic is as follows:
 

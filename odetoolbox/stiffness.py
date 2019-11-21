@@ -161,7 +161,7 @@ class StiffnessTester(object):
         return h_min, h_avg, runtime
 
 
-    def draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, avg_step_size_ratio=6):
+    def draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, machine_precision_dist_ratio=10, avg_step_size_ratio=6):
         """Decide which is the best integrator to use for a certain system of ODEs
 
         1. If the minimal step size is close to machine precision for one of the methods but not for the other, this suggest that the other is more stable and should be used instead.
@@ -176,11 +176,11 @@ class StiffnessTester(object):
 
         machine_precision = np.finfo(float).eps
 
-        if step_min_imp > 10. * machine_precision and step_min_exp < 10. * machine_precision:
+        if step_min_imp > machine_precision_dist_ratio * machine_precision and step_min_exp < machine_precision_dist_ratio * machine_precision:
             return "implicit"
-        elif step_min_imp < 10. * machine_precision and step_min_exp > 10. * machine_precision:
+        elif step_min_imp < machine_precision_dist_ratio * machine_precision and step_min_exp > machine_precision_dist_ratio * machine_precision:
             return "explicit"
-        elif step_min_imp < 10. * machine_precision and step_min_exp < 10. * machine_precision:
+        elif step_min_imp < machine_precision_dist_ratio * machine_precision and step_min_exp < machine_precision_dist_ratio * machine_precision:
             return "warning"
 
         if step_average_imp > avg_step_size_ratio * step_average_exp:

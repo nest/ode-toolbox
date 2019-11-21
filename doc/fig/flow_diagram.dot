@@ -1,0 +1,59 @@
+/*
+
+Render dot to TeX using:
+
+dot2tex doc/fig/flow_diagram.dot -f tikz > /tmp/flow_diagram.tex
+
+
+
+Manually improve this to
+
+\usetikzlibrary{positioning}
+
+\begin{tikzpicture}[>=latex',line join=bevel,every node/.style={inner sep=10,outer sep=0}]
+%%
+\node (start) at (29.5bp,251.0bp) [draw,double,ellipse,double distance=.7mm,inner sep=7] {ODE $x^{(n)}$};
+  \node (if_valid) at (29.5bp,105.0bp) [draw,rectangle] {Stiff ODE?};
+  \node (message) [thick,fill=green!20,inner sep=7,draw,ellipse,right=of if_valid]{Stiff solver};
+  \node (end) at (29.5bp,38.0bp) [thick,fill=green!20,inner sep=7,draw,ellipse] {Nonstiff solver};
+  \node (input) at (29.5bp,178.0bp) [draw,rectangle,align=left] {Linear $\wedge$ homogeneous \\$\wedge$ constant coefficient?};
+  \node (analytic) [thick,fill=green!20,inner sep=7,draw,ellipse, right=of input] {Analytic solver};
+  \draw [->] (if_valid) -- (end);
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (36.5bp,84bp) node {no};
+  \draw (36.5bp,151bp) node {no};
+  \draw [->] (if_valid) --  (message);
+  \draw (102.0bp,183.0bp) node {yes};
+  \draw (75.0bp,110.0bp) node {yes};
+  \draw [->] (input) -- (if_valid);
+  \draw [->] (input) --  (analytic);
+  \draw [->] (start) --  (input);
+\end{tikzpicture}
+
+
+
+Then render TeX:
+
+pdflatex -aux-directory=doc/fig -output-directory=doc/fig /tmp/flow_diagram.tex 
+
+
+
+*/
+
+
+
+digraph {
+    start[texlbl="ODE $x^{(n)}$", shape="ellipse", pos="3,5!"];
+    end[shape="ellipse", texlbl="Nonstiff solver"];
+    if_valid[shape="box", style="", texlbl="Stiff ODE?", pos="4,5!"];
+    message[shape="parallelogram", style="", texlbl="Stiff solver"]
+    input[texlbl="Linear $\wedge$ homogeneous \\$\wedge$ constant coefficient?", shape="parallelogram", style="", shape="box"]
+    analytic[shape="ellipse", style="", label="Analytic solver"]
+ 
+    start -> input;
+    input -> if_valid;
+    if_valid -> message[label="yes", constraint=false];
+    if_valid -> end[label="no"];
+    input -> analytic[constraint=false];
+}
