@@ -54,48 +54,13 @@ To increase the verbosity, append the command-line parameters `-s -o log_cli=tru
 
 ode-toolbox can be used in two ways:
 1. As a Python module. Import the `odetoolbox` module, and then call `odetoolbox.analysis(indict)` where `indict` is the JSON-like input in Python dictionary format. See the tests (e.g. [test_lorenz_attractor.py](tests/test_lorenz_attractor.py)) for an example.
-2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line as `ode_analyzer.py my_model.json`
+2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line as `ode_analyzer.py [test_lorenz_attractor.json](tests/test_lorenz_attractor.json)`
 
 The JSON file and Python dictionary are completely equivalent in content and form, described in the "Input" section below.
 
-
-## Analytic solver selection criteria
-
-If an ODE is homogeneous and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analyically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
-
-For example, consider an integrate-and-fire neuron with three postsynaptic currents: excitatory, inhibitory and gap junction. The inhibitory kernel is nonlinear, whereas the other kernels and membrane potential are homogeneous and linear, and thereby analytically solvable. First, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node *a* to *b* indicates that *a* depends on the value of *b*. In addition, each variable is labeled according to whether it can be analytically solved, indicated by a green colour:
-
-![Dependency graph with membrane potential and excitatory and gap junction kernels marked green](https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_1.png)
-
-Second, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable. In this example, `V_abs` is unmarked as it depends on the nonlinear excitatory kernel:
-
-![Dependency graph with excitatory and gap junction kernels marked green](https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_2.png)
-
-The analytic solution is computed in the form of a propagator matrix.
-
-TODO: propagator matrix maths
-
-
-## Numeric solver selection criteria
-
-Solver selection is performed on the basis of a set of rules, defined in `StiffnessTester.draw_decision()`. The logic is as follows:
-
- * If the minimum step size recommended by all solvers is smaller than `machine_precision_dist_ratio` times the machine precision, a warning is issued.
- * If the minimum step size for the implicit solver is smaller than `machine_precision_dist_ratio` times the machine precision, recommend the explicit solver.
- * If the minimum step size for the explicit solver is smaller than `machine_precision_dist_ratio` times the machine precision, recommend the implicit solver.
- * If the average step size for the implicit solver is at least `avg_step_size_ratio` times as large as the average step size for the explicit solver, recommend the implicit solver.
- * Otherwise, recommend the explicit solver.
-
-
-| Name        | Default           | Description  |
-| ------------- | ------------- | ----- |
-| `avg_step_size_ratio` | 6 | Ratio between average step sizes of implicit and explicit solver. Larger means that the explicit solver is more likely to be selected. |
-| `machine_precision_dist_ratio` | 10 | Disqualify a solver if its minimum step size comes closer than this ratio to the machine precision. |
-
-
 ## Input
 
-The JSON input dictionary that is passed to ode-toolbox contains **dynamics**, **numerical parameters**, and **options**. **Documentation** may optionally be provided as a string.
+The JSON input dictionary that is passed to ode-toolbox contains **dynamics**, **numerical parameters**, and **global options**. **Documentation** may optionally be provided as a string.
 
 All expressions are parsed as sympy expressions. There are several predefined symbols, such as `e` and `E` for Euler's number, trigonometric functions, etc. The list of predefined symbols is defined in `symbols.py`, as the static member `Shape._sympy_globals`. Variable names should be chosen such that they do not overlap with the predefined symbols.
 
@@ -169,9 +134,25 @@ If only one initial value is required, the following simpler syntax may be used,
 ]
 ```
 
+### Upper and lower thresholds
+
+Neuronal dynamics is typically characterised by a discontinuous jump upon action potential firing. To model this behaviour, an upper and lower bound can be defined for each input variable. When either bound is reached, the state of that variable is reset to its initial value.
+
+```Python
+"dynamics":
+[
+    {
+      "expression": "V_m' = (-g_L * (V_m - E_L) - g_ex * (V_m - E_ex))/C_m$
+      "initial_value": "-70",
+      "upper_bound": "-55"
+    }
+}
+```
+
+
 ### Parameters
 
-It is not necessary to supply numerical values for the parameters (e.g. `tau = 10E-3`). The expressions are symbolically analysed, and in this case a set of propagators will be generated, because the alpha kernel is analytically tractable. However, in some cases (in particular when doing stiffness testing), it can be important to simulate with a particular set of parameter values. In this case, they can be specified in the global `parameters` dictionary. This dictionary maps parameter names to default values, for example:
+It is not necessary to supply any numerical values for parameters. The expressions are symbolically analysed, and in some cases a set of symbolic propagators will be generated. However, in some cases (in particular when doing stiffness testing), it can be important to simulate with a particular set of parameter values. In this case, they can be specified in the global `parameters` dictionary. This dictionary maps parameter names to default values, for example:
 
 
 ```Python
@@ -184,7 +165,7 @@ It is not necessary to supply numerical values for the parameters (e.g. `tau = 1
 }
 ```
 
-### Options
+### Global options
 
 Further options for the integrator, decision criteria for solver selection and so on, can be specified in the global `options` dictionary, for example:
 
@@ -198,29 +179,21 @@ Further options for the integrator, decision criteria for solver selection and s
 ```
 
 
-### Upper and lower thresholds
-
-TODO
-
-
 ## Output
 
 The analysis output is returned in the form of a Python dictionary, or an equivalent JSON file.
 
 During analysis, ode-toolbox rewrites the differential notation from single quotation marks into characters that are typically compatible with variable names; by default every quotation mark is rewritten into the string "__d".
 
-TODO: JSON format overview
 ode-toolbox will return a list of solvers. Each solver has the following keys:
 - `state_variables`: an unordered list containing all variable symbols.
 - `initial_values`: a dictionary that maps each variable symbol (in string form) to a sympy expression. For example `"g" : "e / tau"`.
 - `parameters`: only present when parameters were supplied in the input. The input parameters are copied into the output for convenience.
 - `solver`: a string containing the solver recommendation. Either "analytical" or "numeric".
 
-
 Analytic solvers have the following extra entries:
 
 - `update_expressions` : a dictionary that maps each variable symbol (in string form) to a sympy propagator expression. The interpretation of an entry `"g" : "g * __P__g__g + h * __P__g__h"` is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:`t` to the next step :math:`t + \Delta t`, we assign the new value `"g * __P__g__g + h * __P__g__h"` to the variable `g`. Note that the expression is always evaluated at the old time :math:`t`; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
-
 - `propagators` : a dictionary that maps each propagator matrix entry to its defining expression; for example `"__P__g__h" : "__h*exp(-__h/tau)"`
 
 
@@ -228,12 +201,82 @@ Numeric solvers have the following extra entries:
 - `update_expressions`: a dictionary that maps each variable symbol (in string form) to a sympy expression that is its Jacobian, that is, for a symbol :math:`x`, the expression is equal to :math:`\frac{\delta x}{\delta t}`.
 
 
+## Analytic solver selection criteria
+
+If an ODE is homogeneous, constant-coefficient and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analyically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
+
+For example, consider an integrate-and-fire neuron with two alpha-shaped kernels (`I_shape_in` and `I_shape_gap`), and one nonlinear kernel (`I_shape_ex`). Each of these kernels can be expressed as a system of ODEs containing two variables. `I_shape_in` is specified as a second-order equation, whereas `I_shape_gap` is explicitly given as a system of two coupled first-order equations, i.e. as two separate `dynamics` entries with names `I_shape_gap1` and `I_shape_gap2`.
+
+Both formulations are mathematically equivalent, and ode-toolbox treats them the same following input processing.
+
+During processing, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node *a* to *b* indicates that *a* depends on the value of *b*.
+
+Boxes enclosing nodes mark input shapes that were specified as either a direct function of time or a higher-order differential equation, and were expanded to a system of first-order ODEs.
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_0.png" alt="Dependency graph" width="720" height="383">
+</p>
+
+Each variable is subsequently labeled according to whether it can be analytically solved, indicated by a green colour.
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_1.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
+</p>
+
+Second, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable. In this example, `V_abs` is unmarked as it depends on the nonlinear excitatory kernel:
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_2.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
+</p>
+
+The analytic solution for all green nodes is computed in the form of a propagator matrix. See the section "Analytic solver generation" for more details.
+
+
+## Numeric solver selection criteria
+
+Solver selection is performed on the basis of a set of rules, defined in `StiffnessTester.draw_decision()`. The logic is as follows:
+
+ * If the minimum step size recommended by all solvers is smaller than `machine_precision_dist_ratio` times the machine precision, a warning is issued.
+ * If the minimum step size for the implicit solver is smaller than `machine_precision_dist_ratio` times the machine precision, recommend the explicit solver.
+ * If the minimum step size for the explicit solver is smaller than `machine_precision_dist_ratio` times the machine precision, recommend the implicit solver.
+ * If the average step size for the implicit solver is at least `avg_step_size_ratio` times as large as the average step size for the explicit solver, recommend the implicit solver.
+ * Otherwise, recommend the explicit solver.
+
+
+| Name        | Default           | Description  |
+| ------------- | ------------- | ----- |
+| `avg_step_size_ratio` | 6 | Ratio between average step sizes of implicit and explicit solver. Larger means that the explicit solver is more likely to be selected. |
+| `machine_precision_dist_ratio` | 10 | Disqualify a solver if its minimum step size comes closer than this ratio to the machine precision. |
+
+
+
+
 ## Internal representation
 
-For users who want to modify/extend ode-toolbox: internal representation x' = Ax + C
+For users who want to modify/extend ode-toolbox
+
+Processing input dynamics: method from Blundell et al. 2018
+
+Internal representation as `SystemOfShapes`, generation of matrices A and C such that x' = Ax + C
+
+
+## Analytic solver generation
+
+Matrix exponential maths
 
 
 ## Working with large expressions
 
 Performance issues with sympy; Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD
 
+
+## Contributions and getting help
+
+GitHub issue tracker and PRs welcome.
+
+(see NEST contribute.md)
+
+
+## Citations
+
+...
