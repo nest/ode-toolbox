@@ -54,7 +54,7 @@ To increase the verbosity, append the command-line parameters `-s -o log_cli=tru
 
 ode-toolbox can be used in two ways:
 1. As a Python module. Import the `odetoolbox` module, and then call `odetoolbox.analysis(indict)` where `indict` is the JSON-like input in Python dictionary format. See the tests (e.g. [test_lorenz_attractor.py](tests/test_lorenz_attractor.py)) for an example.
-2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line as `ode_analyzer.py [test_lorenz_attractor.json](tests/test_lorenz_attractor.json)`
+2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line as <code>ode_analyzer.py [test_lorenz_attractor.json](tests/test_lorenz_attractor.json)</code>
 
 The JSON file and Python dictionary are completely equivalent in content and form, described in the "Input" section below.
 
@@ -209,21 +209,19 @@ For example, consider an integrate-and-fire neuron with two alpha-shaped kernels
 
 Both formulations are mathematically equivalent, and ode-toolbox treats them the same following input processing.
 
-During processing, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node *a* to *b* indicates that *a* depends on the value of *b*.
-
-Boxes enclosing nodes mark input shapes that were specified as either a direct function of time or a higher-order differential equation, and were expanded to a system of first-order ODEs.
+During processing, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node *a* to *b* indicates that *a* depends on the value of *b*. Boxes enclosing nodes mark input shapes that were specified as either a direct function of time or a higher-order differential equation, and were expanded to a system of first-order ODEs.
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_0.png" alt="Dependency graph" width="720" height="383">
+<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_0.png" alt="Dependency graph" width="620" height="283">
 </p>
 
-Each variable is subsequently labeled according to whether it can be analytically solved, indicated by a green colour.
+Each variable is subsequently marked according to whether it can, by itself, be analytically solved. This is indicated by a green colour.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_1.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
 </p>
 
-Second, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable. In this example, `V_abs` is unmarked as it depends on the nonlinear excitatory kernel:
+Second, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable. In this example, `V_abs` is unmarked as it depends on the nonlinear excitatory kernel.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_2.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
