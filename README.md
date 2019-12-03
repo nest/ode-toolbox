@@ -15,12 +15,12 @@ ode-toolbox is written in Python and leverages SymPy for the symbolic manipulati
 
 ### Prerequisites
 
-ode-toolbox depends on the Python packages SymPy, SciPy and NumPy and (optionally) matplotlib and graphviz for visualisation, and pytest for self-tests. The stiffness tester additionally depends on an installation of [PyGSL](http://pygsl.sourceforge.net/). If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations.
+Only Python 3 is supported. ode-toolbox depends on the Python packages SymPy, SciPy and NumPy and (optionally) matplotlib and graphviz for visualisation, and pytest for self-tests. The stiffness tester additionally depends on an installation of [PyGSL](http://pygsl.sourceforge.net/). If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations.
 
-The required packages can be installed by running 
+All required and optional packages can be installed by running 
 
 ```
-pip install sympy scipy numpy pygsl
+pip install -r requirements.txt
 ```
 
 
@@ -62,7 +62,7 @@ The JSON file and Python dictionary are completely equivalent in content and for
 
 The JSON input dictionary that is passed to ode-toolbox contains **dynamics**, **numerical parameters**, and **global options**. **Documentation** may optionally be provided as a string.
 
-All expressions are parsed as sympy expressions. There are several predefined symbols, such as `e` and `E` for Euler's number, trigonometric functions, etc. `t` is assumed to represent time. The list of predefined symbols is defined in `symbols.py`, as the static member `Shape._sympy_globals`. Variable names should be chosen such that they do not overlap with the predefined symbols.
+All expressions are parsed as sympy expressions, and subsequently simplified through `sympy.simplify()`. There are several predefined symbols, such as `e` and `E` for Euler's number, trigonometric functions, etc. `t` is assumed to represent time. The list of predefined symbols is defined in `symbols.py`, as the static member `Shape._sympy_globals`. Variable names should be chosen such that they do not overlap with the predefined symbols.
 
 
 ### Dynamics
@@ -154,13 +154,12 @@ Neuronal dynamics is typically characterised by a discontinuous jump upon action
 
 It is not necessary to supply any numerical values for parameters. The expressions are symbolically analysed, and in some cases a set of symbolic propagators will be generated. However, in some cases (in particular when doing stiffness testing), it can be important to simulate with a particular set of parameter values. In this case, they can be specified in the global `parameters` dictionary. This dictionary maps parameter names to default values, for example:
 
-
 ```Python
 "parameters":
 {
-    "C_m": ".4",
-    "E_K": "-70",
-    "E_L": "-50",
+    "N": "10",
+    "C_m": "400.",
+    "tau": "1 - 1/e",
     "I_ext": "30E-3"
 }
 ```
@@ -171,25 +170,33 @@ Further options for the integrator, decision criteria for solver selection and s
 
 ```Python
 "options" : {
-    "output_timestep_symbol": "__h"
     "sim_time": "100E-3",
-    "max_step_size": ".25E-3",
-    "integration_accuracy" : "1E-9"
+    "max_step_size": ".25E-3"
 }
 ```
+
+The following global options are defined. Note that all are typically formatted as strings when encoding into JSON.
+
+| Name | Type | Default | Description  |
+| ------------- | ------------- | ------------- | ----- |
+| `integration_accuracy` | 1E-9 | float | |
+| `output_timestep_symbol` | `"__h"` | string | Generated propagators are a function of the simulation timestep. This parameter gives the name of the variable that contains the numerical value of the timestep during simulation. |
+| `sim_time` | 100E-3 | float | Total simulated time. |
+| `max_step_size` | .25E-3 | float | Maximum step size during simulation (e.g. for stiffness testing solvers). |
+| `differential_order_symbol` | `"__d"` | string | String appended n times to output variable names to indicate differential order n. XXX: TODO: only the default value works for now. |
 
 
 ## Output
 
 The analysis output is returned in the form of a Python dictionary, or an equivalent JSON file.
 
-During analysis, ode-toolbox rewrites the differential notation from single quotation marks into characters that are typically compatible with variable names; by default every quotation mark is rewritten into the string "__d".
+During analysis, ode-toolbox rewrites the differential notation from single quotation marks into characters that are typically compatible with variable names; by default every quotation mark is rewritten into the string specified as the global parameter `differential_order_symbol` (by default, `"__d"`).
 
 ode-toolbox will return a list of solvers. Each solver has the following keys:
+- `solver`: a string containing the solver recommendation. Starts with either "analytical" or "numeric".
 - `state_variables`: an unordered list containing all variable symbols.
 - `initial_values`: a dictionary that maps each variable symbol (in string form) to a sympy expression. For example `"g" : "e / tau"`.
 - `parameters`: only present when parameters were supplied in the input. The input parameters are copied into the output for convenience.
-- `solver`: a string containing the solver recommendation. Either "analytical" or "numeric".
 
 Analytic solvers have the following extra entries:
 
@@ -267,16 +274,20 @@ Internal representation as `SystemOfShapes`, generation of matrices A and C such
 
 ## Analytic solver generation
 
-Matrix exponential maths
+The propagator matrix `P` is derived from the system matrix by matrix exponentiation:
 
-`P = exp(A · t)`
+`P = exp(A · h)`
 
-If the imaginary unit `i` is found in any of the entries in `P`, fail.
+If the imaginary unit `i` is found in any of the entries in `P`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
+
+In some cases, elements of `P` may contain fractions that have a factor of the form `param1 - param2` in their denominator. If at a later stage, the numerical value of `param1` is chosen equal to that of `param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either `param1` or `param2` in the input, before the propagator matrix is generated.
 
 
 ## Working with large expressions
 
-Performance issues with sympy; Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD
+Performance issues with sympy; `Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD`
+
+A caching mechanism will be implemented in the future.
 
 
 ## Contributions and getting help
@@ -289,3 +300,8 @@ GitHub issue tracker and PRs welcome.
 ## Citations
 
 * Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. [doi:10.3389/fninf.2018.00050](https://doi.org/10.3389/fninf.2018.00050). Preprint available on [Zenodo](https://zenodo.org/record/1411417).
+
+
+## Acknowledgments
+
+This open source software code was developed in part or in whole in the Human Brain Project, funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).
