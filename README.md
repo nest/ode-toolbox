@@ -54,7 +54,7 @@ To increase the verbosity, append the command-line parameters `-s -o log_cli=tru
 
 ode-toolbox can be used in two ways:
 1. As a Python module. Import the `odetoolbox` module, and then call `odetoolbox.analysis(indict)` where `indict` is the JSON-like input in Python dictionary format. See the tests (e.g. [test_lorenz_attractor.py](tests/test_lorenz_attractor.py)) for an example.
-2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line as <code>ode_analyzer.py [test_lorenz_attractor.json](tests/test_lorenz_attractor.json)</code>
+2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line as <code>ode_analyzer.py [lorenz_attractor.json](tests/lorenz_attractor.json)</code>
 
 The JSON file and Python dictionary are completely equivalent in content and form, described in the "Input" section below.
 
@@ -62,7 +62,7 @@ The JSON file and Python dictionary are completely equivalent in content and for
 
 The JSON input dictionary that is passed to ode-toolbox contains **dynamics**, **numerical parameters**, and **global options**. **Documentation** may optionally be provided as a string.
 
-All expressions are parsed as sympy expressions. There are several predefined symbols, such as `e` and `E` for Euler's number, trigonometric functions, etc. The list of predefined symbols is defined in `symbols.py`, as the static member `Shape._sympy_globals`. Variable names should be chosen such that they do not overlap with the predefined symbols.
+All expressions are parsed as sympy expressions. There are several predefined symbols, such as `e` and `E` for Euler's number, trigonometric functions, etc. `t` is assumed to represent time. The list of predefined symbols is defined in `symbols.py`, as the static member `Shape._sympy_globals`. Variable names should be chosen such that they do not overlap with the predefined symbols.
 
 
 ### Dynamics
@@ -255,12 +255,23 @@ For users who want to modify/extend ode-toolbox
 
 Processing input dynamics: method from Blundell et al. 2018
 
+The aim is to find a representation of the form `a0 * f + a1 * f' + ... + an * f^(n) = 0`.
+
+* For direct functions of time `f(t)`:
+  1. Find `t` such that `f(t) ≠ 0`
+  2. Test if `f` can be expressed in the first-order form `f' = a_0 * f`
+  3. If not: test if `f` can be expressed in n-th order form ...
+
 Internal representation as `SystemOfShapes`, generation of matrices A and C such that x' = Ax + C
 
 
 ## Analytic solver generation
 
 Matrix exponential maths
+
+`P = exp(A · t)`
+
+If the imaginary unit `i` is found in any of the entries in `P`, fail.
 
 
 ## Working with large expressions
@@ -277,4 +288,4 @@ GitHub issue tracker and PRs welcome.
 
 ## Citations
 
-...
+* Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. [doi:10.3389/fninf.2018.00050](https://doi.org/10.3389/fninf.2018.00050). Preprint available on [Zenodo](https://zenodo.org/record/1411417).
