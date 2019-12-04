@@ -59,9 +59,6 @@ if PLOT_DEPENDENCY_GRAPH:
 class MalformedInput(Exception):
     pass
 
-class ShapeNotLinHom(Exception):
-    pass
-
 
 default_config = {
     "input_time_symbol" : "t",

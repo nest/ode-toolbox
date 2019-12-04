@@ -22,69 +22,47 @@
 
 from __future__ import print_function
 
+import argparse
 import json
+import logging
 import os
 import sys
 
 import odetoolbox
 
 
-exitcodes = {
-    "wrong_num_args": 1,
-    "file_not_found": 2,
-    "invalid_json_input": 3,
-    "malformed_input": 4
-}
-
-
 if __name__ == "__main__":
 
-    args = sys.argv[1:]
+    argparser = argparse.ArgumentParser(description="""ode-toolbox -- https://github.com/nest/ode-toolbox""", formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    print("Reading input file...")
+    argparser.add_argument("infile", metavar='PATH', type=str, help="JSON input file path", required=True)
+    argparser.add_argument("--disable-stiffness-check", action="store_true", help="If provided, disable stiffness check")
+    argparser.add_argument("--disable-analytic-solver", action="store_true", help="If provided, disable generation of propagators")
+    parsed_args = argparser.parse_args()
 
-    num_args = len(args)
-    if num_args != 1:
-        print("Wrong number of arguments (%d given, one expected)" % num_args)
-        print("Usage: ode_analyzer <json_file>")
-        print("Aborting.")
-        sys.exit(exitcodes["wrong_num_args"])
+    logging.info("Reading input file...")
 
-    infname = args[0]
-    if not os.path.isfile(infname):
-        print("The file '%s' does not exist." % infname)
-        print("Usage: ode_analyzer <json_file>")
-        print("Aborting.")
-        sys.exit(exitcodes["file_not_found"])
+    if not os.path.isfile(parsed_args.infile):
+        logging.error("The file '%s' does not exist." % parsed_args.infile)
+        sys.exit(1)
 
-    with open(infname) as infile:
+    with open(parsed_args.infile) as infile:
         try:
             indict = json.load(infile)
         except Exception as e:
-            print("The input JSON file could not be parsed.")
-            print("Error: " + e.msg)
-            print("Please consult the file README.md for help.")
-            print("Aborting.")
-            sys.exit(exitcodes["invalid_json_input"])
+            logging.error("The input JSON file could not be parsed; error: " + e.msg)
+            sys.exit(1)
 
     try:
-        result = odetoolbox.analysis(indict)
+        result = odetoolbox.analysis(indict,
+                                     enable_stiffness_check=not parsed_args.disable_stiffness_check,
+                                     disable_analytic_solver=parsed_args.disable_analytic_solver)
     except odetoolbox.MalformedInput as e:
-        print(e.message)
-        print("Please consult the file README.md for help.")
-        print("Aborting.")
-        sys.exit(exitcodes["malformed_input"])
-    except odetoolbox.ShapeNotLinHom as e:
-        print(e.message)
-        print("Please check the definition of shape '%s'" % shape["symbol"])
-        print("Aborting.")
-        sys.exit(exitcodes["shape_not_lin_hom"])
+        logging.error("The input JSON file could not be parsed; error: " + e.message)
+        sys.exit(1)
 
-    print("Writing output...")
-    basename = os.path.basename(infname.rsplit(".", 1)[0])
+    basename = os.path.basename(parsed_args.infile.rsplit(".", 1)[0])
     outfname = "%s_result.json" % basename
-    print("  filename: %s" % outfname)
+    logging.info("Writing output to file %s..." % outfname)
     with open(outfname, 'w') as outfile:
         outfile.write(json.dumps(result, indent=2))
-
-    print("Done.")
