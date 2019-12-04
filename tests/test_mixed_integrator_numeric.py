@@ -90,7 +90,6 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
         timevec = np.linspace(0., T, N)
 
         initial_values = { sympy.Symbol(k) : v for k, v in initial_values.items() }
-        spike_times = { sympy.Symbol(k) : v for k, v in spike_times.items() }
 
         indict = open_json("iaf_cond_alpha_mixed_test.json")
         analysis_json, shape_sys, shapes = odetoolbox.analysis_(indict, enable_stiffness_check=False, disable_analytic_solver=True)
@@ -117,7 +116,8 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
              spike_times=spike_times,
              random_seed=123,
              max_step_size=h,
-             integration_accuracy=1E-5,
+             integration_accuracy_abs=1E-5,
+             integration_accuracy_rel=1E-5,
              sim_time=T,
              alias_spikes=alias_spikes)
                 h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = mixed_integrator.integrate_ode(

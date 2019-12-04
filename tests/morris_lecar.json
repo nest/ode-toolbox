@@ -24,6 +24,7 @@
   "options": {
     "sim_time": "45E-3",
     "max_step_size": ".25E-3",
-    "integration_accuracy" : "1E-9"
+    "integration_accuracy_abs" : "1E-9",
+    "integration_accuracy_rel" : "1E-9"
   }
 }

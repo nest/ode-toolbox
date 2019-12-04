@@ -248,6 +248,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
         # ...
         spike_times_ = { "I_shape_ex__d" : spike_times, "I_shape_in__d" : spike_times, "I_shape_gap2" : spike_times }
+
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times_)
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
 

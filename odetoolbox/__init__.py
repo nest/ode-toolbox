@@ -21,6 +21,7 @@
 
 from __future__ import print_function
 
+import copy
 import json
 import logging
 
@@ -64,15 +65,20 @@ class ShapeNotLinHom(Exception):
 
 default_config = {
     "input_time_symbol" : "t",
-    "output_timestep_symbol" : "__h"
+    "output_timestep_symbol" : "__h",
+    "differential_order_symbol" : "__d",
+    "sim_time" : 100E-3,
+    "max_step_size" : 999.,
+    "integration_accuracy_abs" : 1E-6,
+    "integration_accuracy_rel" : 1E-6
 }
     
     
-def dependency_analysis(shape_sys, shapes):
+def dependency_analysis(shape_sys, shapes, differential_order_symbol):
     """perform dependency analysis, plot dependency graph"""
     logging.info("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
-    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges)
+    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges, differential_order_symbol=differential_order_symbol)
     if PLOT_DEPENDENCY_GRAPH:
         DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph_lin_cc.dot")
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
@@ -81,36 +87,38 @@ def dependency_analysis(shape_sys, shapes):
     return dependency_edges, node_is_lin
 
 
-def from_json_to_shapes(indict, default_config):
+def read_global_config(indict, default_config):
+    """process global configuration options"""
+
+
+    logging.info("Processing global options...")
+    options_dict = copy.deepcopy(default_config)
+    if "options" in indict.keys():
+        for key, value in indict["options"].items():
+            assert key in default_config.keys(), "Unknown key specified in global options dictionary: \"" + str(key) + "\""
+            options_dict[key] = value
+
+    return options_dict
+
+
+def from_json_to_shapes(indict, options_dict):
     """process the input, construct Shape instances"""
 
-    shapes = []
-
     logging.info("Processing input shapes...")
-    input_time_symbol = default_config["input_time_symbol"]
-    output_timestep_symbol = default_config["output_timestep_symbol"]
-    if "options" in indict.keys():
-        options_dict = indict["options"]
-        if "output_timestep_symbol" in options_dict.keys():
-            output_timestep_symbol = options_dict["output_timestep_symbol"]
-        if "input_time_symbol" in options_dict.keys():
-            input_time_symbol = options_dict["input_time_symbol"]
-    else:
-        options_dict = {}
-
+    shapes = []
     # first run for grabbing all the variable names. Coefficients might be incorrect.
     all_variable_symbols = []
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, time_symbol=input_time_symbol)
+        shape = Shape.from_json(shape_json, time_symbol=options_dict["input_time_symbol"], differential_order_symbol=options_dict["differential_order_symbol"])
         all_variable_symbols.extend(shape.get_state_variables())
     logging.debug("From first run: all_variable_symbols = " + str(all_variable_symbols))
 
     # second run with the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=input_time_symbol, _debug=True)
+        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=options_dict["input_time_symbol"], _debug=True)
         shapes.append(shape)
 
-    return input_time_symbol, output_timestep_symbol, shapes, options_dict
+    return shapes
 
 
 def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False, debug=False):
@@ -119,7 +127,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
 
     init_logging(debug)
 
-    logging.info("In ode-toolbox: analysing indict = ")
+    logging.info("ode-toolbox: analysing input:")
     logging.info(json.dumps(indict, indent=4, sort_keys=True))
 
     if "dynamics" not in indict:
@@ -127,9 +135,10 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
         solvers_json = {}
         return solvers_json
 
-    input_time_symbol, output_timestep_symbol, shapes, options_dict = from_json_to_shapes(indict, default_config)
+    options_dict = read_global_config(indict, default_config)
+    shapes = from_json_to_shapes(indict, options_dict)
     shape_sys = SystemOfShapes.from_shapes(shapes)
-    dependency_edges, node_is_lin = dependency_analysis(shape_sys, shapes)
+    dependency_edges, node_is_lin = dependency_analysis(shape_sys, shapes, differential_order_symbol=options_dict["differential_order_symbol"])
 
 
     #
@@ -146,7 +155,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
     if analytic_syms:
         logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
-        analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=output_timestep_symbol)
+        analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=options_dict["output_timestep_symbol"])
         analytic_solver_json["solver"] = "analytical"
         solvers_json.append(analytic_solver_json)
 
@@ -175,7 +184,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
                 kwargs["parameters"] = indict["parameters"]
             if "stimuli" in indict.keys():
                 kwargs["stimuli"] = indict["stimuli"]
-            for key in ["sim_time", "max_step_size", "integration_accuracy"]:
+            for key in ["sim_time", "max_step_size", "integration_accuracy_abs", "integration_accuracy_rel"]:
                 if "options" in indict.keys() and key in options_dict.keys():
                     kwargs[key] = float(options_dict[key])
             if not analytic_solver_json is None:
@@ -196,10 +205,10 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
     for solver_json in solvers_json:
         solver_json["initial_values"] = {}
         for shape in shapes:
-            all_shape_symbols = [ str(sympy.Symbol(str(shape.symbol) + "__d" * i)) for i in range(shape.order) ]
+            all_shape_symbols = [ str(sympy.Symbol(str(shape.symbol) + options_dict["differential_order_symbol"] * i)) for i in range(shape.order) ]
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
-                    solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace("__d", "'")))
+                    solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace(options_dict["differential_order_symbol"], "'")))
 
 
     #

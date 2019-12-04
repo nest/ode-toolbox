@@ -16,7 +16,7 @@ class DependencyGraphPlotter:
         for shape in shapes:
             if node_is_lin[shape.symbol]:
                 style = "filled"
-                colour = "chartreuse"
+                colour = "#caffca"
             else:
                 style = "rounded"
                 colour = "black"

@@ -25,9 +25,10 @@ import sympy.matrices
 import numpy as np
 
 from .shapes import Shape
+from .integrator import Integrator
 
 
-class AnalyticIntegrator():
+class AnalyticIntegrator(Integrator):
     """integrate a dynamical system by means of the propagators returned by odetoolbox"""
 
     def __init__(self, solver_dict, spike_times, enable_caching=True):
@@ -37,20 +38,19 @@ class AnalyticIntegrator():
         spike_times : Dict[str, List[float]]
             for each variable symbol, list of times at which a spike occurs
         """
+        
+        super(AnalyticIntegrator, self).__init__()
 
         self.solver_dict = solver_dict
 
         self.all_variable_symbols = self.solver_dict["state_variables"]
-        self.all_variable_symbols = [sympy.Symbol(s) for s in self.all_variable_symbols]    # from str to sympy.Symbol
+        self.all_variable_symbols = [sympy.Symbol(s) for s in self.all_variable_symbols]
 
-        self.spike_times = spike_times
         self.set_spike_times(spike_times)
 
         self.enable_caching = enable_caching
         self.enable_cache_update_ = True
         self.t = 0.
-
-        logging.debug("Initialised AnalyticIntegrator with spike times = " + str(spike_times))
 
 
         #
@@ -110,52 +110,6 @@ class AnalyticIntegrator():
         self.update_expressions_wrapped = {}
         for k, v in self.update_expressions.items():
             self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v, args=[sympy.Symbol("__h")] + self.all_variable_symbols, backend="cython")
-
-
-    def sympyfy_keys(self, d):
-        d_out = {}
-        for k, v in d.items():
-            assert type(k) in [sympy.Symbol, str]
-            if type(k) is sympy.Symbol:
-                d_out[k] = v
-
-            if type(k) is str:
-                d_out[sympy.Symbol(k.replace("'", "__d"))] = v
-
-        return d_out
-
-
-
-    def set_spike_times(self, spike_times):
-        """
-        Internally converts to a global, sorted list of spike times.
-
-        Parameters
-        ----------
-        spike_times : dict(sympy.Symbol -> List[Float] **or** dict(str -> List[Float]
-            For each variable, used as a key, the list of spike times associated with it.
-        """
-
-        self.spike_times = self.sympyfy_keys(spike_times)
-
-        assert all([type(sym) is sympy.Symbol for sym in self.spike_times.keys()]), "Spike time keys need to be of type sympy.Symbol"
-
-        self.all_spike_times = []
-        self.all_spike_times_sym = []
-        for sym, spike_times in self.spike_times.items():
-            assert type(sym) is sympy.Symbol
-            assert sym in self.all_variable_symbols, "Tried to set a spike time of unknown symbol \"" + str(sym) + "\""
-            for t_sp in spike_times:
-                if t_sp in self.all_spike_times:
-                    idx = self.all_spike_times.index(t_sp)
-                    self.all_spike_times_sym[idx].extend([sym])
-                else:
-                    self.all_spike_times.append(t_sp)
-                    self.all_spike_times_sym.append([sym])
-
-        idx = np.argsort(self.all_spike_times)
-        self.all_spike_times = [ self.all_spike_times[i] for i in idx ]
-        self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
 
 
     def get_all_variable_symbols(self):
@@ -238,10 +192,17 @@ class AnalyticIntegrator():
         state_at_t_curr = self.state_at_t_curr
 
         #
+        #   grab stimulus spike times
+        #
+        
+        all_spike_times, all_spike_times_sym = self.get_sorted_spike_times()
+
+
+        #
         #   process spikes between t_curr and t
         #
 
-        for spike_t, spike_syms in zip(self.all_spike_times, self.all_spike_times_sym):
+        for spike_t, spike_syms in zip(all_spike_times, all_spike_times_sym):
 
             if spike_t <= t_curr:
                 continue
@@ -263,9 +224,8 @@ class AnalyticIntegrator():
             #
 
             for spike_sym in spike_syms:
-                spike_sym = str(spike_sym)
-                if spike_sym.replace("'", "__d") in self.initial_values.keys():
-                    state_at_t_curr[spike_sym.replace("'", "__d")] += self.shape_starting_values[spike_sym.replace("'", "__d")]
+                if spike_sym in self.initial_values.keys():
+                    state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
 
             t_curr = spike_t
 

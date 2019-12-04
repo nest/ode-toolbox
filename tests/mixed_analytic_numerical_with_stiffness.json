@@ -35,7 +35,8 @@
   "options": {
     "sim_time": ".1",
     "max_step_size": ".001",
-    "integration_accuracy" : "1E-4"
+    "integration_accuracy_abs" : "1E-4",
+    "integration_accuracy_rel" : "1E-4"
   },
   "stimuli": [
     {

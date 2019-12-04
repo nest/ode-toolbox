@@ -164,7 +164,7 @@ class Shape():
             #print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
 
 
-    def is_homogeneous(self, shapes=None):
+    def is_homogeneous(self, shapes=None, differential_order_symbol="__d"):
         """
         Returns False if and only if the shape has a nonzero right-hand side.
         """
@@ -174,7 +174,7 @@ class Shape():
             # trivial case: right-hand side is zero
             return True
 
-        all_symbols = self.get_all_variable_symbols(shapes, derivative_symbol="__d")
+        all_symbols = self.get_all_variable_symbols(shapes, derivative_symbol=differential_order_symbol)
 
         for term in sympy.Add.make_args(self.diff_rhs_derivatives):
             #print("\tTerm " + str(term))
@@ -295,7 +295,7 @@ class Shape():
 
 
     @classmethod
-    def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), _debug=False):
+    def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol="__d", _debug=False):
         """Create a shape object from a JSON input dictionary
         """
 
@@ -368,9 +368,9 @@ class Shape():
             upper_bound = indict["upper_bound"]
 
         if order == 0:
-            return Shape.from_function(symbol, rhs)
+            return Shape.from_function(symbol, rhs, differential_order_symbol=differential_order_symbol)
         else:
-            return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound)
+            return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound, differential_order_symbol=differential_order_symbol)
 
 
     def reconstitute_expr(self, derivative_symbol="__d"):
@@ -452,8 +452,7 @@ class Shape():
 
 
     @classmethod
-    def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), debug=False):
-        debug=99
+    def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol=sympy.Symbol("__d"), debug=False):
         """Create a Shape object given a function of time.
 
         The goal of the algorithm is to calculate the factors of the ODE,
@@ -484,7 +483,7 @@ class Shape():
         Parameters
         ----------
         symbol : string
-            The symbol of the shape (e.g. "alpha", "I", "exp")
+            The symbol of the shape (e.g. "alpha", "I")
         definition : string
             The definition of the shape (e.g. "(e/tau_syn_in) * t *
             exp(-t/tau_syn_in)")
@@ -634,10 +633,10 @@ class Shape():
 
 
     @classmethod
-    def from_ode(cls, symbol: str, definition: str, initial_values: dict, all_variable_symbols=None, lower_bound=None, upper_bound=None, debug=False, **kwargs):
+    def from_ode(cls, symbol: str, definition: str, initial_values: dict, all_variable_symbols=None, lower_bound=None, upper_bound=None, differential_order_symbol="__d", debug=False, **kwargs):
         """Create a Shape object given an ODE and initial values.
 
-        Note that shapes are only aware of their own state variables: if an equation for x depends on another state variable of another shape y, then y will appear in the nonlinear part of x.
+        Note that shapes are only aware of their own state variables: if an equation for x depends on another state variable y of another shape, then y will appear in the nonlinear part of x.
 
 
         Parameters
@@ -671,24 +670,20 @@ class Shape():
         order = len(initial_values)
         all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
         symbol = sympy.Symbol(symbol)
-        definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", "__d"), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
+        definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", differential_order_symbol), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
         initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items() }
 
-        local_symbols = [ sympy.Symbol(str(symbol) + "__d" * i) for i in range(order) ]
+        local_symbols = [ sympy.Symbol(str(symbol) + differential_order_symbol * i) for i in range(order) ]
         if not symbol in all_variable_symbols:
             all_variable_symbols.extend(local_symbols)
-        all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", "__d")) for sym_name in all_variable_symbols ]
-        print("\tlocal_symbols = " + str(local_symbols))
+        all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", differential_order_symbol)) for sym_name in all_variable_symbols ]
         derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, all_variable_symbols)
-        print("\tall_variable_symbols = " + str(all_variable_symbols))
         local_symbols_idx = [ all_variable_symbols.index(sym) for sym in local_symbols ]
-        print("\tlocal_symbols_idx = " + str(local_symbols_idx))
         local_derivative_factors = [ derivative_factors[i] for i in local_symbols_idx ]
-        print("local_derivative_factors = " + str(local_derivative_factors))
         nonlocal_derivative_terms = [ derivative_factors[i] * all_variable_symbols[i] for i in range(len(all_variable_symbols)) if i not in local_symbols_idx ]
         if nonlocal_derivative_terms:
             diff_rhs_derivatives = diff_rhs_derivatives + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 
         shape = cls(symbol, order, initial_values, local_derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
-        print("\treconstituted = " + str(shape.reconstitute_expr()))
+
         return shape

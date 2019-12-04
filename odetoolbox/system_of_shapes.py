@@ -42,8 +42,6 @@ def _is_zero(x):
     return bool(sympy.expand_mul(x).is_zero)
 
 
-
-
 class SystemOfShapes(object):
     """
     """
@@ -87,7 +85,7 @@ class SystemOfShapes(object):
         return E
 
 
-    def get_lin_cc_symbols(self, E):
+    def get_lin_cc_symbols(self, E, differential_order_symbol="__d"):
         """retrieve the variable symbols of those shapes that are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with "__d" suffixes up to the order of the shape."""
 
         #
@@ -100,7 +98,7 @@ class SystemOfShapes(object):
                 _node_is_lin = True
             else:
                 _node_is_lin = False
-            all_shape_symbols = shape.get_state_variables(derivative_symbol="__d")
+            all_shape_symbols = shape.get_state_variables(derivative_symbol=differential_order_symbol)
             for sym in all_shape_symbols:
                 node_is_lin[sym] = _node_is_lin
 

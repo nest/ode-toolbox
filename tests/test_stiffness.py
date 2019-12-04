@@ -59,12 +59,14 @@ class TestStiffnessChecker(unittest.TestCase):
     def test_morris_lecar_stiff(self):
         indict = open_json("morris_lecar.json")
 
-        indict["options"]["integration_accuracy"] = 1E-9
+        indict["options"]["integration_accuracy_abs"] = 1E-9
+        indict["options"]["integration_accuracy_rel"] = 1E-9
         result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=PYGSL_AVAILABLE)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("implicit")
 
-        indict["options"]["integration_accuracy"] = 1E-3
+        indict["options"]["integration_accuracy_abs"] = 1E-3
+        indict["options"]["integration_accuracy_rel"] = 1E-3
         result = odetoolbox.analysis(indict, disable_analytic_solver=True, enable_stiffness_check=PYGSL_AVAILABLE)
         assert len(result) == 1 \
          and result[0]["solver"].endswith("explicit")

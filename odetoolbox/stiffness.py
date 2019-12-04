@@ -58,10 +58,11 @@ except ImportError as ie:
 
 class StiffnessTester(object):
 
-    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, stimuli=None, random_seed=123, max_step_size=np.inf, integration_accuracy=1E-3, sim_time=100., alias_spikes=False):
+    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, stimuli=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=100., alias_spikes=False):
         self.alias_spikes = alias_spikes
         self.max_step_size = max_step_size
-        self.integration_accuracy = integration_accuracy
+        self.integration_accuracy_abs = integration_accuracy_abs
+        self.integration_accuracy_rel = integration_accuracy_rel
         self.sim_time = sim_time
         self._system_of_shapes = system_of_shapes
         self.symbolic_jacobian_ = self._system_of_shapes.get_jacobian_matrix()
@@ -151,7 +152,8 @@ class StiffnessTester(object):
          spike_times=spike_times,
          random_seed=self.random_seed,
          max_step_size=self.max_step_size,
-         integration_accuracy=self.integration_accuracy,
+         integration_accuracy_abs=self.integration_accuracy_abs,
+         integration_accuracy_rel=self.integration_accuracy_rel,
          sim_time=self.sim_time,
          alias_spikes=self.alias_spikes)
         h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(h_min_lower_bound=1E-12, raise_errors=raise_errors, debug=debug))
