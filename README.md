@@ -138,11 +138,13 @@ If only one initial value is required, the following simpler syntax may be used,
 
 Neuronal dynamics is typically characterised by a discontinuous jump upon action potential firing. To model this behaviour, an upper and lower bound can be defined for each input variable. When either bound is reached, the state of that variable is reset to its initial value.
 
+Thresholds are mainly of interest when doing stiffness testing, and only apply to equations that are solved by the numerical integrator. Testing for threshold crossing and reset of the state variable(s) occurs at the beginning of every timestep.
+
 ```Python
 "dynamics":
 [
     {
-      "expression": "V_m' = (-g_L * (V_m - E_L) - g_ex * (V_m - E_ex))/C_m$
+      "expression": "V_m' = (-g_L * (V_m - E_L) - g_ex * (V_m - E_ex)) / C_m
       "initial_value": "-70",
       "upper_bound": "-55"
     }
@@ -179,10 +181,11 @@ The following global options are defined. Note that all are typically formatted 
 
 | Name | Type | Default | Description  |
 | ------------- | ------------- | ------------- | ----- |
-| `integration_accuracy` | 1E-9 | float | |
+| `integration_accuracy_abs` | 1E-9 | float | Absolute error bound for all numerical integrators that are used. |
+| `integration_accuracy_rel` | 1E-9 | float | Relative error bound for all numerical integrators that are used. |
 | `output_timestep_symbol` | `"__h"` | string | Generated propagators are a function of the simulation timestep. This parameter gives the name of the variable that contains the numerical value of the timestep during simulation. |
 | `sim_time` | 100E-3 | float | Total simulated time. |
-| `max_step_size` | .25E-3 | float | Maximum step size during simulation (e.g. for stiffness testing solvers). |
+| `max_step_size` | 999 | float | Maximum step size during simulation (e.g. for stiffness testing solvers). |
 | `differential_order_symbol` | `"__d"` | string | String appended n times to output variable names to indicate differential order n. XXX: TODO: only the default value works for now. |
 
 
@@ -254,6 +257,11 @@ Solver selection is performed on the basis of a set of rules, defined in `Stiffn
 | `machine_precision_dist_ratio` | 10 | Disqualify a solver if its minimum step size comes closer than this ratio to the machine precision. |
 
 
+### Input stimulus for stiffness testing
+
+Spike times for each variable can be read directly from the JSON input as a list, or be generated according to a constant frequency or Poisson distribution.
+
+
 
 
 ## Internal representation
@@ -278,7 +286,7 @@ The propagator matrix `P` is derived from the system matrix by matrix exponentia
 
 `P = exp(A · h)`
 
-If the imaginary unit `i` is found in any of the entries in `P`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
+If the imaginary unit *i* is found in any of the entries in `P`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
 
 In some cases, elements of `P` may contain fractions that have a factor of the form `param1 - param2` in their denominator. If at a later stage, the numerical value of `param1` is chosen equal to that of `param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either `param1` or `param2` in the input, before the propagator matrix is generated.
 
@@ -292,16 +300,14 @@ A caching mechanism will be implemented in the future.
 
 ## Contributions and getting help
 
-GitHub issue tracker and PRs welcome.
-
-(see NEST contribute.md)
+The primary development of ode-toolbox happens on GitHub, at https://github.com/nest/ode-toolbox. If you encounter any issue, please create an new entry in the GitHub issue tracker. Pull requests are welcome.
 
 
 ## Citations
 
-* Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. [doi:10.3389/fninf.2018.00050](https://doi.org/10.3389/fninf.2018.00050). Preprint available on [Zenodo](https://zenodo.org/record/1411417).
+1. Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. [doi:10.3389/fninf.2018.00050](https://doi.org/10.3389/fninf.2018.00050). Preprint available on [Zenodo](https://zenodo.org/record/1411417).
 
 
 ## Acknowledgments
 
-This open source software code was developed in part or in whole in the Human Brain Project, funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).
+This software was developed in part or in whole in the Human Brain Project, funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).
