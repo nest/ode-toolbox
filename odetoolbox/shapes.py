@@ -84,7 +84,7 @@ class Shape():
                      }
 
 
-    def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), lower_bound=None, upper_bound=None, debug=False):
+    def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), lower_bound=None, upper_bound=None, derivative_symbol="__d", debug=False):
         """Perform type and consistency checks and assign arguments to member variables.
 
 
@@ -132,10 +132,9 @@ class Shape():
 
         self.initial_values = initial_values
 
-        """for sym in initial_values.keys():
-            if "__d" in str(sym):
-                print("!!!")
-                import pdb;pdb.set_trace()"""
+        for sym in initial_values.keys():
+            if derivative_symbol in str(sym):
+                raise Exception("Input variable name \"" + str(sym) + "\" should not contain the string \"" + derivative_symbol + "\", which is used to indicate variable differential order")
 
         if not len(derivative_factors) == order:
             raise Exception(str(len(derivative_factors)) + " derivative factors specified, while " + str(order) + " were expected based on differential equation definition")
@@ -160,8 +159,7 @@ class Shape():
         if not self.upper_bound is None:
             self.upper_bound = sympy.simplify(self.upper_bound)
 
-        #if debug:
-            #print("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
+        logging.debug("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
 
 
     def is_homogeneous(self, shapes=None, differential_order_symbol="__d"):
@@ -332,9 +330,6 @@ class Shape():
             if not order == 1:
                 raise Exception("Single initial value specified for equation that is not first order in equation with variable symbol \"" + symbol + "\"")
             initial_values[symbol] = indict["initial_value"]
-            #if "__d" in str(symbol):
-            #    print("!!!")
-            #    import pdb;pdb.set_trace()
 
         if "initial_values" in indict.keys():
             if not len(indict["initial_values"]) == order:

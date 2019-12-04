@@ -364,8 +364,8 @@ class MixedIntegrator(Integrator):
         idx_to_label = {}
         for sym, spike_density in self.get_spike_times().items():
             syms = [sym for sym in list(self._system_of_shapes.x_)]
-            if sym.replace("'", "__d") in syms:
-                idx = syms.index(sym.replace("'", "__d"))
+            if sym in syms:
+                idx = syms.index(sym)
                 idx_to_label[idx] = sym
 
         for i, sym in enumerate(self._system_of_shapes.x_):

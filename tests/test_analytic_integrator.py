@@ -55,40 +55,7 @@ def open_json(fname):
 
 
 class TestAnalyticIntegrator(unittest.TestCase):
-    '''Numerical comparison between ode-toolbox calculated propagators, hand-calculated propagators expressed in Python, and numerical integration, for the iaf_cond_alpha neuron.
-
-    Definition of alpha function:
-
-        g'' = -g / tau^2 - 2*g' / tau
-
-    Let z1 = g
-        z2 = g'
-
-    Then z1' = z2
-         z2' = -z1 / tau^2 - 2*z2 / tau
-
-    Or equivalently
-
-        Z' = S * Z
-
-    with
-
-        S = [ 0         1      ]
-            [ -1/tau^2  -2/tau ]
-
-    Exact solution: let
-
-        P = exp[h * S]
-
-          = [ (h/tau_syn + 1) * np.exp(-h/tau_syn)      h*np.exp(-h/tau_syn)                ]
-            [ -h*np.exp(-h/tau_syn)/tau_syn**2          (-h/tau_syn + 1)*np.exp(-h/tau_syn) ]
-
-    Then
-
-        z(t + h) = P * z(t)
-
-
-    '''
+    """Test that analytic integrator returns the same result when caching is disabled and enabled."""
 
     def test_analytic_integrator_iaf_psc_alpha(self):
         debug = True

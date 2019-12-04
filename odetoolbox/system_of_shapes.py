@@ -76,11 +76,9 @@ class SystemOfShapes(object):
             for j, sym2 in enumerate(self.x_):
                 if not _is_zero(self.A_[j, i]):
                     E.append((sym2, sym1))
-                    #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
                 else:
                     if not _is_zero(sympy.diff(self.C_[j], sym1)):
                         E.append((sym2, sym1))
-                        #E.append((str(sym2).replace("__d", "'"), str(sym1).replace("__d", "'")))
 
         return E
 
@@ -164,10 +162,7 @@ class SystemOfShapes(object):
 
 
     def generate_propagator_solver(self, output_timestep_symbol="__h"):
-        """
-        """
-
-        #from IPython import embed;embed()
+        """Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON"""
 
         #
         #   generate the propagator matrix
@@ -189,8 +184,7 @@ class SystemOfShapes(object):
         for row in range(P_sym.shape[0]):
             update_expr_terms = []
             for col in range(P_sym.shape[1]):
-                if sympy.simplify(P[row, col]) != sympy.sympify(0):
-                    #sym_str = "__P_{}__{}_{}".format(self.x_[row], row, col)
+                if not _is_zero(P[row, col]):
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
@@ -211,8 +205,8 @@ class SystemOfShapes(object):
 
 
     def generate_numeric_solver(self):
-        """
-        """
+        """Generate the symbolic expressions for numeric integration state updates; return as JSON"""
+
         update_expr = self.reconstitute_expr()
         all_state_symbols = [ str(sym) for sym in self.x_ ]
         initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_state_symbols }
@@ -226,6 +220,7 @@ class SystemOfShapes(object):
 
     def reconstitute_expr(self):
         """Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + C)"""
+        
         update_expr = {}
 
         for row, x in enumerate(self.x_):

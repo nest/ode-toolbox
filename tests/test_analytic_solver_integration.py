@@ -95,36 +95,6 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
     Then
 
         z(t + h) = P * z(t)
-
-
-
-
-    Test JSON:
-
-    {
-        "shapes": [
-            {
-            "type": "function",
-            "symbol": "I_shape_in",
-            "definition": "(e/tau_syn_in) * t * exp(-t/tau_syn_in)"
-            },
-            {
-            "type": "function",
-            "symbol": "I_shape_ex",
-            "definition": "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)"
-            }
-        ],
-
-        "odes": [
-            {
-            "symbol": "V_abs",
-            "definition": "(-1)/Tau*V_abs+1/C_m*(I_shape_in+I_shape_ex+I_e+currents)"
-            }
-        ],
-
-        "parameters": {}
-    }
-
     '''
 
     def test_analytic_solver_integration_psc_alpha(self):
@@ -246,9 +216,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
             solver_dict["parameters"] = {}
         solver_dict["parameters"].update(_parms)
 
-        # ...
         spike_times_ = { "I_shape_ex__d" : spike_times, "I_shape_in__d" : spike_times, "I_shape_gap2" : spike_times }
-
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times_)
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
 
@@ -288,7 +256,6 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
             ax[-1].set_xlabel("Time [ms]")
 
-            #plt.show()
             base_dir = "/tmp"
             fn = os.path.join(base_dir, "test_analytic_solver_integration.png")
             print("Saving to " + fn)
