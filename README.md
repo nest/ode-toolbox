@@ -166,6 +166,33 @@ It is not necessary to supply any numerical values for parameters. The expressio
 }
 ```
 
+
+## Spiking stimulus for stiffness testing
+
+Spike times for each variable can be read directly from the JSON input as a list, or be generated according to a constant frequency or Poisson distribution. The general format is as follows: any number of stimuli can be defined in the global list `"stimuli"`. Each entry in the list is a dictionary containing parameters, and a `"variables"` attribute that specifies which dynamical variables are affected by this particular spike generator. For example:
+
+```Python
+"stimuli":
+[
+    {
+        "type": "poisson_generator",
+        "rate": "10.",
+        "variables": ["g_in'", "g_ex'"]
+    }
+]
+```
+
+The type is one of `"poisson_generator"`, `"regular"` or `"list"`. The Poisson and regular spiking generators only have one parameter: rate. When the selected type is `"list"`, a list of predefined spike times can be directly supplied under the key `"list"`, separated by spaces, as such:
+
+```Python
+{
+    "type": "list",
+    "list": "5E-3 10E-3 20E-3 15E-3 50E-3",
+    "variables": ["I'"]
+}
+```
+
+
 ### Global options
 
 Further options for the integrator, decision criteria for solver selection and so on, can be specified in the global `options` dictionary, for example:
@@ -255,11 +282,6 @@ Solver selection is performed on the basis of a set of rules, defined in `Stiffn
 | ------------- | ------------- | ----- |
 | `avg_step_size_ratio` | 6 | Ratio between average step sizes of implicit and explicit solver. Larger means that the explicit solver is more likely to be selected. |
 | `machine_precision_dist_ratio` | 10 | Disqualify a solver if its minimum step size comes closer than this ratio to the machine precision. |
-
-
-### Input stimulus for stiffness testing
-
-Spike times for each variable can be read directly from the JSON input as a list, or be generated according to a constant frequency or Poisson distribution.
 
 
 
