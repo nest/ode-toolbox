@@ -167,7 +167,7 @@ It is not necessary to supply any numerical values for parameters. The expressio
 ```
 
 
-## Spiking stimulus for stiffness testing
+### Spiking stimulus for stiffness testing
 
 Spike times for each variable can be read directly from the JSON input as a list, or be generated according to a constant frequency or Poisson distribution. The general format is as follows: any number of stimuli can be defined in the global list `"stimuli"`. Each entry in the list is a dictionary containing parameters, and a `"variables"` attribute that specifies which dynamical variables are affected by this particular spike generator. For example:
 
@@ -191,6 +191,8 @@ The type is one of `"poisson_generator"`, `"regular"` or `"list"`. The Poisson a
     "variables": ["I'"]
 }
 ```
+
+Note that the "amplitude" of a spike response is a result of the magnitude of its initial values.
 
 
 ### Global options
@@ -288,18 +290,27 @@ Solver selection is performed on the basis of a set of rules, defined in `Stiffn
 
 ## Internal representation
 
-For users who want to modify/extend ode-toolbox
+For users who want to modify/extend ode-toolbox.
 
-Processing input dynamics: method from Blundell et al. 2018
+Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a SystemOfShapes instance, which expresses the complete dynamics in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{C}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{C}` containing the nonlinear terms.
 
-The aim is to find a representation of the form `a0 * f + a1 * f' + ... + an * f^(n) = 0`.
 
-* For direct functions of time `f(t)`:
-  1. Find `t` such that `f(t) ≠ 0`
-  2. Test if `f` can be expressed in the first-order form `f' = a_0 * f`
-  3. If not: test if `f` can be expressed in n-th order form ...
+### Converting direct functions of time
 
-Internal representation as `SystemOfShapes`, generation of matrices A and C such that x' = Ax + C
+The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}`, with :math:`a_i\in\mathcal{R}\forall 0 \leq i < n`. The approach taken here [Blundell et al. 2018] works by evaluating the function `f` at times `t = t_0, t_1, ... t_n`, which results in `n` equations, that we can use to solve for the coefficients of the potentially n-dimensional dynamical system.
+
+1. Begin by assuming that the dynamical system is of order :math:`n`.
+2. Find timepoints :math:`t = t_0, t_1, ..., t_n` such that :math:`f(t_i) \neq 0 \forall 0 \leq i \leq n`. The times can be selected at random.
+3. Formulate the equations as :math:`\mathbf{X} \cdot \begin{matrix}a_0\\a_1\\\vdots\\a_{n-1}\end{matrix} = \begin{matrix}f^{(n)}(t_0)\\f^{(n)}(t_1)\\\vdots\\f^{(n)}(t_n)\end{matrix}` with :math:`\mathbf{X} = \begin{matrix}
+                                                       f(t_0) &  \cdots   & f^(n-1)(t_0) \\ 
+                                                       f(t_1) &  \cdots   & f^(n-1)(t_1) \\ 
+                                                       \vdots &           & \vdots \\ 
+                                                       f(t_n) &  \cdots   & f^(n-1)(t_n)
+                                                \end{matrix}`.
+4. If :math:`\mathbf{X}` is invertible, the equation can be solved for :math:`a_0\ldots a_{n-1}`.
+5. If :math:`\mathbf{X}` is not invertible, increase `n` (up to some predefined maximum order `max_n`). If `max_n` is reached, fail.
+
+This algorithm is implemented in [`Shape.from_function`](odetoolbox/shapes.py).
 
 
 ## Analytic solver generation
@@ -319,6 +330,11 @@ Performance issues with sympy; `Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD`
 
 A caching mechanism will be implemented in the future.
 
+## Examples
+
+### Stiffness testing
+
+... list files in `testing/`
 
 ## Contributions and getting help
 

@@ -1,6 +1,4 @@
 #
-# shapes.py
-#
 # This file is part of the NEST ODE toolbox.
 #
 # Copyright (C) 2017 The NEST Initiative
@@ -379,6 +377,7 @@ class Shape():
 
     @staticmethod
     def split_lin_nonlin(expr, x):
+        """Split an expression into the form a_0 * x[0] + a_1 * x[1] + ... + C. The coefficients a_0...a_n are returned as `lin_factors`. The nonlinear remainder is returned as `nonlin_term`"""
         """const_terms = [term for term in expr.args if not term.free_symbols]
         const_term = functools.reduce(lambda x, y: x + y, const_terms)
         C[highest_diff_sym_idx] += const_term"""
@@ -386,23 +385,18 @@ class Shape():
         assert all([is_sympy_type(sym) for sym in x])
 
         lin_factors = []
-        print("Splitting expr " + str(expr) + " into symbols " + str(x))
+        logging.debug("Splitting expression " + str(expr) + " into symbols " + str(x))
 
-        ##print("* Splitting expr = " + str(expr))
         expr = expr.expand()
-        #print("                 = " + str(expr))
-        print("  with known symbols = " + str(x))
         for j, sym in enumerate(x):
             # check if there is a linear part in `sym`
-            print("\tCheck if there is a linear part in " + str(sym))
             if expr.is_Add:
                 terms = expr.args
             else:
                 terms = [expr]
+
             # a term is linear in `sym` if `term/sym` contains only free symbols that are not in all_known_symbols, i.e. if the sets are disjoint
             linear_terms = [term for term in terms if (term / sym).free_symbols.isdisjoint(x)]
-            print("\t  linear_terms = " + str(linear_terms))
-            #all_linear_terms.append(linear_term)
             if linear_terms:
                 linear_factors = [term / sym for term in linear_terms]
                 linear_factor = functools.reduce(lambda x, y: x + y, linear_factors)
@@ -412,74 +406,31 @@ class Shape():
                 linear_factor = sympy.Float(0)
                 linear_term = sympy.Float(0)
 
-            print("\t  linear_term = " + str(linear_term))
             lin_factors.append(linear_factor)
-            #print("\t   Old expr = " + str(expr))
             expr = expr - linear_term
-            #print("\t   New expr = " + str(expr))
 
         lin_factors = np.array(lin_factors)
         nonlin_term = expr
         assert len(lin_factors) == len(x)
-        print("\t--> lin_factors = " + str(lin_factors))
-        #print("\t--> nonlin_term = " + str(nonlin_term))
+
+        logging.debug("\tlinear factors: " + str(lin_factors))
+        logging.debug("\tnonlinear term: " + str(nonlin_term))
 
         return lin_factors, nonlin_term
 
-        """for j, sym1 in enumerate(x):
-            #diff_expr = sympy.simplify(sympy.diff(shape_expr, sym1))
-            diff_expr = sympy.diff(shape_expr, sym1)
-            print("\tdiff wrt " + str(sym1) + " = " + str(diff_expr))
-            for sym2 in x:
-                print("\t\tsym2 = " + str(sym2))
-                diff_wrt_sym2 = sympy.diff(diff_expr, sym2)
-                #print("\t\tdiff_wrt_sym2 = " + str(diff_wrt_sym2))
-                if not diff_wrt_sym2.is_zero:
-                    # nonlinear term containing sym1
-                    C[highest_diff_sym_idx] += sym1 * sym2 * diff_wrt_sym2
-                    shape_expr -= sym1 * sym2 * diff_wrt_sym2
-                    diff_expr -= sym2 * diff_wrt_sym2
-                    #shape_expr = sympy.simplify(shape_expr)
-                    #diff_expr = sympy.simplify(diff_expr)
-                A[highest_diff_sym_idx, j] = diff_expr
-                print("\t\t---> new diff_expr = " + str(diff_expr))
-                print("\t\t---> new shape_expr = " + str(shape_expr))"""
-
 
     @classmethod
-    def from_function(cls, symbol, definition, max_t=100, max_order=4, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol=sympy.Symbol("__d"), debug=False):
+    def from_function(cls, symbol: str, definition, max_t=100, max_order=4, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol=sympy.Symbol("__d"), debug=False):
         """Create a Shape object given a function of time.
 
-        The goal of the algorithm is to calculate the factors of the ODE,
-        assuming they exist. It uses a matrix whose entries correspond to
-        the evaluation of derivatives of the shape function at certain
-        points `t` in time.
+        For a complete description of the algorithm, please see the ode-toolbox README.
 
-        The idea is to create a system of equations by substituting
-        natural numbers into the homogeneous linear ODE with variable
-        derivative factors order many times for varying natural numbers
-        and solving for derivative factors. Once we have derivative
-        factors, the ODE is uniquely defined. This is assuming that shape
-        satisfies an ODE of this order, which we check after determining
-        the factors.
-
-        In the function, the symbol `t` is assumed to stand for the
-        current time.
-
-        The algorithm used in this function is described in full detail
-        together with the mathematical foundations in the following
-        publication:
-
-            Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler,
-            Abigail Morrison (2018) Automatically selecting an optimal
-            integration scheme for systems of differential equations in
-            neuron models. Front. Neuroinf. doi:10.3389/fninf.2018.00050.
 
         Parameters
         ----------
-        symbol : string
-            The symbol of the shape (e.g. "alpha", "I")
-        definition : string
+        symbol : str
+            The variable name of the shape (e.g. "alpha", "I")
+        definition : str
             The definition of the shape (e.g. "(e/tau_syn_in) * t *
             exp(-t/tau_syn_in)")
 
@@ -490,7 +441,7 @@ class Shape():
 
         Examples
         --------
-        >>> Shape("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
+        >>> Shape.from_function("I_in", "(e/tau) * t * exp(-t/tau)")
         """
 
         if all_variable_symbols is None:
@@ -498,12 +449,8 @@ class Shape():
 
         all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
 
-        # The symbol and the definition of the shape function were given as
-        # strings. We have to transform them to SymPy symbols for using
-        # them in symbolic calculations.
         symbol = sympy.Symbol(symbol)
-        definition = definition.replace("delta", "DiracDelta")
-        definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol))
+        definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)
 
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, time_symbol)]
@@ -545,12 +492,12 @@ class Shape():
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
         found_ode = sympy.simplify(diff_rhs_lhs).is_zero
 
-        # If `shape` does not satisfy a linear homogeneous ODE of order 1,
-        # we try to find one of higher order in a loop. The loop runs
-        # while no linear homogeneous ODE was found and the maximum
-        # order to check for was not yet reached.
+
+        #
+        #   If `shape` does not satisfy a linear homogeneous ODE of order 1, we try to find one of higher order in a loop. The loop runs while no linear homogeneous ODE was found and the maximum order to check for was not yet reached.
+        #
+        
         while not found_ode and order < max_order:
-            # Set the potential order for the iteration
             order += 1
 
             logging.debug("\tFinding ode for order " + str(order) + "...")
@@ -558,9 +505,6 @@ class Shape():
             # Add the next higher derivative to the list
             derivatives.append(sympy.diff(derivatives[-1], time_symbol))
 
-            # `X` is an `order`x`order` matrix that will be assigned
-            # the derivatives up to `order`-1 of some natural numbers
-            # as rows (differing in each row)
             X = sympy.zeros(order)
 
             # `Y` is a vector of length `order` that will be assigned the derivatives of `order` of the natural number in the corresponding row of `X`

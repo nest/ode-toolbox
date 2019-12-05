@@ -20,9 +20,9 @@
 #
 
 import logging
+import numpy as np
 import sympy
 import sympy.matrices
-import numpy as np
 
 from .shapes import Shape
 from .integrator import Integrator

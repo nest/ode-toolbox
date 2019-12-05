@@ -25,9 +25,6 @@ import logging
 import numpy as np
 import sympy
 import sympy.matrices
-from sympy import diff, exp, Matrix, simplify, sqrt, Symbol, sympify
-from sympy.parsing.sympy_parser import parse_expr
-from sympy.matrices import zeros
 
 from .shapes import Shape
 
@@ -220,7 +217,7 @@ class SystemOfShapes(object):
 
     def reconstitute_expr(self):
         """Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + C)"""
-        
+
         update_expr = {}
 
         for row, x in enumerate(self.x_):
