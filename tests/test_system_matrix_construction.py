@@ -1,5 +1,5 @@
 #
-# tes
+# test_system_matrix_construction.py
 #
 # This file is part of the NEST ODE toolbox.
 #
@@ -23,6 +23,8 @@ import json
 import os
 import unittest
 import sympy
+import sympy.parsing.sympy_parser
+
 import numpy as np
 #np.seterr(under="warn")
 
