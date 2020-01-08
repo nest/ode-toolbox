@@ -91,7 +91,7 @@ Instead of a second-order differential equation, we can equivalently describe th
 ]
 ```
 
-Expressions can refer to variables defined in other expressions. For example, a third equivalent formulation of the alpha shape is as the following system of two coupled first-order equations:
+Expressions can refer to variables defined in other expressions. For example, a third, equivalent formulation of the alpha shape is as the following system of two coupled first-order equations:
 
 ```Python
 "dynamics":
@@ -328,15 +328,25 @@ In some cases, elements of `P` may contain fractions that have a factor of the f
 
 ## Working with large expressions
 
-Performance issues with sympy; `Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD`
+In serveral places during processing, a sympy expression simplification (`simplify()`) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with sympy, we introduce the `Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD` constant, which causes expressions whose string representation is longer than this number of characters to not be skipped when simplifying expressions. The default value is 1000.
 
-A caching mechanism will be implemented in the future.
+A caching mechanism will be implemented in the future to further improve runtime performance.
+
 
 ## Examples
 
+Several example input files can be found under `tests/*.json`. Some highlights:
+
+ * [Lorenz attractor](tests/test_lorenz_attractor.json)
+ * [Morris-Lecar neuron model](tests/morris_lecar.json)
+ * [Integrate-and-fire neuron with alpha-kernel postsynaptic currents](tests/mixed_analytic_numerical_with_stiffness.json), including Poisson spike generator for stiffness test
+ * [Integrate-and-fire neuron with alpha-kernel postsynaptic conductances](tests/iaf_cond_alpha_odes_stiff.json)
+ * [Canonical, two-dimensional stiff system](tests/stiff_system.json) ex. 11.57, Dahmen, W., and Reusken, A. (2005). Numerik fuer Naturwissenschaftler. Berlin: Springer
+
+
 ### Stiffness testing
 
-This example correponds to the unit test in `tests/test_stiffness.py`, which simulates the Morris-Lecar neuron model in `tests/morris_lecar.json`. The plot shows the two state variables of the model, `V` and `W`, while in the lower panel the solver timestep recommendation is plotted at each step. Note that the `avg_step_size_ratio` selection criterion parameter refers to the *average* of this value across the entire simulation period.
+This example correponds to the unit test in `tests/test_stiffness.py`, which simulates the Morris-Lecar neuron model in `tests/morris_lecar.json`. The plot shows the two state variables of the model, `V` and `W`, while in the lower panel the solver timestep recommendation is plotted at each step. This recommendation is returned by each GSL solver.  Note that the `avg_step_size_ratio` selection criterion parameter refers to the *average* of this value across the entire simulation period.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/stiffness_example.png" alt="timeseries plots of V, W, and recommended timestep" width="620" height="434">
