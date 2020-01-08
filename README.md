@@ -336,7 +336,13 @@ A caching mechanism will be implemented in the future.
 
 ### Stiffness testing
 
-... list files in `testing/`
+This example correponds to the unit test in `tests/test_stiffness.py`, which simulates the Morris-Lecar neuron model in `tests/morris_lecar.json`. The plot shows the two state variables of the model, `V` and `W`, while in the lower panel the solver timestep recommendation is plotted at each step. Note that the `avg_step_size_ratio` selection criterion parameter refers to the *average* of this value across the entire simulation period.
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/stiffness_example.png" alt="timeseries plots of V, W, and recommended timestep" width="620" height="434">
+</p>
+
+`test_stiffness.py` tests that for a tighter integration accuracy, the solver recommendation for this example changes from "explicit" (non-stiff) to "implicit" (stiff).
 
 
 ### From ode-toolbox results dictionary to simulation
