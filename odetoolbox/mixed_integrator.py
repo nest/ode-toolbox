@@ -372,6 +372,13 @@ class MixedIntegrator(Integrator):
             idx_to_label[i] = sym
 
         fig, ax = plt.subplots(y_log.shape[1] + analytic_dim + 1, sharex=True)
+        
+        # adjust the axes slightly towards the right
+        for _ax in ax:
+            pos1 = _ax.get_position()
+            pos2 = [pos1.x0 + 0.05, pos1.y0,  pos1.width, pos1.height]
+            _ax.set_position(pos2)
+        
         for i in range(y_log.shape[1]):
             sym = idx_to_label[i]
             ax[i].plot(t_log, y_log[:, i], label=sym, marker="o", color="blue")
@@ -385,7 +392,8 @@ class MixedIntegrator(Integrator):
         ax[-1].set_ylabel("suggested dt [s]")
 
         for _ax in ax:
-            _ax.legend()
+            if not _ax is ax[-1]:
+                _ax.legend()
             _ax.grid(True)
             _ax.set_xlim(0., np.amax(t_log))
 

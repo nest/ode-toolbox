@@ -23,6 +23,8 @@ import json
 import os
 import unittest
 import odetoolbox
+import sympy
+import sympy.parsing.sympy_parser
 
 try:
     import pygsl
