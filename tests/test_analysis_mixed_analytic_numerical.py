@@ -23,6 +23,9 @@ import json
 import os
 import unittest
 import pytest
+import sympy
+import sympy.parsing.sympy_parser
+
 
 from .context import odetoolbox
 

@@ -41,6 +41,7 @@ from odetoolbox.analytic_integrator import AnalyticIntegrator
 
 from math import e
 from sympy import exp, sympify
+import sympy.parsing.sympy_parser
 
 import scipy
 import scipy.special

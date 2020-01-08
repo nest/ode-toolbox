@@ -1,5 +1,5 @@
 #
-# test_integration.py
+# test_analytic_integrator.py
 #
 # This file is part of the NEST ODE toolbox.
 #

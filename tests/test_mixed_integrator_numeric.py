@@ -42,6 +42,7 @@ from odetoolbox.mixed_integrator import MixedIntegrator
 
 from math import e
 from sympy import exp, sympify
+import sympy.parsing.sympy_parser
 
 import scipy
 import scipy.special
@@ -97,32 +98,25 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
         print(json.dumps(analysis_json, indent=2))
         assert len(analysis_json) == 1
         assert analysis_json[0]["solver"].startswith("numeric")
-        """assert len(analysis_json) == 2
-
-        if analysis_json[0]["solver"].startswith("numeric"):
-            analysis_json = analysis_json[::-1]
-
-        assert analysis_json[0]["solver"] == "analytical"
-        assert analysis_json[1]["solver"].startswith("numeric")"""
 
         for alias_spikes in [False, True]:
             for integrator in [odeiv.step_rk4, odeiv.step_bsimp]:
                 mixed_integrator = MixedIntegrator(
-             integrator,
-             shape_sys,
-             shapes,
-             analytic_solver_dict=None, #analysis_json[0],
-             parameters=indict["parameters"],
-             spike_times=spike_times,
-             random_seed=123,
-             max_step_size=h,
-             integration_accuracy_abs=1E-5,
-             integration_accuracy_rel=1E-5,
-             sim_time=T,
-             alias_spikes=alias_spikes)
+                 integrator,
+                 shape_sys,
+                 shapes,
+                 analytic_solver_dict=None, #analysis_json[0],
+                 parameters=indict["parameters"],
+                 spike_times=spike_times,
+                 random_seed=123,
+                 max_step_size=h,
+                 integration_accuracy_abs=1E-5,
+                 integration_accuracy_rel=1E-5,
+                 sim_time=T,
+                 alias_spikes=alias_spikes)
                 h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = mixed_integrator.integrate_ode(
-             initial_values=initial_values,
-             h_min_lower_bound=1E-12, raise_errors=True, debug=True) # debug needs to be True here to obtain the right return values
+                 initial_values=initial_values,
+                 h_min_lower_bound=1E-12, raise_errors=True, debug=True) # debug needs to be True here to obtain the right return values
 
                 if INTEGRATION_TEST_DEBUG_PLOTS:
                     self._timeseries_plot(
