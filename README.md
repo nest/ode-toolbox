@@ -294,7 +294,7 @@ Solver selection is performed on the basis of a set of rules, defined in `Stiffn
 
 For users who want to modify/extend ode-toolbox.
 
-Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a SystemOfShapes instance, which expresses the complete dynamics in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{C}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{C}` containing the nonlinear terms.
+Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a SystemOfShapes instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{C}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{C}` containing the nonlinear terms.
 
 
 ### Converting direct functions of time
@@ -328,7 +328,7 @@ In some cases, elements of `P` may contain fractions that have a factor of the f
 
 ## Working with large expressions
 
-In serveral places during processing, a sympy expression simplification (`simplify()`) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with sympy, we introduce the `Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD` constant, which causes expressions whose string representation is longer than this number of characters to not be skipped when simplifying expressions. The default value is 1000.
+In several places during processing, a sympy expression simplification (`simplify()`) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with sympy, we introduce the `Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD` constant, which causes expressions whose string representation is longer than this number of characters to not be skipped when simplifying expressions. The default value is 1000.
 
 A caching mechanism will be implemented in the future to further improve runtime performance.
 
@@ -357,15 +357,15 @@ This example correponds to the unit test in `tests/test_stiffness.py`, which sim
 
 ### From ode-toolbox results dictionary to simulation
 
-ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: `AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and `MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using `pygsl.odeiv.step_rk4` or `pygsl.odeiv.step_bsimp`). These integrators both use `sympy.parsing.sympy_parser.parse_expr()` to parse the expression strings from the ode-toolbox results dictionary, and then use the sympy expression `evalf()` method to evaluate to a floating-point value.
+ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: [AnalyticIntegrator](odetoolbox/analytic_integrator.py), which simulates on the basis of propagators and returns precise values, and [MixedIntegrator](odetoolbox/mixed_integrator.py), which in addition performs numerical integration using GSL (for example, using `pygsl.odeiv.step_rk4` or `pygsl.odeiv.step_bsimp`). These integrators both use `sympy.parsing.sympy_parser` to parse the expression strings from the ode-toolbox results dictionary, and then use the sympy expression `evalf()` method to evaluate to a floating-point value.
 
-The file `tests/test_analytic_solver_integration.py` contains an integration test, that uses `AnalyticIntegrator` and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic response. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically. The following results figure shows perfect agreement between the three simulation methods:
+The file `tests/test_analytic_solver_integration.py` contains an integration test, that uses [AnalyticIntegrator](odetoolbox/analytic_integrator.py) and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ode-toolbox. The following results figure shows perfect agreement between the three simulation methods:
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
 </p>
 
-The file `test/test_mixed_integrator_numeric.py` contains an integration test, that uses `MixedIntegrator` and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the `AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of `V_m` in the plot that is generated:
+The file [`test/test_mixed_integrator_numeric.py`](test/test_mixed_integrator_numeric.py) contains an integration test, that uses [MixedIntegrator](odetoolbox/mixed_integrator.py) and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the [AnalyticIntegrator](odetoolbox/analytic_integrator.py), enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_mixed_integrator_numeric.png" alt="g_in, g_in__d, g_ex, g_ex__d, V_m timeseries plots" width="620" height="451">
