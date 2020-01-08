@@ -4,7 +4,7 @@
 
 Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends solvers on the basis of a set of user-configurable heuristics. For all dynamical equations that admit an analytic solution, ode-toolbox generates propagator matrices that allow the solution to be calculated at machine precision.
 
-The workflow of ode-toolbox can be visually summarised as follows, where initial nodes are marked by a double line, and results nodes in green:
+The internal processing carried out by ode-toolbox can be visually summarised as follows, starting from (a set of) ODEs on the top (double outline), and finishing by either generating propagator matrices (top green node) or recommending either a stiff or nonstiff solver (bottom two green nodes):
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/flow_diagram.png" alt="Flow diagram" width="361" height="341">
@@ -55,10 +55,21 @@ To increase the verbosity, append the command-line parameters `-s -o log_cli=tru
 ## Usage
 
 ode-toolbox can be used in two ways:
-1. As a Python module. Import the `odetoolbox` module, and then call `odetoolbox.analysis(indict)` where `indict` is the JSON-like input in Python dictionary format. See the tests (e.g. [test_lorenz_attractor.py](tests/test_lorenz_attractor.py)) for an example.
-2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line as <code>ode_analyzer.py [lorenz_attractor.json](tests/lorenz_attractor.json)</code>
+
+1. As a Python module. Import the `odetoolbox` module, and then call `odetoolbox.analysis(indict)` where `indict` is the JSON-like input in Python dictionary format. See the tests (e.g. [test_lorenz_attractor.py](tests/test_lorenz_attractor.py)) for a full example.
+2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line:
+
+   <code>ode_analyzer.py [lorenz_attractor.json](tests/lorenz_attractor.json)</code>
 
 The JSON file and Python dictionary are completely equivalent in content and form, described in the "Input" section below.
+
+However, when using the API, additional boolean flags can be passed:
+
+| Name | Default | Description  |
+| ------------- | ------------- | ------------- |
+| `enable_stiffness_check` | True | Set to False to disable stiffness check. |
+| `disable_analytic_solver` | False | Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable. |
+
 
 ## Input
 
