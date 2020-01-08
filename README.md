@@ -4,6 +4,8 @@
 
 Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends solvers on the basis of a set of user-configurable heuristics. For all dynamical equations that admit an analytic solution, ode-toolbox generates propagator matrices that allow the solution to be calculated at machine precision.
 
+The workflow of ode-toolbox can be visually summarised as follows, where initial nodes are marked by a double line, and results nodes in green:
+
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/flow_diagram.png" alt="Flow diagram" width="361" height="341">
 </p>
@@ -336,14 +338,40 @@ A caching mechanism will be implemented in the future.
 
 ... list files in `testing/`
 
+
+### From ode-toolbox results dictionary to simulation
+
+ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: `AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and `MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using `pygsl.odeiv.step_rk4` or `pygsl.odeiv.step_bsimp`). These integrators both use `sympy.parsing.sympy_parser.parse_expr()` to parse the expression strings from the ode-toolbox results dictionary, and then use the sympy expression `evalf()` method to evaluate to a floating-point value.
+
+The file `tests/test_analytic_solver_integration.py` contains an integration test, that uses `AnalyticIntegrator` and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic response. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically. The following results figure shows perfect agreement between the three simulation methods:
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
+</p>
+
+The file `test/test_mixed_integrator_numeric.py` contains an integration test, that uses `MixedIntegrator` and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the `AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of `V_m` in the plot that is generated:
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_mixed_integrator_numeric.png" alt="g_in, g_in__d, g_ex, g_ex__d, V_m timeseries plots" width="620" height="451">
+</p>
+
+
 ## Contributions and getting help
 
 The primary development of ode-toolbox happens on GitHub, at https://github.com/nest/ode-toolbox. If you encounter any issue, please create an new entry in the GitHub issue tracker. Pull requests are welcome.
 
 
-## Citations
+## Citing ode-toolbox
+
+If you use ode-toolbox in your work, please cite it as:
+
+Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. [doi:10.3389/fninf.2018.00050](https://doi.org/10.3389/fninf.2018.00050). Preprint available on [Zenodo](https://zenodo.org/record/1411417).
+
+
+## References
 
 1. Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. [doi:10.3389/fninf.2018.00050](https://doi.org/10.3389/fninf.2018.00050). Preprint available on [Zenodo](https://zenodo.org/record/1411417).
+
 
 
 ## Acknowledgments
