@@ -87,8 +87,11 @@ class TestSystemMatrixConstruction(unittest.TestCase):
                                             [                             0.0,                0.0]])
 
         V, W = sympy.symbols("V W")
-        assert shape_sys.C_ == sympy.Matrix([[500.0*E_Ca*g_Ca*sympy.tanh(V/15 + 1/15)/C_m + 500.0*E_Ca*g_Ca/C_m + 1000.0*E_L*g_L/C_m + 1000.0*I_ext/C_m - 1000.0*V*W*g_K/C_m - 500.0*V*g_Ca*sympy.tanh(V/15 + 1/15)/C_m], \
+        equality_fractional = shape_sys.C_ == sympy.Matrix([[500.0*E_Ca*g_Ca*sympy.tanh(V/15 + 1/15)/C_m + 500.0*E_Ca*g_Ca/C_m + 1000.0*E_L*g_L/C_m + 1000.0*I_ext/C_m - 1000.0*V*W*g_K/C_m - 500.0*V*g_Ca*sympy.tanh(V/15 + 1/15)/C_m], \
                                              [                                                                                         -200.0*W*sympy.cosh(V/60) + 100.0*sympy.cosh(V/60)*sympy.tanh(V/30) + 100.0*sympy.cosh(V/60)]])
+        equality_decimal = shape_sys.C_ == sympy.Matrix([[500.0*E_Ca*g_Ca*sympy.tanh(V/15 + 0.0666666666666667)/C_m + 500.0*E_Ca*g_Ca/C_m + 1000.0*E_L*g_L/C_m + 1000.0*I_ext/C_m - 1000.0*V*W*g_K/C_m - 500.0*V*g_Ca*sympy.tanh(V/15 + 0.0666666666666667)/C_m], \
+                                             [                                                                                         -200.0*W*sympy.cosh(V/60) + 100.0*sympy.cosh(V/60)*sympy.tanh(V/30) + 100.0*sympy.cosh(V/60)]])
+        assert equality_fractional or equality_decimal
 
 if __name__ == '__main__':
     unittest.main()
