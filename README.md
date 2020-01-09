@@ -357,20 +357,20 @@ Several example input files can be found under `tests/*.json`. Some highlights:
 
 ### Stiffness testing
 
-This example correponds to the unit test in `tests/test_stiffness.py`, which simulates the Morris-Lecar neuron model in `tests/morris_lecar.json`. The plot shows the two state variables of the model, `V` and `W`, while in the lower panel the solver timestep recommendation is plotted at each step. This recommendation is returned by each GSL solver.  Note that the `avg_step_size_ratio` selection criterion parameter refers to the *average* of this value across the entire simulation period.
+This example correponds to the unit test in [`tests/test_stiffness.py`](tests/test_stiffness.py), which simulates the Morris-Lecar neuron model in [`tests/morris_lecar.json`](tests/morris_lecar.json). The plot shows the two state variables of the model, `V` and `W`, while in the lower panel the solver timestep recommendation is plotted at each step. This recommendation is returned by each GSL solver.  Note that the `avg_step_size_ratio` selection criterion parameter refers to the *average* of this value across the entire simulation period.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/stiffness_example.png" alt="timeseries plots of V, W, and recommended timestep" width="620" height="434">
 </p>
 
-`test_stiffness.py` tests that for a tighter integration accuracy, the solver recommendation for this example changes from "explicit" (non-stiff) to "implicit" (stiff).
+[`test_stiffness.py`](tests/test_stiffness.py) tests that for a tighter integration accuracy, the solver recommendation for this example changes from "explicit" (non-stiff) to "implicit" (stiff).
 
 
 ### From ode-toolbox results dictionary to simulation
 
 ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: [AnalyticIntegrator](odetoolbox/analytic_integrator.py), which simulates on the basis of propagators and returns precise values, and [MixedIntegrator](odetoolbox/mixed_integrator.py), which in addition performs numerical integration using GSL (for example, using `pygsl.odeiv.step_rk4` or `pygsl.odeiv.step_bsimp`). These integrators both use `sympy.parsing.sympy_parser` to parse the expression strings from the ode-toolbox results dictionary, and then use the sympy expression `evalf()` method to evaluate to a floating-point value.
 
-The file `tests/test_analytic_solver_integration.py` contains an integration test, that uses [AnalyticIntegrator](odetoolbox/analytic_integrator.py) and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ode-toolbox. The following results figure shows perfect agreement between the three simulation methods:
+The file [`tests/test_analytic_solver_integration.py`](tests/test_analytic_solver_integration.py) contains an integration test, that uses [AnalyticIntegrator](odetoolbox/analytic_integrator.py) and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ode-toolbox. The following results figure shows perfect agreement between the three simulation methods:
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
@@ -401,7 +401,7 @@ Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (201
 
 
 
-## Acknowledgments
+## Acknowledgements
 
 This software was initially supported by the JARA-HPC Seed Fund *NESTML - A modeling language for spiking neuron and synapse models for NEST* and the Initiative and Networking Fund of the Helmholtz Association and the Helmholtz Portfolio Theme *Simulation and Modeling for the Human Brain*.
 
