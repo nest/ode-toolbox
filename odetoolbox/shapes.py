@@ -22,6 +22,7 @@ import logging
 import numpy as np
 import re
 import sympy
+import sympy.parsing.sympy_parser
 
 
 def is_sympy_type(var):
@@ -371,7 +372,7 @@ class Shape():
         derivative_symbols = self.get_state_variables(derivative_symbol=derivative_symbol)
         for derivative_factor, derivative_symbol in zip(self.derivative_factors, derivative_symbols):
             expr += derivative_factor * derivative_symbol
-        print("Shape: reconstituting expr with derivative_factors = " + str(self.derivative_factors) + ", derivative_symbols = " + str(derivative_symbols), ", expr = " + str(expr))
+        logging.info("Shape " + str(self.symbol) + ": reconstituting expr with derivative_factors = " + str(self.derivative_factors) + ", derivative_symbols = " + str(derivative_symbols) + ", expr = " + str(expr))
         return expr
 
 

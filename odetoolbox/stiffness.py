@@ -32,9 +32,6 @@ from .mixed_integrator import ParametersIncompleteException
 from .shapes import Shape
 from .spike_generator import SpikeGenerator
 
-# Make NumPy warnings errors. Without this, we can't catch overflow errors that can occur in the step() function, which might indicate a problem with the ODE, the grid resolution or the stiffness testing framework itself.
-np.seterr(over='raise')
-
 try:
     import matplotlib as mpl
     mpl.use('Agg', warn=False)
@@ -142,6 +139,8 @@ class StiffnessTester(object):
         #
         #  initialise and run mixed integrator
         #
+        
+        logging.info("Simulating for " + str(self.sim_time) + " with max_step_size = " + str(self.max_step_size))
 
         mixed_integrator = MixedIntegrator(
          integrator,
