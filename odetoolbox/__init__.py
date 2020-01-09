@@ -265,7 +265,7 @@ def analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fals
 
     Parameters
     ----------
-    disble_stiffness_check : bool
+    disable_stiffness_check : bool
         Whether to perform stiffness checking.
     disable_analytic_solver : bool
         Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.

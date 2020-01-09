@@ -38,6 +38,7 @@ if __name__ == "__main__":
     argparser.add_argument("infile", metavar='PATH', type=str, help="JSON input file path")
     argparser.add_argument("--disable-stiffness-check", action="store_true", help="If provided, disable stiffness check")
     argparser.add_argument("--disable-analytic-solver", action="store_true", help="If provided, disable generation of propagators")
+    argparser.add_argument("--debug", action="store_true", help="If provided, increase the verbosity.")
     parsed_args = argparser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)
@@ -57,7 +58,8 @@ if __name__ == "__main__":
     try:
         result = odetoolbox.analysis(indict,
                                      disable_stiffness_check=parsed_args.disable_stiffness_check,
-                                     disable_analytic_solver=parsed_args.disable_analytic_solver)
+                                     disable_analytic_solver=parsed_args.disable_analytic_solver,
+                                     debug=parsed_args.debug)
     except odetoolbox.MalformedInput as e:
         logging.error("The input JSON file could not be parsed; error: " + e.message)
         sys.exit(1)
