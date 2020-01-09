@@ -61,7 +61,7 @@ ode-toolbox can be used in two ways:
 
    <code>ode_analyzer.py [lorenz_attractor.json](tests/lorenz_attractor.json)</code>
 
-The JSON file and Python dictionary are completely equivalent in content and form, described in the "Input" section below.
+The JSON file and Python dictionary are completely equivalent in content and form, described in the [Input](#input) section below.
 
 Two additional boolean flags can be passed; when ode-toolbox is used via its API, these exist as two additional function parameters (`odetoolbox.analysis(indict, disable_stiffness_check=True, ...)`), whereas if the command-line is used, they can be passed as arguments (`./ode-analyzer.py --disable_stiffness_check ...`).
 
