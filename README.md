@@ -63,7 +63,7 @@ ode-toolbox can be used in two ways:
 
 The JSON file and Python dictionary are completely equivalent in content and form, described in the [Input](#input) section below.
 
-Two additional boolean flags can be passed; when ode-toolbox is used via its API, these exist as two additional function parameters (`odetoolbox.analysis(indict, disable_stiffness_check=True, ...)`), whereas if the command line is used, they can be passed as arguments (`./ode-analyzer.py --disable_stiffness_check ...`).
+Several boolean flags can additionally be passed; when ode-toolbox is used via its API, these exist as function parameters (`odetoolbox.analysis(indict, disable_stiffness_check=True, ...)`), whereas if the command line is used, they can be passed as arguments (`./ode-analyzer.py --disable_stiffness_check ...`).
 
 | Name | Default | Description  |
 | ------------- | ------------- | ------------- |
@@ -74,7 +74,7 @@ Two additional boolean flags can be passed; when ode-toolbox is used via its API
 
 ## Input
 
-The JSON input dictionary that is passed to ode-toolbox contains **dynamics**, **numerical parameters**, and **global options**. **Documentation** may optionally be provided as a string.
+The JSON input dictionary that is passed to ode-toolbox contains [dynamics](#dynamics), [numerical parameters](#parameters), and [global options](#global-options). Documentation may optionally be provided as a string.
 
 All expressions are parsed as sympy expressions, and subsequently simplified through `sympy.simplify()`. There are several predefined symbols, such as `e` and `E` for Euler's number, trigonometric functions, etc. `t` is assumed to represent time. The list of predefined symbols is defined in `symbols.py`, as the static member `Shape._sympy_globals`. Variable names should be chosen such that they do not overlap with the predefined symbols.
 
