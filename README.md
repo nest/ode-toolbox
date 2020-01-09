@@ -7,7 +7,7 @@ Choosing the optimal solver for systems of ordinary differential equations (ODEs
 The internal processing carried out by ode-toolbox can be visually summarised as follows, starting from (a set of) ODEs on the top (double outline), and finishing by either generating propagator matrices (top green node) or recommending either a stiff or nonstiff solver (bottom two green nodes):
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/flow_diagram.png" alt="Flow diagram" width="361" height="341">
+<img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/flow_diagram.png" alt="Flow diagram" width="620" height="539">
 </p>
 
 ode-toolbox is written in Python and leverages SymPy for the symbolic manipulation of equations. It was initially developed in the context of the [NESTML](https://github.com/nest/nestml) project, in which the main focus was on the class of spiking neurons presently available in the [NEST](https://github.com/nest/nest-simulator) simulator. It can, however, be used standalone and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
