@@ -40,6 +40,7 @@ if __name__ == "__main__":
     argparser.add_argument("--disable-analytic-solver", action="store_true", help="If provided, disable generation of propagators")
     parsed_args = argparser.parse_args()
 
+    logging.basicConfig(level=logging.DEBUG)
     logging.info("Reading input file...")
 
     if not os.path.isfile(parsed_args.infile):
@@ -55,7 +56,7 @@ if __name__ == "__main__":
 
     try:
         result = odetoolbox.analysis(indict,
-                                     enable_stiffness_check=not parsed_args.disable_stiffness_check,
+                                     disable_stiffness_check=parsed_args.disable_stiffness_check,
                                      disable_analytic_solver=parsed_args.disable_analytic_solver)
     except odetoolbox.MalformedInput as e:
         logging.error("The input JSON file could not be parsed; error: " + e.message)

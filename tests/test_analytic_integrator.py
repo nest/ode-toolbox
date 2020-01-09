@@ -69,7 +69,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
         #
 
         indict = open_json("test_analytic_integrator.json")
-        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=False)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1

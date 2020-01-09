@@ -55,7 +55,7 @@ def open_json(fname):
 class TestLorenzAttractor(unittest.TestCase):
     def test_lorenz_attractor(self):
         indict = open_json("lorenz_attractor.json")
-        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=PYGSL_AVAILABLE)
+        solver_dict = odetoolbox.analysis(indict, disble_stiffness_check=not PYGSL_AVAILABLE)
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict,  indent=2))
         assert len(solver_dict) == 1

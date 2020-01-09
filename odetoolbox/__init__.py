@@ -118,7 +118,7 @@ def from_json_to_shapes(indict, options_dict):
     return shapes
 
 
-def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False, debug=False):
+def analysis_(indict, disable_stiffness_check=False, disable_analytic_solver=False, debug=False):
 
     global default_config
 
@@ -167,7 +167,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
         sub_sys = shape_sys.get_sub_system(numeric_syms)
         solver_json = sub_sys.generate_numeric_solver()
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
-        if enable_stiffness_check:
+        if not disable_stiffness_check:
             if not PYGSL_AVAILABLE:
                 raise Exception("Stiffness test requested, but PyGSL not available")
 
@@ -254,7 +254,7 @@ def analysis_(indict, enable_stiffness_check=True, disable_analytic_solver=False
     return solvers_json, shape_sys, shapes
 
 
-def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False, debug=True):
+def analysis(indict, disable_stiffness_check=False, disable_analytic_solver=False, debug=True):
     """The main entry point of the analysis.
 
     This function expects a single dictionary with the keys `odes`,
@@ -265,14 +265,14 @@ def analysis(indict, enable_stiffness_check=True, disable_analytic_solver=False,
 
     Parameters
     ----------
-    enable_stiffness_check : bool
+    disble_stiffness_check : bool
         Whether to perform stiffness checking.
     disable_analytic_solver : bool
-        When performing stiffness checking, optionally disable analytic integration so that all ODEs are integrated numerically.
+        Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
 
     :return: The result of the analysis, again as a dictionary.
     """
-    d, _, _ = analysis_(indict, enable_stiffness_check=enable_stiffness_check, disable_analytic_solver=disable_analytic_solver, debug=debug)
+    d, _, _ = analysis_(indict, disable_stiffness_check=disable_stiffness_check, disable_analytic_solver=disable_analytic_solver, debug=debug)
     return d
 
 

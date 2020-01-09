@@ -63,12 +63,12 @@ ode-toolbox can be used in two ways:
 
 The JSON file and Python dictionary are completely equivalent in content and form, described in the "Input" section below.
 
-However, when using the API, additional boolean flags can be passed:
+Two additional boolean flags can be passed; when ode-toolbox is used via its API, these exist as two additional function parameters (`odetoolbox.analysis(indict, disable_stiffness_check=True, ...)`), whereas if the command-line is used, they can be passed as arguments (`./ode-analyzer.py --disable_stiffness_check ...`).
 
 | Name | Default | Description  |
 | ------------- | ------------- | ------------- |
-| `enable_stiffness_check` | True | Set to False to disable stiffness check. |
 | `disable_analytic_solver` | False | Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable. |
+| `disable_stiffness_check` | False | Set to True to disable stiffness check. |
 
 
 ## Input

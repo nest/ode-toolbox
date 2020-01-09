@@ -48,7 +48,7 @@ class TestAnalysisMixedAnalyticNumerical(unittest.TestCase):
 
     def test_mixed_analytic_numerical_no_stiffness(self):
         indict = open_json("mixed_analytic_numerical_no_stiffness.json")
-        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=False)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
         assert len(solver_dict) == 2
         assert (solver_dict[0]["solver"] == "analytical" and solver_dict[1]["solver"][:7] == "numeric") \
          or (solver_dict[1]["solver"] == "analytical" and solver_dict[0]["solver"][:7] == "numeric")
@@ -56,7 +56,7 @@ class TestAnalysisMixedAnalyticNumerical(unittest.TestCase):
     @pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Cannot run stiffness test if GSL is not installed.")
     def test_mixed_analytic_numerical_with_stiffness(self):
         indict = open_json("mixed_analytic_numerical_with_stiffness.json")
-        solver_dict = odetoolbox.analysis(indict, enable_stiffness_check=True)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=False)
         assert len(solver_dict) == 2
         assert (solver_dict[0]["solver"] == "analytical" and solver_dict[1]["solver"][:7] == "numeric") \
          or (solver_dict[1]["solver"] == "analytical" and solver_dict[0]["solver"][:7] == "numeric")
