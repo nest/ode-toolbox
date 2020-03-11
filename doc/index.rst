@@ -383,6 +383,23 @@ The file [`test/test_mixed_integrator_numeric.py`](test/test_mixed_integrator_nu
 <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_mixed_integrator_numeric.png" alt="g_in, g_in__d, g_ex, g_ex__d, V_m timeseries plots" width="620" height="451">
 </p>
 
+## Caching of results
+
+* Not implemented yet—**TODO! ** *
+
+Some operations on sympy expressions can be quite slow (see the section [Working with large expressions](#working-with-large-expressions) ).
+
+Even dynamical systems of moderate size can require a few minutes of processing time, in large part due to sympy calls, and solver selection.
+
+To speed up processing, a caching mechanism analyses the final system matrix :math:`$A$` and rewrites it as a block-diagonal matrix :math:`$A = \text{diag}(B_1, B_2, \dots, B_k)`, were each of :math:`B_1, B_2, \dots, B_k` is square.
+
+For propagators, we note that
+
+.. math::
+
+   e^{At} = \text{diag}(e^{B_1t}, e^{B_2t}, \dots, e^{B_kt})
+
+
 
 ## Contributions and getting help
 
