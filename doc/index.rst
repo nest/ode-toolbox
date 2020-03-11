@@ -1,6 +1,8 @@
 ode-toolbox
 ===========
 
+:mod:`odetoolbox`
+
 |Build status| |Testing coverage|
 
 Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends solvers on the basis of a set of user-configurable heuristics. For all dynamical equations that admit an analytic solution, ode-toolbox generates propagator matrices that allow the solution to be calculated at machine precision.
@@ -246,11 +248,11 @@ The following global options are defined. Note that all are typically formatted 
      - Type
      - Default
      - Description
-   * `integration_accuracy_abs`
+   * - `integration_accuracy_abs`
      - 1E-9
      - float
      - Absolute error bound for all numerical integrators that are used.
-   * `integration_accuracy_rel`
+   * - `integration_accuracy_rel`
      - 1E-9
      - float
      - Relative error bound for all numerical integrators that are used.
@@ -258,15 +260,15 @@ The following global options are defined. Note that all are typically formatted 
      - `"__h"`
      - string
      - Generated propagators are a function of the simulation timestep. This parameter gives the name of the variable that contains the numerical value of the timestep during simulation.
-   * `sim_time`
+   * - `sim_time`
      - 100E-3
      - float
      - Total simulated time.
-   * `max_step_size`
+   * - `max_step_size`
      - 999
      - float
      - Maximum step size during simulation (e.g. for stiffness testing solvers).
-   * `differential_order_symbol`
+   * - `differential_order_symbol`
      - `"__d"`
      - string
      - String appended n times to output variable names to indicate differential order n. XXX: TODO: only the default value works for now.
