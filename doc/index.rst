@@ -75,15 +75,15 @@ Several boolean flags can additionally be passed; when ode-toolbox is used via i
    * - Name
      - Default
      - Description
-| `disable_analytic_solver`
+   * - `disable_analytic_solver`
      - False
-     - Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable. |
-| `disable_stiffness_check`
+     - Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
+   * - `disable_stiffness_check`
      - False
-     - Set to True to disable stiffness check. |
-| `debug`
+     - Set to True to disable stiffness check.
+   * - `debug`
      - False
-     - Set to True to increase the verbosity. |
+     - Set to True to increase the verbosity.
 
 Input
 -----

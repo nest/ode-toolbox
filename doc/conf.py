@@ -47,6 +47,7 @@ from subprocess import check_output, CalledProcessError
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+sys.path.insert(0, os.path.abspath('sphinx-apidoc'))
 sys.path.insert(0, os.path.abspath('../doc'))
 sys.path.insert(0, os.path.abspath('doc'))
 sys.path.insert(0, os.path.abspath('..'))
@@ -67,6 +68,8 @@ import os
 
 static_docs_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print("Searching in: " + str(static_docs_dir))
+sys.path.insert(0, os.path.join(static_docs_dir, "sphinx-apidoc"))
+sys.path.insert(0, os.path.join(static_docs_dir, "sphinx-apidoc/odetoolbox"))
 sys.path.insert(0, os.path.join(static_docs_dir, "fig"))
 matches = []
 for root, dirnames, filenames in os.walk(static_docs_dir):
@@ -78,6 +81,8 @@ for root, dirnames, filenames in os.walk(static_docs_dir):
             matches.append(os.path.join(root, filename))
 print("Matches:")
 print(matches)
+
+os.system("find sphinx-apidoc")
 
 for fn in matches:
 	if "sphinx-apidoc" in fn:
