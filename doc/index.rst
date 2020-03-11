@@ -84,7 +84,7 @@ All expressions are parsed as sympy expressions, and subsequently simplified thr
 Dynamics
 ~~~~~~~~
 
-All dynamical variables have a variable name, a differential order, and a defining expression. The overall dynamics is given as a list of these definitions. For example, we can define an alpha shape kernel :math:``g`` with time constant :math:``\tau`` as follows:
+All dynamical variables have a variable name, a differential order, and a defining expression. The overall dynamics is given as a list of these definitions. For example, we can define an alpha shape kernel :math:`g` with time constant :math:`\tau` as follows:
 
 .. code:: python
 
@@ -248,10 +248,10 @@ ode-toolbox will return a list of solvers. Each solver has the following keys: -
 
 Analytic solvers have the following extra entries:
 
--  ``update_expressions`` : a dictionary that maps each variable symbol (in string form) to a sympy propagator expression. The interpretation of an entry ``"g" : "g * __P__g__g + h * __P__g__h"`` is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:``t`` to the next step :math:``t + \Delta t``, we assign the new value ``"g * __P__g__g + h * __P__g__h"`` to the variable ``g``. Note that the expression is always evaluated at the old time :math:``t``; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
+-  ``update_expressions`` : a dictionary that maps each variable symbol (in string form) to a sympy propagator expression. The interpretation of an entry ``"g" : "g * __P__g__g + h * __P__g__h"`` is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:`t` to the next step :math:`t + \Delta t`, we assign the new value ``"g * __P__g__g + h * __P__g__h"`` to the variable ``g``. Note that the expression is always evaluated at the old time :math:`t`; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
 -  ``propagators`` : a dictionary that maps each propagator matrix entry to its defining expression; for example ``"__P__g__h" : "__h*exp(-__h/tau)"``
 
-Numeric solvers have the following extra entries: - ``update_expressions``: a dictionary that maps each variable symbol (in string form) to a sympy expression that is its Jacobian, that is, for a symbol :math:``x``, the expression is equal to :math:``\frac{\delta x}{\delta t}``.
+Numeric solvers have the following extra entries: - ``update_expressions``: a dictionary that maps each variable symbol (in string form) to a sympy expression that is its Jacobian, that is, for a symbol :math:`x`, the expression is equal to :math:`\frac{\delta x}{\delta t}`.
 
 Analytic solver selection criteria
 ----------------------------------
@@ -309,18 +309,18 @@ Internal representation
 
 For users who want to modify/extend ode-toolbox.
 
-Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a SystemOfShapes instance, which summarises all provided dynamical equations in the canonical form :math:``\mathbf{x}' = \mathbf{Ax} + \mathbf{C}``, with matrix :math:``\mathbf{A}`` containing the linear part of the system dynamics and vector :math:``\mathbf{C}`` containing the nonlinear terms.
+Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a SystemOfShapes instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{C}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{C}` containing the nonlinear terms.
 
 Converting direct functions of time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The aim is to find a representation of the form :math:``a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}``, with :math:``a_i\in\mathcal{R}\forall 0 \leq i < n``. The approach taken here [Blundell et al. 2018] works by evaluating the function ``f`` at times ``t = t_0, t_1, ... t_n``, which results in ``n`` equations, that we can use to solve for the coefficients of the potentially n-dimensional dynamical system.
+The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}`, with :math:`a_i\in\mathcal{R}\forall 0 \leq i < n`. The approach taken here [Blundell et al. 2018] works by evaluating the function ``f`` at times ``t = t_0, t_1, ... t_n``, which results in ``n`` equations, that we can use to solve for the coefficients of the potentially n-dimensional dynamical system.
 
-1. Begin by assuming that the dynamical system is of order :math:``n``.
-2. Find timepoints :math:``t = t_0, t_1, ..., t_n`` such that :math:``f(t_i) \neq 0 \forall 0 \leq i \leq n``. The times can be selected at random.
-3. Formulate the equations as :math:``\mathbf{X} \cdot \begin{matrix}a_0\\a_1\\\vdots\\a_{n-1}\end{matrix} = \begin{matrix}f^{(n)}(t_0)\\f^{(n)}(t_1)\\\vdots\\f^{(n)}(t_n)\end{matrix}`` with :math:``\mathbf{X} = \begin{matrix}                                                    f(t_0) &  \cdots   & f^(n-1)(t_0) \\                                                     f(t_1) &  \cdots   & f^(n-1)(t_1) \\                                                     \vdots &           & \vdots \\                                                     f(t_n) &  \cdots   & f^(n-1)(t_n)                                             \end{matrix}``.
-4. If :math:``\mathbf{X}`` is invertible, the equation can be solved for :math:``a_0\ldots a_{n-1}``.
-5. If :math:``\mathbf{X}`` is not invertible, increase ``n`` (up to some predefined maximum order ``max_n``). If ``max_n`` is reached, fail.
+1. Begin by assuming that the dynamical system is of order :math:`n`.
+2. Find timepoints :math:`t = t_0, t_1, ..., t_n` such that :math:`f(t_i) \neq 0 \forall 0 \leq i \leq n`. The times can be selected at random.
+3. Formulate the equations as :math:`\mathbf{X} \cdot \begin{matrix}a_0\\a_1\\\vdots\\a_{n-1}\end{matrix} = \begin{matrix}f^{(n)}(t_0)\\f^{(n)}(t_1)\\\vdots\\f^{(n)}(t_n)\end{matrix}` with :math:`\mathbf{X} = \begin{matrix}                                                    f(t_0) &  \cdots   & f^(n-1)(t_0) \\                                                     f(t_1) &  \cdots   & f^(n-1)(t_1) \\                                                     \vdots &           & \vdots \\                                                     f(t_n) &  \cdots   & f^(n-1)(t_n)                                             \end{matrix}`.
+4. If :math:`\mathbf{X}` is invertible, the equation can be solved for :math:`a_0\ldots a_{n-1}`.
+5. If :math:`\mathbf{X}` is not invertible, increase ``n`` (up to some predefined maximum order ``max_n``). If ``max_n`` is reached, fail.
 
 This algorithm is implemented in ```Shape.from_function()`` <odetoolbox/shapes.py>`__.
 
@@ -377,7 +377,7 @@ The file ```tests/test_analytic_solver_integration.py`` <tests/test_analytic_sol
    <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
 
 
-The file ```test/test_mixed_integrator_numeric.py`` <test/test_mixed_integrator_numeric.py>`__ contains an integration test, that uses `MixedIntegrator <odetoolbox/mixed_integrator.py>`__ and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the `AnalyticIntegrator <odetoolbox/analytic_integrator.py>`__, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:``V_m`` in the plot that is generated:
+The file ```test/test_mixed_integrator_numeric.py`` <test/test_mixed_integrator_numeric.py>`__ contains an integration test, that uses `MixedIntegrator <odetoolbox/mixed_integrator.py>`__ and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the `AnalyticIntegrator <odetoolbox/analytic_integrator.py>`__, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
 
 .. raw:: html
 
@@ -393,13 +393,13 @@ Some operations on sympy expressions can be quite slow (see the section `Working
 
 Even dynamical systems of moderate size can require a few minutes of processing time, in large part due to sympy calls, and solver selection.
 
-To speed up processing, a caching mechanism analyses the final system matrix :math:``$A$`` and rewrites it as a block-diagonal matrix :math:``$A = \text{diag}(B_1, B_2, \dots, B_k)``, were each of :math:``B_1, B_2, \dots, B_k`` is square.
+To speed up processing, a caching mechanism analyses the final system matrix :math:`$A$` and rewrites it as a block-diagonal matrix :math:`$A = \text{diag}(B_1, B_2, \dots, B_k)`, were each of :math:`B_1, B_2, \dots, B_k` is square.
 
 For propagators, we note that
 
 .. math::
 
-   e^{At} = :raw-latex:`\text{diag}`(e^{B\_1t}, e^{B\_2t}, :raw-latex:`\dots`, e^{B\_kt})
+   e^{At} = \text{diag}(e^{B\_1t}, e^{B\_2t}, \dots, e^{B\_kt})
 
 Contributions and getting help
 ------------------------------
