@@ -1,5 +1,4 @@
 ode-toolbox
 ===========
 
-.. include:: doc/index.rst
-
+Documentation can be found at https://ode-toolbox.readthedocs.io

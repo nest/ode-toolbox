@@ -68,11 +68,22 @@ The JSON file and Python dictionary are completely equivalent in content and for
 
 Several boolean flags can additionally be passed; when ode-toolbox is used via its API, these exist as function parameters (``odetoolbox.analysis(indict, disable_stiffness_check=True, ...)``), whereas if the command line is used, they can be passed as arguments (``./ode-analyzer.py --disable_stiffness_check ...``).
 
-| Name | Default | Description  |
-| ------------- | ------------- | ------------- |
-| `disable_analytic_solver` | False | Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable. |
-| `disable_stiffness_check` | False | Set to True to disable stiffness check. |
-| `debug` | False | Set to True to increase the verbosity. |
+.. list-table::
+   :header-rows: 1
+   :widths: 10 5 20
+
+   * - Name
+     - Default
+     - Description
+| `disable_analytic_solver`
+     - False
+     - Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable. |
+| `disable_stiffness_check`
+     - False
+     - Set to True to disable stiffness check. |
+| `debug`
+     - False
+     - Set to True to increase the verbosity. |
 
 Input
 -----
@@ -227,14 +238,38 @@ Further options for the integrator, decision criteria for solver selection and s
 The following global options are defined. Note that all are typically formatted as strings when encoding into JSON.
 
 
-| Name | Type | Default | Description  |
-| ------------- | ------------- | ------------- | ----- |
-| `integration_accuracy_abs` | 1E-9 | float | Absolute error bound for all numerical integrators that are used. |
-| `integration_accuracy_rel` | 1E-9 | float | Relative error bound for all numerical integrators that are used. |
-| `output_timestep_symbol` | `"__h"` | string | Generated propagators are a function of the simulation timestep. This parameter gives the name of the variable that contains the numerical value of the timestep during simulation. |
-| `sim_time` | 100E-3 | float | Total simulated time. |
-| `max_step_size` | 999 | float | Maximum step size during simulation (e.g. for stiffness testing solvers). |
-| `differential_order_symbol` | `"__d"` | string | String appended n times to output variable names to indicate differential order n. XXX: TODO: only the default value works for now. |
+.. list-table::
+   :header-rows: 1
+   :widths: 10 5 5 20
+
+   * - Name
+     - Type
+     - Default
+     - Description
+   * `integration_accuracy_abs`
+     - 1E-9
+     - float
+     - Absolute error bound for all numerical integrators that are used.
+   * `integration_accuracy_rel`
+     - 1E-9
+     - float
+     - Relative error bound for all numerical integrators that are used.
+   * `output_timestep_symbol`
+     - `"__h"`
+     - string
+     - Generated propagators are a function of the simulation timestep. This parameter gives the name of the variable that contains the numerical value of the timestep during simulation.
+   * `sim_time`
+     - 100E-3
+     - float
+     - Total simulated time.
+   * `max_step_size`
+     - 999
+     - float
+     - Maximum step size during simulation (e.g. for stiffness testing solvers).
+   * `differential_order_symbol`
+     - `"__d"`
+     - string
+     - String appended n times to output variable names to indicate differential order n. XXX: TODO: only the default value works for now.
 
 
 Output
@@ -296,12 +331,19 @@ Solver selection is performed on the basis of a set of rules, defined in ``Stiff
 -  If the average step size for the implicit solver is at least ``avg_step_size_ratio`` times as large as the average step size for the explicit solver, recommend the implicit solver.
 -  Otherwise, recommend the explicit solver.
 
+.. list-table::
+   :header-rows: 1
+   :widths: 10 5 20
 
-
-| Name        | Default           | Description  |
-| ------------- | ------------- | ----- |
-| `avg_step_size_ratio` | 6 | Ratio between average step sizes of implicit and explicit solver. Larger means that the explicit solver is more likely to be selected. |
-| `machine_precision_dist_ratio` | 10 | Disqualify a solver if its minimum step size comes closer than this ratio to the machine precision. |
+   * - Name
+     - Default
+     - Description
+   * - `avg_step_size_ratio`
+     - 6
+     - Ratio between average step sizes of implicit and explicit solver. Larger means that the explicit solver is more likely to be selected.
+   * - `machine_precision_dist_ratio`
+     - 10
+     - Disqualify a solver if its minimum step size comes closer than this ratio to the machine precision.
 
 
 Internal representation
@@ -393,7 +435,7 @@ Some operations on sympy expressions can be quite slow (see the section `Working
 
 Even dynamical systems of moderate size can require a few minutes of processing time, in large part due to sympy calls, and solver selection.
 
-To speed up processing, a caching mechanism analyses the final system matrix :math:`$A$` and rewrites it as a block-diagonal matrix :math:`$A = \text{diag}(B_1, B_2, \dots, B_k)`, were each of :math:`B_1, B_2, \dots, B_k` is square.
+To speed up processing, a caching mechanism analyses the final system matrix :math:`A` and rewrites it as a block-diagonal matrix :math:`A = \text{diag}(B_1, B_2, \dots, B_k)`, were each of :math:`B_1, B_2, \dots, B_k` is square.
 
 For propagators, we note that
 
