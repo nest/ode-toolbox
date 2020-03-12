@@ -76,25 +76,21 @@ import os
 
 static_docs_dir = os.path.dirname(os.path.abspath(__file__))
 print("Searching in: " + str(static_docs_dir))
-sys.path.insert(0, os.path.join(static_docs_dir, "sphinx-apidoc"))
-sys.path.insert(0, os.path.join(static_docs_dir, "sphinx-apidoc/odetoolbox"))
-sys.path.insert(0, os.path.join(static_docs_dir, "fig"))
+sys.path.insert(0, os.path.join(static_docs_dir, "odetoolbox"))
 matches = []
-for root, dirnames, filenames in os.walk(static_docs_dir):
+for root, dirnames, filenames in os.walk(os.path.join(static_docs_dir, "..", "odetoolbox"):
     for filename in fnmatch.filter(filenames, '*.rst'):
             matches.append(os.path.join(root, filename))
-    for filename in fnmatch.filter(filenames, '*.pdf'):
-            matches.append(os.path.join(root, filename))
-    for filename in fnmatch.filter(filenames, '*.png'):
-            matches.append(os.path.join(root, filename))
+#    for filename in fnmatch.filter(filenames, '*.pdf'):
+#            matches.append(os.path.join(root, filename))
+#    for filename in fnmatch.filter(filenames, '*.png'):
+#            matches.append(os.path.join(root, filename))
 print("Matches:")
 print(matches)
 
-os.system("find ../odetoolbox")
+#os.system("find ../odetoolbox")
 
 for fn in matches:
-	if "sphinx-apidoc" in fn:
-		continue
 	fn_from = fn
 	fn_to = os.path.join(static_docs_dir, ".", fn[len(static_docs_dir)+1:])
 	print("From " + fn_from + " to " + fn_to)
