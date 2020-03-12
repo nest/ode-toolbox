@@ -58,10 +58,13 @@ sys.path.insert(0, os.path.abspath('.'))
 
 print("Running sphinx-apidoc...")
 
-os.system("sphinx-apidoc --module-first -o "
+cmd = "sphinx-apidoc --module-first -o "
  + os.path.join(os.path.dirname(os.path.abspath(__file__)), '../odetoolbox')
  + " "
  + os.path.join(os.path.dirname(os.path.abspath(__file__)), '../odetoolbox'))	# in-source generation of necessary .rst files
+
+print("\tcmd = " + str(cmd))
+os.system(cmd)
 
 
 #
@@ -71,7 +74,7 @@ os.system("sphinx-apidoc --module-first -o "
 import fnmatch
 import os
 
-static_docs_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+static_docs_dir = os.path.dirname(os.path.abspath(__file__))
 print("Searching in: " + str(static_docs_dir))
 sys.path.insert(0, os.path.join(static_docs_dir, "sphinx-apidoc"))
 sys.path.insert(0, os.path.join(static_docs_dir, "sphinx-apidoc/odetoolbox"))
