@@ -56,6 +56,8 @@ sys.path.insert(0, os.path.abspath('doc'))
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('.'))
 
+print("Running sphinx-apidoc...")
+
 os.system("sphinx-apidoc --module-first -o "
  + os.path.join(os.path.dirname(os.path.abspath(__file__)), '../odetoolbox')
  + " "
@@ -85,7 +87,7 @@ for root, dirnames, filenames in os.walk(static_docs_dir):
 print("Matches:")
 print(matches)
 
-os.system("find sphinx-apidoc")
+os.system("find ../odetoolbox")
 
 for fn in matches:
 	if "sphinx-apidoc" in fn:
