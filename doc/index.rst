@@ -66,7 +66,7 @@ ode-toolbox can be used in two ways:
 
 ode\_analyzer.py `lorenz\_attractor.json <tests/lorenz_attractor.json>`__\ 
 
-The JSON file and Python dictionary are completely equivalent in content and form, described in the `Input <#input>`__ section below.
+The JSON file and Python dictionary are completely equivalent in content and form, described in the :ref:`Input` section below.
 
 Several boolean flags can additionally be passed; when ode-toolbox is used via its API, these exist as function parameters (``odetoolbox.analysis(indict, disable_stiffness_check=True, ...)``), whereas if the command line is used, they can be passed as arguments (``./ode-analyzer.py --disable_stiffness_check ...``).
 
@@ -400,7 +400,7 @@ Several example input files can be found under ``tests/*.json``. Some highlights
 Stiffness testing
 ~~~~~~~~~~~~~~~~~
 
-This example correponds to the unit test in ```tests/test_stiffness.py`` <tests/test_stiffness.py>`__, which simulates the Morris-Lecar neuron model in ```tests/morris_lecar.json`` <tests/morris_lecar.json>`__. The plot shows the two state variables of the model, ``V`` and ``W``, while in the lower panel the solver timestep recommendation is plotted at each step. This recommendation is returned by each GSL solver. Note that the ``avg_step_size_ratio`` selection criterion parameter refers to the *average* of this value across the entire simulation period.
+This example correponds to the unit test in `\ ``tests/test_stiffness.py`` <tests/test_stiffness.py>`__, which simulates the Morris-Lecar neuron model in `\ ``tests/morris_lecar.json`` <tests/morris_lecar.json>`__. The plot shows the two state variables of the model, ``V`` and ``W``, while in the lower panel the solver timestep recommendation is plotted at each step. This recommendation is returned by each GSL solver. Note that the ``avg_step_size_ratio`` selection criterion parameter refers to the *average* of this value across the entire simulation period.
 
 .. raw:: html
 
@@ -435,7 +435,7 @@ Caching of results
 
    Not implemented yet
 
-Some operations on sympy expressions can be quite slow (see the section `Working with large expressions <#working-with-large-expressions>`__ ).
+Some operations on sympy expressions can be quite slow (see the section :ref:`Working with large expressions`\ ).
 
 Even dynamical systems of moderate size can require a few minutes of processing time, in large part due to sympy calls, and solver selection.
 
