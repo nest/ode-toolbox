@@ -44,6 +44,9 @@ import subprocess
 
 from subprocess import check_output, CalledProcessError
 
+os.system('mkdir _static')
+os.system('install -v -D css/custom.css _static/css/custom.css')
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
