@@ -1,8 +1,6 @@
 ode-toolbox
 ===========
 
-:mod:`odetoolbox`
-
 |Build status| |Testing coverage|
 
 Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox assists in solver benchmarking, and recommends solvers on the basis of a set of user-configurable heuristics. For all dynamical equations that admit an analytic solution, ode-toolbox generates propagator matrices that allow the solution to be calculated at machine precision.
@@ -446,6 +444,13 @@ For propagators, we note that
 .. math::
 
    e^{At} = \text{diag}(e^{B\_1t}, e^{B\_2t}, \dots, e^{B\_kt})
+
+
+API documentation
+-----------------
+
+The documentation of classes and functions in the odetoolbox Python module can be found here: :mod:`odetoolbox`
+
 
 Contributions and getting help
 ------------------------------
