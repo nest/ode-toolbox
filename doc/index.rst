@@ -77,20 +77,20 @@ Several boolean flags can additionally be passed; when ode-toolbox is used via i
    * - Name
      - Default
      - Description
-   * - `disable_analytic_solver`
+   * - ``disable_analytic_solver``
      - False
      - Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
-   * - `disable_stiffness_check`
+   * - ``disable_stiffness_check``
      - False
      - Set to True to disable stiffness check.
-   * - `debug`
+   * - ``debug``
      - False
      - Set to True to increase the verbosity.
 
 Input
 -----
 
-The JSON input dictionary that is passed to ode-toolbox contains `dynamics <#dynamics>`__, `numerical parameters <#parameters>`__, and `global options <#global-options>`__. Documentation may optionally be provided as a string.
+The JSON input dictionary that is passed to ode-toolbox contains :ref:`dynamics <Dynamics>`, :ref:`numerical parameters <Parameters>`, and :ref:`global options <global-options>`. Documentation may optionally be provided as a string.
 
 All expressions are parsed as sympy expressions, and subsequently simplified through ``sympy.simplify()``. There are several predefined symbols, such as ``e`` and ``E`` for Euler's number, trigonometric functions, etc. ``t`` is assumed to represent time. The list of predefined symbols is defined in ```shapes.py`` <odetoolbox/shapes.py>`__, as the static member ``Shape._sympy_globals``. Variable names should be chosen such that they do not overlap with the predefined symbols.
 
@@ -245,31 +245,31 @@ The following global options are defined. Note that all are typically formatted 
    :widths: 10 5 5 20
 
    * - Name
-     - Type
      - Default
+     - Type
      - Description
-   * - `integration_accuracy_abs`
+   * - ``integration_accuracy_abs``
      - 1E-9
      - float
      - Absolute error bound for all numerical integrators that are used.
-   * - `integration_accuracy_rel`
+   * - ``integration_accuracy_rel``
      - 1E-9
      - float
      - Relative error bound for all numerical integrators that are used.
-   * - `output_timestep_symbol`
-     - `"__h"`
+   * - ``output_timestep_symbol``
+     - ``"__h"``
      - string
      - Generated propagators are a function of the simulation timestep. This parameter gives the name of the variable that contains the numerical value of the timestep during simulation.
-   * - `sim_time`
+   * - ``sim_time``
      - 100E-3
      - float
      - Total simulated time.
-   * - `max_step_size`
+   * - ``max_step_size``
      - 999
      - float
      - Maximum step size during simulation (e.g. for stiffness testing solvers).
-   * - `differential_order_symbol`
-     - `"__d"`
+   * - ``differential_order_symbol``
+     - ``"__d"``
      - string
      - String appended n times to output variable names to indicate differential order n. XXX: TODO: only the default value works for now.
 
@@ -340,10 +340,10 @@ Solver selection is performed on the basis of a set of rules, defined in ``Stiff
    * - Name
      - Default
      - Description
-   * - `avg_step_size_ratio`
+   * - ``avg_step_size_ratio``
      - 6
      - Ratio between average step sizes of implicit and explicit solver. Larger means that the explicit solver is more likely to be selected.
-   * - `machine_precision_dist_ratio`
+   * - ``machine_precision_dist_ratio``
      - 10
      - Disqualify a solver if its minimum step size comes closer than this ratio to the machine precision.
 
