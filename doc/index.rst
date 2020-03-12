@@ -256,7 +256,7 @@ The following global options are defined. Note that all are typically formatted 
      - 1E-9
      - float
      - Relative error bound for all numerical integrators that are used.
-   * `output_timestep_symbol`
+   * - `output_timestep_symbol`
      - `"__h"`
      - string
      - Generated propagators are a function of the simulation timestep. This parameter gives the name of the variable that contains the numerical value of the timestep during simulation.
