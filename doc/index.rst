@@ -90,7 +90,7 @@ Several boolean flags can additionally be passed; when ode-toolbox is used via i
 Input
 -----
 
-The JSON input dictionary that is passed to ode-toolbox contains :ref:`dynamics <Dynamics>`, :ref:`numerical parameters <Parameters>`, and :ref:`global options <global-options>`. Documentation may optionally be provided as a string.
+The JSON input dictionary that is passed to ode-toolbox contains :ref:`dynamics <Dynamics>`, :ref:`numerical parameters <Parameters>`, and :ref:`global options <Global options>`. Documentation may optionally be provided as a string.
 
 All expressions are parsed as sympy expressions, and subsequently simplified through ``sympy.simplify()``. There are several predefined symbols, such as ``e`` and ``E`` for Euler's number, trigonometric functions, etc. ``t`` is assumed to represent time. The list of predefined symbols is defined in ```shapes.py`` <odetoolbox/shapes.py>`__, as the static member ``Shape._sympy_globals``. Variable names should be chosen such that they do not overlap with the predefined symbols.
 
