@@ -93,10 +93,6 @@ code.descclassname {
     line-height: 1.3em;
 }
 
-.highlight {
-    background: rgba(255, 165, 0, 0.1);
-}
-
 .rst-content .admonition-title::before {
     display:none;
 }
