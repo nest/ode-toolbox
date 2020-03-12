@@ -58,9 +58,9 @@ sys.path.insert(0, os.path.abspath('.'))
 
 print("Running sphinx-apidoc...")
 
-cmd = "sphinx-apidoc --module-first -o "
- + os.path.join(os.path.dirname(os.path.abspath(__file__)), '../odetoolbox')
- + " "
+cmd = "sphinx-apidoc --module-first -o " \
+ + os.path.join(os.path.dirname(os.path.abspath(__file__)), '../odetoolbox') \
+ + " " \
  + os.path.join(os.path.dirname(os.path.abspath(__file__)), '../odetoolbox'))	# in-source generation of necessary .rst files
 
 print("\tcmd = " + str(cmd))
