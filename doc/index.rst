@@ -364,7 +364,7 @@ Numeric solvers are automatically benchmarked on solving the provided system of 
 
 Let the machine precision (defined as the smallest representable difference between any two floating-point numbers) be written as :math:`\varepsilon`.
 
-Then the minimum permissible timestep is defined as :math:`\varepsilon\,\cdot`\ ``machine_precision_dist_ratio``
+Then the minimum permissible timestep is defined as :math:`\varepsilon\,\cdot`\ ``machine_precision_dist_ratio``.
 
 -  If the minimum step size recommended by all solvers is smaller than the minimum permissible timestep, a warning is issued.
 -  If the minimum step size for the implicit solver is smaller than the minimum permissible timestep, recommend the explicit solver.
@@ -406,8 +406,8 @@ The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_
 4. If :math:`\mathbf{X}` is invertible, the equation can be solved for :math:`a_0\ldots a_{n-1}`.
 5. If :math:`\mathbf{X}` is not invertible, increase :math:`n` (up to some predefined maximum order :math:`n_{max}`). If :math:`n_{max}` is reached, fail.
 
-This algorithm is implemented in :py:meth:`odetoolbox.shapes.Shape.from_function`.
-:py:meth:`odetoolbox.shapes.Shape.from_function()`
+This algorithm is implemented in :py:meth:`odetoolbox.shapes.Shape.from_function()`.
+
 
 Analytic solver generation
 --------------------------
