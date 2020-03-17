@@ -497,7 +497,7 @@ The documentation of all Python classes and functions in the odetoolbox package 
 
 .. class:: center
 
-   :mod:`odetoolbox`
+:mod:`odetoolbox`
 
 
 Contributions and getting help
@@ -519,7 +519,7 @@ If you use ode-toolbox in your work, please cite it as:
 References
 ----------
 
-1. Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. `doi:10.3389/fninf.2018.00050 <https://doi.org/10.3389/fninf.2018.00050>`__. Preprint available on `Zenodo <https://zenodo.org/record/1411417>`__.
+.. [1] Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. `doi:10.3389/fninf.2018.00050 <https://doi.org/10.3389/fninf.2018.00050>`__.
 
 
 Acknowledgements
