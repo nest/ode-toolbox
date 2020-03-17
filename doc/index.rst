@@ -454,18 +454,16 @@ This example correponds to the unit test in `test_stiffness.py <tests/test_stiff
 From ode-toolbox results dictionary to simulation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: :py:class:`odetoolbox.AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and :py:class:`MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using :python:`pygsl.odeiv.step_rk4` or :python:`pygsl.odeiv.step_bsimp`). These integrators both use :python:`sympy.parsing.sympy_parser` to parse the expression strings from the ode-toolbox results dictionary, and then use the SymPy expression :python:`evalf()` method to evaluate to a floating-point value.
+ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: :py:class:~`odetoolbox.analytic_integrator.AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and :py:class:~`odetoolbox.mixed_integrator.MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using :python:`pygsl.odeiv.step_rk4` or :python:`pygsl.odeiv.step_bsimp`). These integrators both use :python:`sympy.parsing.sympy_parser` to parse the expression strings from the ode-toolbox results dictionary, and then use the SymPy expression :python:`evalf()` method to evaluate to a floating-point value.
 
-:py:class:`odetoolbox.analytic_integrator.AnalyticIntegrator`
-
-The file `test_analytic_solver_integration.py <tests/test_analytic_solver_integration.py>`_ contains an integration test that uses :python:`AnalyticIntegrator` and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ode-toolbox. The following results figure shows perfect agreement between the three simulation methods:
+The file `test_analytic_solver_integration.py <tests/test_analytic_solver_integration.py>`_ contains an integration test that uses :py:class:~`odetoolbox.analytic_integrator.AnalyticIntegrator` and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ode-toolbox. The following results figure shows perfect agreement between the three simulation methods:
 
 .. raw:: html
 
    <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
 
 
-The file `test_mixed_integrator_numeric.py <tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :python:`MixedIntegrator` and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :python:`AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
+The file `test_mixed_integrator_numeric.py <tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :py:class:~`odetoolbox.mixed_integrator.MixedIntegrator` and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :py:class:~`odetoolbox.analytic_integrator.AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
 
 .. raw:: html
 
@@ -495,7 +493,11 @@ For propagators, we note that
 API documentation
 -----------------
 
-The documentation of classes and functions in the odetoolbox Python module can be found here: :mod:`odetoolbox`
+The documentation of all Python classes and functions in the odetoolbox package can be found here:
+
+.. class:: center
+
+   :mod:`odetoolbox`
 
 
 Contributions and getting help
