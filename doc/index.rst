@@ -30,7 +30,7 @@ Only Python 3 is supported. ode-toolbox depends on the Python packages SymPy, Cy
 
 All required and optional packages can be installed by running
 
-::
+.. code:: bash
 
     pip install -r requirements.txt
 
@@ -39,7 +39,7 @@ Installing ode-toolbox
 
 To install, clone the repository, go to the root directory and then run the following command in a terminal:
 
-::
+.. code:: bash
 
     python setup.py install
 
@@ -52,7 +52,7 @@ Testing
 
 To run the unit and integration tests that come with ode-toolbox, you can run the following command:
 
-::
+.. code:: bash
 
     python -m pytest
 
@@ -66,7 +66,7 @@ Usage
 ode-toolbox can be used in two ways:
 
 1. As a Python module. Import the :python:`odetoolbox` module, and then call :python:`odetoolbox.analysis(indict)` where :python:`indict` is the JSON-like input in Python dictionary format. See the tests (e.g. `test\_lorenz\_attractor.py <tests/test_lorenz_attractor.py>`__) for a full example.
-2. As command line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line:
+2. As command-line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line:
 
    .. code:: bash
 
@@ -98,7 +98,7 @@ Input
 
 The JSON input dictionary that is passed to ode-toolbox contains :ref:`dynamics <Dynamics>`, :ref:`numerical parameters <Parameters>`, and :ref:`global options <Global options>`. Documentation may optionally be provided as a string.
 
-All expressions are parsed as SymPy expressions, and subsequently simplified through :python:`sympy.simplify()`. There are several predefined symbols, such as :python:`e` and :python:`E` for Euler's number, trigonometric functions, etc. :python:`t` is assumed to represent time. The list of predefined symbols is defined in ```shapes.py`` <odetoolbox/shapes.py>`__, as the static member :python:`Shape._sympy_globals`. Variable names should be chosen such that they do not conflict with the predefined symbols.
+All expressions are parsed as SymPy expressions, and subsequently simplified through :python:`sympy.simplify()`. There are several predefined symbols, such as :python:`e` and :python:`E` for Euler's number, trigonometric functions, etc. :python:`t` is assumed to represent time. The list of predefined symbols is defined in `shapes.py <odetoolbox/shapes.py>`_, as the static member :python:`Shape._sympy_globals`. Variable names should be chosen such that they do not conflict with the predefined symbols.
 
 Dynamics
 ~~~~~~~~
@@ -454,16 +454,16 @@ This example correponds to the unit test in `test_stiffness.py <tests/test_stiff
 From ode-toolbox results dictionary to simulation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: :py:class:~`odetoolbox.analytic_integrator.AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and :py:class:~`odetoolbox.mixed_integrator.MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using :python:`pygsl.odeiv.step_rk4` or :python:`pygsl.odeiv.step_bsimp`). These integrators both use :python:`sympy.parsing.sympy_parser` to parse the expression strings from the ode-toolbox results dictionary, and then use the SymPy expression :python:`evalf()` method to evaluate to a floating-point value.
+ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using :python:`pygsl.odeiv.step_rk4` or :python:`pygsl.odeiv.step_bsimp`). These integrators both use :python:`sympy.parsing.sympy_parser` to parse the expression strings from the ode-toolbox results dictionary, and then use the SymPy expression :python:`evalf()` method to evaluate to a floating-point value.
 
-The file `test_analytic_solver_integration.py <tests/test_analytic_solver_integration.py>`_ contains an integration test that uses :py:class:~`odetoolbox.analytic_integrator.AnalyticIntegrator` and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ode-toolbox. The following results figure shows perfect agreement between the three simulation methods:
+The file `test_analytic_solver_integration.py <tests/test_analytic_solver_integration.py>`_ contains an integration test that uses :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator` and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ode-toolbox. The following results figure shows perfect agreement between the three simulation methods:
 
 .. raw:: html
 
    <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
 
 
-The file `test_mixed_integrator_numeric.py <tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :py:class:~`odetoolbox.mixed_integrator.MixedIntegrator` and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :py:class:~`odetoolbox.analytic_integrator.AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
+The file `test_mixed_integrator_numeric.py <tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator` and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
 
 .. raw:: html
 

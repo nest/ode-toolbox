@@ -43,12 +43,9 @@ class SystemOfShapes(object):
     """
     """
 
-    def __init__(self, x, A, C, shapes):
+    def __init__(self, x, A : sympy.Matrix, C, shapes):
         """
-        Parameters
-        ----------
-        A : sympy.Matrix
-            Jacobian of the system (square matrix).
+        :param A: Jacobian of the system (square matrix).
         """
         logging.info("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", C = " + str(C))
         assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
@@ -68,7 +65,7 @@ class SystemOfShapes(object):
     def get_dependency_edges(self):
 
         E = []
-        
+
         for i, sym1 in enumerate(self.x_):
             for j, sym2 in enumerate(self.x_):
                 if not _is_zero(self.A_[j, i]):
@@ -101,8 +98,10 @@ class SystemOfShapes(object):
 
 
     def propagate_lin_cc_judgements(self, node_is_lin, E):
-        """propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient"""
-        
+        """
+        Propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient.
+        """
+
         queue = [ sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc ]
         while len(queue) > 0:
 
@@ -120,7 +119,8 @@ class SystemOfShapes(object):
 
 
     def get_jacobian_matrix(self):
-        """Get the Jacobian matrix
+        """
+        Get the Jacobian matrix
         """
         N = len(self.x_)
         J = sympy.zeros(N, N)
@@ -134,12 +134,13 @@ class SystemOfShapes(object):
 
 
     def get_sub_system(self, symbols):
-        """Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in `symbols` do not dependend on any of the other symbols that will be thrown away.
+        """
+        Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in `symbols` do not dependend on any of the other symbols that will be thrown away.
         """
 
         idx = [ i for i, sym in enumerate(self.x_) if sym in symbols ]
         idx_compl = [ i for i, sym in enumerate(self.x_) if not sym in symbols ]
-        
+
         x_sub = self.x_[idx, :]
         A_sub = self.A_[idx, :][:, idx]
 
@@ -150,16 +151,18 @@ class SystemOfShapes(object):
                 logging.warning("Skipping simplification of an expression that exceeds sympy simplification threshold")
             else:
                 C_old[_idx] = sympy.simplify(C_old[_idx])
-        
+
         C_sub = C_old[idx, :]
-        
+
         shapes_sub = [shape for shape in self.shapes_ if shape.symbol in symbols]
-        
+
         return SystemOfShapes(x_sub, A_sub, C_sub, shapes_sub)
 
 
     def generate_propagator_solver(self, output_timestep_symbol="__h"):
-        """Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON"""
+        """
+        Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
+        """
 
         #
         #   generate the propagator matrix
@@ -202,7 +205,9 @@ class SystemOfShapes(object):
 
 
     def generate_numeric_solver(self):
-        """Generate the symbolic expressions for numeric integration state updates; return as JSON"""
+        """
+        Generate the symbolic expressions for numeric integration state updates; return as JSON.
+        """
 
         update_expr = self.reconstitute_expr()
         all_state_symbols = [ str(sym) for sym in self.x_ ]
@@ -216,7 +221,9 @@ class SystemOfShapes(object):
 
 
     def reconstitute_expr(self):
-        """Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + C)"""
+        """
+        Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + C).
+        """
 
         update_expr = {}
 

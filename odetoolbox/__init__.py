@@ -69,8 +69,8 @@ default_config = {
     "integration_accuracy_abs" : 1E-6,
     "integration_accuracy_rel" : 1E-6
 }
-    
-    
+
+
 def dependency_analysis(shape_sys, shapes, differential_order_symbol):
     """perform dependency analysis, plot dependency graph"""
     logging.info("Dependency analysis...")
@@ -254,21 +254,14 @@ def analysis_(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
     return solvers_json, shape_sys, shapes
 
 
-def analysis(indict, disable_stiffness_check=False, disable_analytic_solver=False, debug=True):
-    """The main entry point of the analysis.
+def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solver : bool=False, debug : bool=True):
+    """
+    The main entry point of the analysis.
 
-    This function expects a single dictionary with the keys `odes`,
-    `parameters` and `shapes` that describe the input to the analysis.
+    This function expects a single dictionary that describes the input to the analysis. The exact format of the input is described in the ode-toolbox documentation.
 
-    The exact format of the input entries is described in the file
-    `README.md`.
-
-    Parameters
-    ----------
-    disable_stiffness_check : bool
-        Whether to perform stiffness checking.
-    disable_analytic_solver : bool
-        Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
+    :param disable_stiffness_check: Whether to perform stiffness checking.
+    :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
 
     :return: The result of the analysis, again as a dictionary.
     """

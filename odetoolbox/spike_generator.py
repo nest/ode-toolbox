@@ -3,19 +3,16 @@ import math
 import numpy as np
 import random
 
-    
 class SpikeGenerator():
-    
+
     @classmethod
     def spike_times_from_json(cls, stimuli, sim_time, derivative_symbol="__d"):
-        """Read or generate spike times according to a JSON specification
-        
-        Returns
-        -------
-        spike_times : Dict[str -> List[float]]
-            Each variable symbol is a key in the dictionary, and the list of spike times is the corresponding value. Symbol names use `derivative_symbol` to indicate differential order.
         """
+        Read or generate spike times according to a JSON specification
 
+        :return: spike_times: Each variable symbol is a key in the dictionary, and the list of spike times is the corresponding value. Symbol names use `derivative_symbol` to indicate differential order.
+        :rtype: Dict[str -> List[float]]
+        """
         spike_times = {}
         for stimulus in stimuli:
             for sym in set(stimulus["variables"]):
@@ -35,25 +32,20 @@ class SpikeGenerator():
                     spike_times[sym].extend(spikes)
                 else:
                     assert False, "Unknown stimulus type: \"" + str(stimulus["type"]) + "\""
-        
+
         return spike_times
 
 
     @classmethod
-    def _generate_homogeneous_poisson_spikes(cls, T, rate, min_isi=1E-6):
-        """Generate spike trains for the given simulation length. Uses a Poisson distribution to create biologically realistic characteristics of the spike-trains.
+    def _generate_homogeneous_poisson_spikes(cls, T : float, rate : float, min_isi : float=1E-6):
+        """
+        Generate spike trains for the given simulation length. Uses a Poisson distribution to create biologically realistic characteristics of the spike-trains.
 
-        Parameters
-        ----------
-        T : float
-            Spikes are generated in the window [0, T]. T is in s.
-        min_isi : float
-            Minimum time between two consecutive spikes, in s.
+        :param T: Spikes are generated in the window [0, T]. T is in s.
+        :param min_isi: Minimum time between two consecutive spikes, in s.
 
-        Returns
-        -------
-        spike_times : dict(str -> list of float)
-            For each symbol: a list with spike times
+        :return: spike_times: For each symbol: a list with spike times
+        :rtype: Dict(str -> List(float))
         """
 
         spike_times = []
@@ -69,18 +61,13 @@ class SpikeGenerator():
 
 
     @classmethod
-    def _generate_regular_spikes(cls, T, rate):
+    def _generate_regular_spikes(cls, T : float, rate : float):
         """Generate spike trains for the given simulation length.
 
-        Parameters
-        ----------
-        T : float
-            Spikes are generated in the window (0, T]. T is in s.
+        :param T: Spikes are generated in the window (0, T]. T is in s.
 
-        Returns
-        -------
-        spike_times : dict(str -> list of float)
-            For each symbol: a list with spike times
+        :return: For each symbol: a list with spike times
+        :rtype: Dict(str -> List(float))
         """
 
         spike_times = []
