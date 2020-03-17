@@ -107,7 +107,7 @@ All dynamical variables have a variable name, a differential order, and a defini
 
 .. math::
 
-   \frac{d^2g}{dt^2} = -\frac{1}{\tau^2} g - \frac{2}{\tau} \frac{dg}{dt}
+   \frac{d^2g}{dt^2} = -\frac{1}{\tau^2} \cdot g - \frac{2}{\tau} \cdot \frac{dg}{dt}
 
 This can be entered as:
 
@@ -124,7 +124,7 @@ Instead of a second-order differential equation, we can equivalently describe th
 
 .. math::
 
-   g(t) = \frac{e}{\tau} t \exp(-\frac{t}{\tau})
+   g(t) = \frac{e}{\tau} \cdot t \cdot \exp(-\frac{t}{\tau})
 
 This can be entered as:
 
@@ -142,7 +142,7 @@ Expressions can refer to variables defined in other expressions. For example, a 
 .. math::
 
    \frac{dg}{dt} &= h \\
-   \frac{dh}{dt} &= -\frac{1}{\tau^2} g - \frac{2}{\tau} h
+   \frac{dh}{dt} &= -\frac{1}{\tau^2} \cdot g - \frac{2}{\tau} \cdot h
 
 This can be entered as:
 
@@ -298,7 +298,7 @@ The following global options are defined. Note that all are typically formatted 
    * - ``differential_order_symbol``
      - :python:`"__d"`
      - string
-     - String appended n times to output variable names to indicate differential order n. XXX: TODO: only the default value works for now.
+     - String appended n times to output variable names to indicate differential order n. TODO: only the default value works for now.
 
 
 Output
@@ -364,7 +364,7 @@ Numeric solvers are automatically benchmarked on solving the provided system of 
 
 Let the machine precision (defined as the smallest representable difference between any two floating-point numbers) be written as :math:`\varepsilon`.
 
-Then the minimum permissible timestep is defined as ``machine_precision_dist_ratio`` :math:`\cdot\varepsilon`.
+Then the minimum permissible timestep is defined as :math:`\varepsilon\,\cdot`\ ``machine_precision_dist_ratio``
 
 -  If the minimum step size recommended by all solvers is smaller than the minimum permissible timestep, a warning is issued.
 -  If the minimum step size for the implicit solver is smaller than the minimum permissible timestep, recommend the explicit solver.
@@ -392,20 +392,22 @@ Internal representation
 
 For users who want to modify/extend ode-toolbox.
 
-Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a SystemOfShapes instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{C}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{C}` containing the nonlinear terms.
+Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a :py:class:`odetoolbox.system_of_shapes.SystemOfShapes` instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{C}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{C}` containing the nonlinear terms.
+
 
 Converting direct functions of time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}`, with :math:`a_i\in\mathcal{R}\forall 0 \leq i < n`. The approach taken here [Blundell et al. 2018] works by evaluating the function ``f`` at times ``t = t_0, t_1, ... t_n``, which results in ``n`` equations, that we can use to solve for the coefficients of the potentially n-dimensional dynamical system.
+The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}`, with :math:`a_i\in\mathbb{R}\,\forall 0 \leq i < n`. The approach taken here [1]_ works by evaluating the function :math:`f(t)` at times :math:`t = t_0, t_1, \ldots t_n`, which results in :math:`n` equations, that we can use to solve for the coefficients of the potentially :math:`n`-dimensional dynamical system.
 
 1. Begin by assuming that the dynamical system is of order :math:`n`.
 2. Find timepoints :math:`t = t_0, t_1, ..., t_n` such that :math:`f(t_i) \neq 0 \forall 0 \leq i \leq n`. The times can be selected at random.
-3. Formulate the equations as :math:`\mathbf{X} \cdot \left[\begin{matrix}a_0\\a_1\\\vdots\\a_{n-1}\end{matrix}\right] = \begin{matrix}f^{(n)}(t_0)\\f^{(n)}(t_1)\\\vdots\\f^{(n)}(t_n)\end{matrix}` with :math:`\mathbf{X} = \begin{matrix}                                                    f(t_0) &  \cdots   & f^(n-1)(t_0) \\                                                     f(t_1) &  \cdots   & f^(n-1)(t_1) \\                                                     \vdots &           & \vdots \\                                                     f(t_n) &  \cdots   & f^(n-1)(t_n)                                             \end{matrix}`.
+3. Formulate the equations as :math:`\mathbf{X} \cdot \left[\begin{matrix}a_0\\a_1\\\vdots\\a_{n-1}\end{matrix}\right] = \left[\begin{matrix}f^{(n)}(t_0)\\f^{(n)}(t_1)\\\vdots\\f^{(n)}(t_n)\end{matrix}\right]` with :math:`\mathbf{X} = \left[\begin{matrix}                                                    f(t_0) &  \cdots   & f^(n-1)(t_0) \\                                                     f(t_1) &  \cdots   & f^(n-1)(t_1) \\                                                     \vdots &           & \vdots \\                                                     f(t_n) &  \cdots   & f^(n-1)(t_n)              \end{matrix}\right]`.
 4. If :math:`\mathbf{X}` is invertible, the equation can be solved for :math:`a_0\ldots a_{n-1}`.
 5. If :math:`\mathbf{X}` is not invertible, increase :math:`n` (up to some predefined maximum order :math:`n_{max}`). If :math:`n_{max}` is reached, fail.
 
-This algorithm is implemented in :python:`Shape.from_function()` in `shapes.py <odetoolbox/shapes.py>`__.
+This algorithm is implemented in :py:method:`odetoolbox.shapes.Shape.from_function()`.
+
 
 Analytic solver generation
 --------------------------
