@@ -31,7 +31,7 @@ def is_sympy_type(var):
 
 class Shape():
     r"""
-    This class provides a canonical representation of a shape function independently of the way in which the user specified the shape. It assumes a differential equation of the general form (where bracketed superscript :math:`\cdot^{(n)}` indicates the n-th derivative with respect to time):
+    This class provides a canonical representation of a shape function independently of the way in which the user specified the shape. It assumes a differential equation of the general form (where bracketed superscript :math:`{}^{(n)}` indicates the :math:`n`-th derivative with respect to time):
 
     .. math::
 

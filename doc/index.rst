@@ -1,4 +1,4 @@
-ode-toolbox
+ODE-toolbox
 ===========
 
 .. role:: python(code)
@@ -9,16 +9,20 @@ ode-toolbox
 
 |Build status| |Testing coverage|
 
-Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ode-toolbox is a Python package that assists in solver benchmarking, and recommends solvers on the basis of a set of user-configurable heuristics. For all dynamical equations that admit an analytic solution, ode-toolbox generates propagator matrices that allow the solution to be calculated at machine precision. For all others, the Jacobian matrix provides first-order update expressions.
+Choosing the optimal solver for systems of ordinary differential equations (ODEs) is a critical step in dynamical systems simulation. ODE-toolbox is a Python package that assists in solver benchmarking, and recommends solvers on the basis of a set of user-configurable heuristics. For all dynamical equations that admit an analytic solution, ODE-toolbox generates propagator matrices that allow the solution to be calculated at machine precision. For all others, first-order update expressions are returned based on the Jacobian matrix.
 
-The internal processing carried out by ode-toolbox can be visually summarised as follows, starting from a system of ODEs (or functions of time) on the top (double outline), and generating propagator matrices, Jacobian (first-order) update expressions, and/or recommending either a stiff or nonstiff solver (green nodes). Each step will be described below in depth.
+ODE-toolbox is intended to be run "off-line", before commencing the actual simulation. It processes a JSON encoded input of a dynamical system, and produces its output encoded as JSON.
 
-.. raw:: html
+.. figure:: https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/ode-toolbox-flow-diagram.png
+   :alt: Flow diagram: input JSON to ODE-toolbox to output JSON
 
-   <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/flow_diagram.png" alt="Flow diagram" width="620" height="463">
+The internal processing carried out by ODE-toolbox can be visually summarised as follows, starting from a system of ODEs and functions of time on the left, and generating propagator matrices, Jacobian (first-order) update expressions, and finally performing solver benchmarking to recommend a particular numerical solver. Each of these steps will be described in depth in the following sections.
 
+.. figure:: https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/ode-toolbox-flow-diagram-detailed.png
+   :alt: Detailed flow diagram
 
-ode-toolbox is written in Python and leverages SymPy for the symbolic manipulation of equations. It was initially developed in the context of the `NESTML <https://github.com/nest/nestml>`__ project, in which the main focus was on the class of spiking neurons presently available in the `NEST <https://github.com/nest/nest-simulator>`__ simulator. It can, however, be used in a standalone fashion, and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
+ODE-toolbox is written in Python and leverages SymPy for the symbolic manipulation of equations. It was initially developed in the context of the `NESTML <https://github.com/nest/nestml>`__ project, in which the main focus was on the class of spiking neurons presently available in the `NEST <https://github.com/nest/nest-simulator>`__ simulator. It can, however, be used in a standalone fashion, and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
+
 
 Installation
 ------------
@@ -26,7 +30,7 @@ Installation
 Prerequisites
 ~~~~~~~~~~~~~
 
-Only Python 3 is supported. ode-toolbox depends on the Python packages SymPy, Cython, SciPy and NumPy (required), matplotlib and graphviz for visualisation (optional), and pytest for self-tests (also optional). The stiffness tester additionally depends on an installation of `PyGSL <http://pygsl.sourceforge.net/>`__. If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations.
+Only Python 3 is supported. ODE-toolbox depends on the Python packages SymPy, Cython, SciPy and NumPy (required), matplotlib and graphviz for visualisation (optional), and pytest for self-tests (also optional). The stiffness tester additionally depends on an installation of `PyGSL <http://pygsl.sourceforge.net/>`__. If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations.
 
 All required and optional packages can be installed by running
 
@@ -34,7 +38,7 @@ All required and optional packages can be installed by running
 
     pip install -r requirements.txt
 
-Installing ode-toolbox
+Installing ODE-toolbox
 ~~~~~~~~~~~~~~~~~~~~~~
 
 To install, clone the repository, go to the root directory and then run the following command in a terminal:
@@ -43,14 +47,14 @@ To install, clone the repository, go to the root directory and then run the foll
 
     python setup.py install
 
-If you wish to install ode-toolbox into your home directory, add the option :bash:`--user` to the above call.
+If you wish to install ODE-toolbox into your home directory, add the option :bash:`--user` to the above call.
 
 For further installation hints, please see `.travis.yml <.travis.yml>`__.
 
 Testing
 ~~~~~~~
 
-To run the unit and integration tests that come with ode-toolbox, you can run the following command:
+To run the unit and integration tests that come with ODE-toolbox, you can run the following command:
 
 .. code:: bash
 
@@ -63,10 +67,10 @@ To increase the verbosity, append the command-line parameters :bash:`-s -o log_c
 Usage
 -----
 
-ode-toolbox can be used in two ways:
+ODE-toolbox can be used in two ways:
 
 1. As a Python module. Import the :python:`odetoolbox` module, and then call :python:`odetoolbox.analysis(indict)` where :python:`indict` is the JSON-like input in Python dictionary format. See the tests (e.g. `test\_lorenz\_attractor.py <tests/test_lorenz_attractor.py>`__) for a full example.
-2. As command-line application. In this case, the input is stored in a JSON file, and ode-toolbox is invoked from the command line:
+2. As command-line application. In this case, the input is stored in a JSON file, and ODE-toolbox is invoked from the command line:
 
    .. code:: bash
 
@@ -74,7 +78,7 @@ ode-toolbox can be used in two ways:
 
 The JSON file and Python dictionary are completely equivalent in content and form, described in the :ref:`Input` section below.
 
-Several boolean flags can additionally be passed; when ode-toolbox is used via its API, these exist as function parameters (\ :python:`odetoolbox.analysis(indict, disable_stiffness_check=True, ...)`), whereas if the command line is used, they can be passed as arguments (:bash:`./ode-analyzer.py --disable_stiffness_check ...`).
+Several boolean flags can additionally be passed; when ODE-toolbox is used via its API, these exist as function parameters (\ :python:`odetoolbox.analysis(indict, disable_stiffness_check=True, ...)`), whereas if the command line is used, they can be passed as arguments (:bash:`./ode-analyzer.py --disable_stiffness_check ...`).
 
 .. list-table::
    :header-rows: 1
@@ -96,7 +100,7 @@ Several boolean flags can additionally be passed; when ode-toolbox is used via i
 Input
 -----
 
-The JSON input dictionary that is passed to ode-toolbox contains :ref:`dynamics <Dynamics>`, :ref:`numerical parameters <Parameters>`, and :ref:`global options <Global options>`. Documentation may optionally be provided as a string.
+The JSON input dictionary that is passed to ODE-toolbox contains :ref:`dynamics <Dynamics>`, :ref:`numerical parameters <Parameters>`, and :ref:`global options <Global options>`. Documentation may optionally be provided as a string.
 
 All expressions are parsed as SymPy expressions, and subsequently simplified through :python:`sympy.simplify()`. There are several predefined symbols, such as :python:`e` and :python:`E` for Euler's number, trigonometric functions, etc. :python:`t` is assumed to represent time. The list of predefined symbols is defined in `shapes.py <odetoolbox/shapes.py>`_, as the static member :python:`Shape._sympy_globals`. Variable names should be chosen such that they do not conflict with the predefined symbols.
 
@@ -306,9 +310,9 @@ Output
 
 The analysis output is returned in the form of a Python dictionary, or an equivalent JSON file.
 
-During analysis, ode-toolbox rewrites the differential notation from single quotation marks into characters that are typically compatible with variable names; by default every quotation mark is rewritten into the string specified as the global parameter :python:`differential_order_symbol` (by default, :python:`"__d"`).
+During analysis, ODE-toolbox rewrites the differential notation from single quotation marks into characters that are typically compatible with variable names; by default every quotation mark is rewritten into the string specified as the global parameter :python:`differential_order_symbol` (by default, :python:`"__d"`).
 
-ode-toolbox will return a list of solvers. Each solver has the following keys: 
+ODE-toolbox will return a list of solvers. Each solver has the following keys: 
 
 - :python:`"solver"`\ : a string containing the solver recommendation. Starts with either :python:`"analytical"` or :python:`"numeric"`\ .
 - :python:`"state_variables"`\ : an unordered list containing all variable symbols.
@@ -332,7 +336,7 @@ If an ODE is homogeneous, constant-coefficient and linear, an analytic solution 
 
 For example, consider an integrate-and-fire neuron with two alpha-shaped kernels (``I_shape_in`` and ``I_shape_gap``), and one nonlinear kernel (``I_shape_ex``). Each of these kernels can be expressed as a system of ODEs containing two variables. ``I_shape_in`` is specified as a second-order equation, whereas ``I_shape_gap`` is explicitly given as a system of two coupled first-order equations, i.e. as two separate ``dynamics`` entries with names ``I_shape_gap1`` and ``I_shape_gap2``.
 
-Both formulations are mathematically equivalent, and ode-toolbox treats them the same following input processing.
+Both formulations are mathematically equivalent, and ODE-toolbox treats them the same following input processing.
 
 During processing, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node *a* to *b* indicates that *a* depends on the value of *b*. Boxes enclosing nodes mark input shapes that were specified as either a direct function of time or a higher-order differential equation, and were expanded to a system of first-order ODEs.
 
@@ -390,7 +394,7 @@ Then the minimum permissible timestep is defined as :math:`\varepsilon\,\cdot`\ 
 Internal representation
 -----------------------
 
-For users who want to modify/extend ode-toolbox.
+For users who want to modify/extend ODE-toolbox.
 
 Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a :py:class:`odetoolbox.system_of_shapes.SystemOfShapes` instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{C}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{C}` containing the nonlinear terms.
 
@@ -453,19 +457,19 @@ This example correponds to the unit test in `test_stiffness.py <tests/test_stiff
 
 `test_stiffness.py <tests/test_stiffness.py>`_ tests that for a tighter integration accuracy, the solver recommendation for this example changes from "explicit" (non-stiff) to "implicit" (stiff).
 
-From ode-toolbox results dictionary to simulation
+From ODE-toolbox results dictionary to simulation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ode-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ode-toolbox: :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using :python:`pygsl.odeiv.step_rk4` or :python:`pygsl.odeiv.step_bsimp`). These integrators both use :python:`sympy.parsing.sympy_parser` to parse the expression strings from the ode-toolbox results dictionary, and then use the SymPy expression :python:`evalf()` method to evaluate to a floating-point value.
+ODE-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ODE-toolbox: :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using :python:`pygsl.odeiv.step_rk4` or :python:`pygsl.odeiv.step_bsimp`). These integrators both use :python:`sympy.parsing.sympy_parser` to parse the expression strings from the ODE-toolbox results dictionary, and then use the SymPy expression :python:`evalf()` method to evaluate to a floating-point value.
 
-The file `test_analytic_solver_integration.py <tests/test_analytic_solver_integration.py>`_ contains an integration test that uses :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator` and the propagators returned from ode-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ode-toolbox. The following results figure shows perfect agreement between the three simulation methods:
+The file `test_analytic_solver_integration.py <tests/test_analytic_solver_integration.py>`_ contains an integration test that uses :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator` and the propagators returned from ODE-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ODE-toolbox. The following results figure shows perfect agreement between the three simulation methods:
 
 .. raw:: html
 
    <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
 
 
-The file `test_mixed_integrator_numeric.py <tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator` and the results dictionary from ode-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
+The file `test_mixed_integrator_numeric.py <tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator` and the results dictionary from ODE-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
 
 .. raw:: html
 
@@ -505,17 +509,17 @@ The documentation of all Python classes and functions in the odetoolbox package 
 Contributions and getting help
 ------------------------------
 
-The primary development of ode-toolbox happens on GitHub, at https://github.com/nest/ode-toolbox. If you encounter any issue, please create an new entry in the GitHub issue tracker. Pull requests are welcome.
+The primary development of ODE-toolbox happens on GitHub, at https://github.com/nest/ode-toolbox. If you encounter any issue, please create an new entry in the GitHub issue tracker. Pull requests are welcome.
 
 
-Citing ode-toolbox
+Citing ODE-toolbox
 ------------------
 
-If you use ode-toolbox in your work, please cite it as:
+If you use ODE-toolbox in your work, please cite it as:
 
 .. admonition:: TODO
 
-   Will insert the Zenodo reference here to ode-toolbox once released.
+   Will insert the Zenodo reference here to ODE-toolbox once released.
 
 
 References
