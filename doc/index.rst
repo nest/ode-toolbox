@@ -15,6 +15,8 @@ ODE-toolbox is intended to be run "off-line", before commencing the actual simul
 
 .. figure:: https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/ode-toolbox-flow-diagram.png
    :alt: Flow diagram: input JSON to ODE-toolbox to output JSON
+   :width: 1223px
+   :height: 294px
    :scale: 40%
 
 The internal processing carried out by ODE-toolbox can be visually summarised as follows, starting from a system of ODEs and functions of time on the left, and generating propagator matrices, Jacobian (first-order) update expressions, and finally performing solver benchmarking to recommend a particular numerical solver. Each of these steps will be described in depth in the following sections.
