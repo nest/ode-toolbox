@@ -495,9 +495,9 @@ API documentation
 
 The documentation of all Python classes and functions in the odetoolbox package can be found here:
 
-.. class:: center
+.. container:: center
 
-:mod:`odetoolbox`
+   :mod:`odetoolbox`
 
 
 Contributions and getting help
