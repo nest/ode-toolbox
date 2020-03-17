@@ -402,12 +402,12 @@ The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_
 
 1. Begin by assuming that the dynamical system is of order :math:`n`.
 2. Find timepoints :math:`t = t_0, t_1, ..., t_n` such that :math:`f(t_i) \neq 0 \forall 0 \leq i \leq n`. The times can be selected at random.
-3. Formulate the equations as :math:`\mathbf{X} \cdot \left[\begin{matrix}a_0\\a_1\\\vdots\\a_{n-1}\end{matrix}\right] = \left[\begin{matrix}f^{(n)}(t_0)\\f^{(n)}(t_1)\\\vdots\\f^{(n)}(t_n)\end{matrix}\right]` with :math:`\mathbf{X} = \left[\begin{matrix}                                                    f(t_0) &  \cdots   & f^(n-1)(t_0) \\                                                     f(t_1) &  \cdots   & f^(n-1)(t_1) \\                                                     \vdots &           & \vdots \\                                                     f(t_n) &  \cdots   & f^(n-1)(t_n)              \end{matrix}\right]`.
+3. Formulate the equations as :math:`\mathbf{X} \cdot \left[\begin{matrix}a_0\\a_1\\\vdots\\a_{n-1}\end{matrix}\right] = \left[\begin{matrix}f^{(n)}(t_0)\\f^{(n)}(t_1)\\\vdots\\f^{(n)}(t_n)\end{matrix}\right]` with :math:`\mathbf{X} = \left[\begin{matrix}                                                    f(t_0) &  \cdots   & f^{(n-1)}(t_0) \\                                                     f(t_1) &  \cdots   & f^{(n-1)}(t_1) \\                                                     \vdots &           & \vdots \\                                                     f(t_n) &  \cdots   & f^{(n-1)}(t_n)              \end{matrix}\right]`.
 4. If :math:`\mathbf{X}` is invertible, the equation can be solved for :math:`a_0\ldots a_{n-1}`.
 5. If :math:`\mathbf{X}` is not invertible, increase :math:`n` (up to some predefined maximum order :math:`n_{max}`). If :math:`n_{max}` is reached, fail.
 
-This algorithm is implemented in :py:method:`odetoolbox.shapes.Shape.from_function()`.
-
+This algorithm is implemented in :py:meth:`odetoolbox.shapes.Shape.from_function`.
+:py:meth:`odetoolbox.shapes.Shape.from_function()`
 
 Analytic solver generation
 --------------------------
