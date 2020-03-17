@@ -333,8 +333,8 @@ Numeric solvers have the following extra entries:
 - :python:`"update_expressions"`\ : a dictionary that maps each variable symbol (in string form) to a SymPy expression that is its Jacobian, that is, for a symbol :math:`x`, the expression is equal to :math:`\frac{\delta x}{\delta t}`.
 
 
-Analytic solver selection criteria
-----------------------------------
+Analytic solver generation
+--------------------------
 
 If an ODE is homogeneous, constant-coefficient and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analytically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
 
@@ -534,6 +534,8 @@ References
 
 Acknowledgements
 ----------------
+
+Logo due to Konstantin Perun.
 
 This software was initially supported by the JARA-HPC Seed Fund *NESTML - A modeling language for spiking neuron and synapse models for NEST* and the Initiative and Networking Fund of the Helmholtz Association and the Helmholtz Portfolio Theme *Simulation and Modeling for the Human Brain*.
 
