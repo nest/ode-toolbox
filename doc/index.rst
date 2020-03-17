@@ -363,7 +363,7 @@ In the next step, variables are unmarked as analytically solvable if they depend
    <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_2.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
 
 
-The analytic solution for all green nodes is computed in the form of a propagator matrix. See the section :ref:"Analytic solver generation" for more details.
+The analytic solution for all green nodes is computed in the form of a propagator matrix. See the section :ref:"Computing the propagator matrix" for more details.
 
 Numeric solver selection criteria
 ---------------------------------
@@ -417,8 +417,8 @@ The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_
 This algorithm is implemented in :py:meth:`odetoolbox.shapes.Shape.from_function()`.
 
 
-Analytic solver generation
---------------------------
+Computing the propagator matrix
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The propagator matrix :math:`P` is derived from the system matrix by matrix exponentiation:
 
@@ -461,6 +461,7 @@ This example correponds to the unit test in `test_stiffness.py <tests/test_stiff
 
 `test_stiffness.py <tests/test_stiffness.py>`_ tests that for a tighter integration accuracy, the solver recommendation for this example changes from "explicit" (non-stiff) to "implicit" (stiff).
 
+
 From ODE-toolbox results dictionary to simulation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -485,7 +486,7 @@ Caching of results
 
 .. admonition:: TODO
 
-   Not implemented yet
+   Not implemented yet.
 
 Some operations on SymPy expressions can be quite slow (see the section :ref:`Working with large expressions`\ ).
 
@@ -497,7 +498,7 @@ For propagators, we note that
 
 .. math::
 
-   e^{At} = \text{diag}(e^{B\_1t}, e^{B\_2t}, \dots, e^{B\_kt})
+   e^{At} = \text{diag}(e^{B_1t}, e^{B_2t}, \dots, e^{B_kt})
 
 
 API documentation
