@@ -118,3 +118,13 @@ code.descclassname {
       overflow: visible !important;
    }
 }
+
+.bigcenterlink {
+   text-align: center;
+   font-size: 125%;
+   margin-bottom: 2em;
+}
+
+.bigcenterlink code {
+   padding: 1em;
+}
