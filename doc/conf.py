@@ -178,7 +178,10 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 
-html_theme_options = {'logo_only': True}
+html_theme_options = {
+    'logo_only': True,
+    'navigation_depth': 2
+}
 html_logo = "https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/ode-toolbox-logo.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
