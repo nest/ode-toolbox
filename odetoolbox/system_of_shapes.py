@@ -236,7 +236,7 @@ class SystemOfShapes(object):
 
     @classmethod
     def from_shapes(cls, shapes):
-        """Construct the global system matrix including all shapes.
+        r"""Construct the global system matrix including all shapes.
 
         Global dynamics
 

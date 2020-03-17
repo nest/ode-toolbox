@@ -30,11 +30,7 @@ def is_sympy_type(var):
 
 
 class Shape():
-    """Canonical representation of a shape function.
-
-    Description
-    -----------
-
+    r"""
     This class provides a canonical representation of a shape function independently of the way in which the user specified the shape. It assumes a differential equation of the general form (where bracketed superscript :math:`\cdot^{(n)}` indicates the n-th derivative with respect to time):
 
     .. math::
@@ -50,12 +46,10 @@ class Shape():
         x''' = c0*x + c1*x' + c2*x'' + x*y + x**2
 
     the `symbol` of the ODE would be `x` (i.e. without any qualifiers), `order` would be 3, `derivative_factors` would contain the linear part in the form of the list `[c0, c1, c2]`, and the nonlinear part is stored in `diff_rhs_derivatives`.
-
     """
 
     EXPRESSION_SIMPLIFICATION_THRESHOLD = 1000
-    
-    
+
     # a minimal subset of sympy classes and functions to avoid "from sympy import *"
     _sympy_globals = {"Symbol" : sympy.Symbol,
                      "Integer" : sympy.Integer,
@@ -86,19 +80,11 @@ class Shape():
     def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), lower_bound=None, upper_bound=None, derivative_symbol="__d", debug=False):
         """Perform type and consistency checks and assign arguments to member variables.
 
-
-        Parameters
-        ----------
-
-        symbol : SymPy expression
-            Symbolic name of the shape without additional qualifiers like prime symbols or similar.
-        order : int
-            Order of the ODE representing the shape.
-        initial_values : dict of SymPy expressions
-            Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
-        derivative_factors : list of SymPy expressions
-            The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
-        diff_rhs_derivatives : 
+        :param symbol: Symbolic name of the shape without additional qualifiers like prime symbols or similar.
+        :param order: Order of the ODE representing the shape.
+        :param initial_values: Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
+        :param derivative_factors: The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
+        :param diff_rhs_derivatives: Nonlinear part of the ODE representing the shape.
         """
         if not type(symbol) is sympy.Symbol:
             raise Exception("symbol is not a SymPy symbol: \"%r\"" % symbol)
@@ -125,7 +111,6 @@ class Shape():
                 iv_basename = iv_name
             if not iv_basename == str(symbol):
                 raise Exception("Initial value specified for unknown variable \"" + str(iv_basename) + "\" in differential equation for variable \"" + str(symbol) + "\"")
-            
             if differential_order >= self.order:
                 raise Exception("Initial value \"" + str(iv_name) + "\" specifies initial value for degree " + str(differential_order) + ", which is too high in order-" + str(self.order) + " differential equation")
 
@@ -165,7 +150,6 @@ class Shape():
         """
         Returns False if and only if the shape has a nonzero right-hand side.
         """
-        #print("--> is " + str(self.symbol) + " homogeneous? defining expr = " + str(self.diff_rhs_derivatives))
 
         if self.diff_rhs_derivatives.is_zero:
             # trivial case: right-hand side is zero
@@ -209,12 +193,10 @@ class Shape():
 
 
     def get_initial_value(self, sym: str):
-        """get the initial value corresponding to the symbol
+        """
+        Get the initial value corresponding to the variable symbol.
 
-        Parameters
-        ----------
-        sym : str
-            string representation of a sympy symbol, e.g. `"V_m'"`
+        :param sym: String representation of a sympy symbol, e.g. :python:`"V_m'"`
         """
         if not sym in self.initial_values.keys():
             return None
@@ -222,11 +204,11 @@ class Shape():
 
 
     def get_state_variables(self, derivative_symbol="'"):
-        """Get all variable symbols for this shape, ordered according to derivative order: [sym, dsym/dt, d^2sym/dt^2, ...]
+        """
+        Get all variable symbols for this shape, ordered according to derivative order: [sym, dsym/dt, d^2sym/dt^2, ...]
 
-        Return
-        ------
-        all_symbols : list of sympy.Symbol
+        :return: all_symbols
+        :rtype: list of sympy.Symbol
         """
         all_symbols = []
 
@@ -234,14 +216,14 @@ class Shape():
             all_symbols.append(sympy.Symbol(str(self.symbol) + derivative_symbol * order))
 
         return all_symbols
-        
+
 
     def get_all_variable_symbols(self, shapes=None, derivative_symbol="'"):
-        """Get all variable symbols for this shape and all other shapes in `shapes`, without duplicates, in no particular order.
+        """
+        Get all variable symbols for this shape and all other shapes in `shapes`, without duplicates, in no particular order.
 
-        Return
-        ------
-        all_symbols : list of sympy.Symbol
+        :return: all_symbols
+        :rtype: list of sympy.Symbol
         """
         all_symbols = []
         all_shapes = []
@@ -262,13 +244,11 @@ class Shape():
 
     def is_lin_const_coeff(self, shapes=None):
         """
-        Returns
-        -------
-        lin_const_coeff : bool
-            True if and only if the shape is linear and constant coefficient in all known variable symbols in `shapes`
+        :return: True if and only if the shape is linear and constant coefficient in all known variable symbols in `shapes`
+        :rtype: bool
         """
-        #print("--> is " + str(self.symbol) + " lin cc?")
 
+        #print("--> is " + str(self.symbol) + " lin cc?")
         all_symbols = self.get_all_variable_symbols(shapes, derivative_symbol="__d")
 
         for sym in all_symbols:
@@ -379,6 +359,7 @@ class Shape():
     @staticmethod
     def split_lin_nonlin(expr, x):
         """Split an expression into the form a_0 * x[0] + a_1 * x[1] + ... + C. The coefficients a_0...a_n are returned as `lin_factors`. The nonlinear remainder is returned as `nonlin_term`"""
+
         """const_terms = [term for term in expr.args if not term.free_symbols]
         const_term = functools.reduce(lambda x, y: x + y, const_terms)
         C[highest_diff_sym_idx] += const_term"""
@@ -424,24 +405,17 @@ class Shape():
     def from_function(cls, symbol: str, definition, max_t=100, max_order=4, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol=sympy.Symbol("__d"), debug=False):
         """Create a Shape object given a function of time.
 
-        For a complete description of the algorithm, please see the ode-toolbox README.
+        For a complete description of the algorithm, please see the ode-toolbox documentation pages.
 
 
-        Parameters
-        ----------
-        symbol : str
-            The variable name of the shape (e.g. "alpha", "I")
-        definition : str
-            The definition of the shape (e.g. "(e/tau_syn_in) * t *
-            exp(-t/tau_syn_in)")
+        :param symbol: The variable name of the shape (e.g. "alpha", "I")
+        :param definition: The definition of the shape (e.g. :python:`"(e/tau_syn_in) * t *  exp(-t/tau_syn_in)"`)
 
-        Returns
-        -------
-        shape : Shape
-            The canonical representation of the postsynaptic shape
+        :return: The canonical representation of the postsynaptic shape
+        :rtype: Shape
 
-        Examples
-        --------
+        :Example:
+
         >>> Shape.from_function("I_in", "(e/tau) * t * exp(-t/tau)")
         """
 
@@ -578,24 +552,16 @@ class Shape():
 
         Note that shapes are only aware of their own state variables: if an equation for x depends on another state variable y of another shape, then y will appear in the nonlinear part of x.
 
+        :param symbol: The symbol (variable name) of the ODE
+        :param definition: The definition of the ODE
+        :param initial_values: A dictionary mapping initial values to expressions.
+        :param all_variable_symbols: None or list of string
 
-        Parameters
-        ----------
-        symbol : str
-            The symbol (variable name) of the ODE
-        definition : str
-            The definition of the ODE
-        initial_values : dict
-            A dictionary mapping initial values to expressions.
-        all_variable_symbols : None or list of string
-            ...
+        :Example:
 
-
-        Examples
-        --------
-        Shape.from_ode("alpha",
-                       "-1/tau**2 * shape_alpha -2/tau * shape_alpha'",
-                       {"alpha" : "0", "alpha'" : "e/tau", "0"]})
+        >>> Shape.from_ode("alpha",
+                          "-1/tau**2 * shape_alpha -2/tau * shape_alpha'",
+                          {"alpha" : "0", "alpha'" : "e/tau", "0"]})
         """
 
         assert type(symbol) is str

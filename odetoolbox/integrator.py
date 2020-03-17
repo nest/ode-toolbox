@@ -26,15 +26,15 @@ import numpy as np
 
 
 class Integrator():
-    """integrate a dynamical system by means of the propagators returned by odetoolbox"""
+    """
+    Integrate a dynamical system by means of the propagators returned by odetoolbox (base class).
+    """
 
     def set_spike_times(self, spike_times):
-        """Internally converts to a global, sorted list of spike times.
-        
-        Parameters
-        ----------
-        spike_times : dict(str -> List[Float] **or** dict(str -> List[Float]
-            For each variable, used as a key, the list of spike times associated with it.
+        """
+        Internally converts to a global, sorted list of spike times.
+
+        :param spike_times: For each variable, used as a key, the list of spike times associated with it.
         """
 
         if spike_times is None:
@@ -65,7 +65,6 @@ class Integrator():
     def get_spike_times(self):
         return self.spike_times
 
-    
+
     def get_sorted_spike_times(self):
         return self.all_spike_times, self.all_spike_times_sym
-    

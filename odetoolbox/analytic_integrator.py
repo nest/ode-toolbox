@@ -29,16 +29,15 @@ from .integrator import Integrator
 
 
 class AnalyticIntegrator(Integrator):
-    """integrate a dynamical system by means of the propagators returned by odetoolbox"""
+    """
+    Integrate a dynamical system by means of the propagators returned by odetoolbox
+    """
 
     def __init__(self, solver_dict, spike_times, enable_caching=True):
         """
-        Parameters
-        ----------
-        spike_times : Dict[str, List[float]]
-            for each variable symbol, list of times at which a spike occurs
+        :param spike_times: For each variable, used as a key, the list of times at which a spike occurs.
         """
-        
+
         super(AnalyticIntegrator, self).__init__()
 
         self.solver_dict = solver_dict
@@ -82,8 +81,6 @@ class AnalyticIntegrator(Integrator):
         self.reset()
 
 
-
-
         #
         #   in the update expression, replace symbolic variables with their numerical values
         #
@@ -94,6 +91,7 @@ class AnalyticIntegrator(Integrator):
         if "parameters" in self.solver_dict.keys():
             for param_symbol, param_expr in self.solver_dict["parameters"].items():
                 self.subs_dict[param_symbol] = param_expr
+
 
         #
         #   perform substtitution in update expressions ahead of time to save time later
@@ -134,12 +132,10 @@ class AnalyticIntegrator(Integrator):
 
 
     def set_initial_values(self, vals):
-        """Set initial values, i.e. the state of the system at t = 0. This will additionally cause the system state to be reset to t = 0.
+        """
+        Set initial values, i.e. the state of the system at t = 0. This will additionally cause the system state to be reset to t = 0.
 
-        Parameters
-        ----------
-        vals : Dict(str -> float)
-            New initial values.
+        :param vals: New initial values.
         """
         for k, v in vals.items():
             k = str(k)
@@ -194,7 +190,7 @@ class AnalyticIntegrator(Integrator):
         #
         #   grab stimulus spike times
         #
-        
+
         all_spike_times, all_spike_times_sym = self.get_sorted_spike_times()
 
 
@@ -247,4 +243,4 @@ class AnalyticIntegrator(Integrator):
             state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
             t_curr = t
 
-        return state_at_t_curr #self.state_at_t_curr
+        return state_at_t_curr

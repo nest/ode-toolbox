@@ -64,15 +64,17 @@ class ParametersIncompleteException(Exception):
 
 
 class MixedIntegrator(Integrator):
-    """Mixed numeric+analytic integrator. Supply with a result from odetoolbox analysis; returns numeric approximation of the solution."""
+    """
+    Mixed numeric+analytic integrator. Supply with a result from odetoolbox analysis; calculates numeric approximation of the solution.
+    """
 
     def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False):
         """
         :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
         """
-        
+
         super(MixedIntegrator, self).__init__()
-        
+
         assert PYGSL_AVAILABLE
 
         self.numeric_integrator = numeric_integrator
@@ -130,11 +132,12 @@ class MixedIntegrator(Integrator):
 
     def integrate_ode(self, initial_values=None, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
         """
-        This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
+        This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train.
 
-        :param max_step_size: The maximal stepsize for one evolution step in miliseconds
-        :param y: The 'state variables' in f(y)=y'
-        :return: Average and minimal step size.
+        :param h_min_lower_bound: The minimum acceptable step size.
+        :param raise_errors: Stop and raise exception when error occurs, or try to continue.
+
+        :return: Average and minimal step size, and elapsed wall clock time.
         """
 
         if initial_values is None:
@@ -145,7 +148,7 @@ class MixedIntegrator(Integrator):
         #
         #   grab stimulus spike times
         #
-        
+
         all_spike_times, all_spike_times_sym = self.get_sorted_spike_times()
 
 
@@ -372,13 +375,13 @@ class MixedIntegrator(Integrator):
             idx_to_label[i] = sym
 
         fig, ax = plt.subplots(y_log.shape[1] + analytic_dim + 1, sharex=True)
-        
+
         # adjust the axes slightly towards the right
         for _ax in ax:
             pos1 = _ax.get_position()
             pos2 = [pos1.x0 + 0.05, pos1.y0,  pos1.width, pos1.height]
             _ax.set_position(pos2)
-        
+
         for i in range(y_log.shape[1]):
             sym = idx_to_label[i]
             ax[i].plot(t_log, y_log[:, i], label=sym, marker="o", color="blue")

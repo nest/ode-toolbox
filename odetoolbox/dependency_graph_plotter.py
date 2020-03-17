@@ -2,6 +2,9 @@ import sympy
 
 
 class DependencyGraphPlotter:
+    """
+    Use graphviz to plot a dependency graph between state variables.
+    """
 
     @classmethod
     def plot_graph(cls, shapes, dependency_edges, node_is_lin, fn=None):
