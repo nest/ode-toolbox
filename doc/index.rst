@@ -10,8 +10,8 @@ ODE-toolbox
 .. toctree::
    :maxdepth: 2
 
-   index/Installation
-   index/usage
+   Installation
+   Usage
 
 |Build status| |Testing coverage|
 
