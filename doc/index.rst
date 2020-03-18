@@ -51,7 +51,7 @@ To install, clone the repository, go to the root directory and then run the foll
 
     python setup.py install
 
-If you wish to install ODE-toolbox into your home directory, add the option :bash:`--user` to the above call.
+If you wish to install into your home directory, add the option :bash:`--user` to the above call.
 
 For further installation hints, please see `.travis.yml <.travis.yml>`__.
 
@@ -64,7 +64,7 @@ To run the unit and integration tests that come with ODE-toolbox, you can run th
 
     python -m pytest
 
-Please note that this requires the `pytest <https://docs.pytest.org>`__ package to be installed.
+Please note that this requires the pytest package to be installed.
 
 To increase the verbosity, append the command-line parameters :bash:`-s -o log_cli=true -o log_cli_level="DEBUG"`.
 
@@ -73,16 +73,37 @@ Usage
 
 ODE-toolbox can be used in two ways:
 
-1. As a Python module. Import the :python:`odetoolbox` module, and then call :python:`odetoolbox.analysis(indict)` where :python:`indict` is the JSON-like input in Python dictionary format. See the tests (e.g. `test\_lorenz\_attractor.py <tests/test_lorenz_attractor.py>`__) for a full example.
-2. As command-line application. In this case, the input is stored in a JSON file, and ODE-toolbox is invoked from the command line:
+1. As a command-line application. In this case, the input is stored in a JSON file, and ODE-toolbox is invoked from the command line:
 
    .. code:: bash
 
       ./ode_analyzer.py tests/lorenz_attractor.json
 
+2. As a Python module:
+
+   .. code:: python
+
+      import odetoolbox, json
+      indict = json.load(open("tests/lorenz_attractor.json"))
+      odetoolbox.analysis(indict)
+
+   See the tests (e.g. `test\_lorenz\_attractor.py <tests/test_lorenz_attractor.py>`__) for more examples.
+
 The JSON file and Python dictionary are completely equivalent in content and form, described in the :ref:`Input` section below.
 
-Several boolean flags can additionally be passed; when ODE-toolbox is used via its API, these exist as function parameters (\ :python:`odetoolbox.analysis(indict, disable_stiffness_check=True, ...)`), whereas if the command line is used, they can be passed as arguments (:bash:`./ode-analyzer.py --disable_stiffness_check ...`).
+Several boolean flags can additionally be passed. When ODE-toolbox is used via its API, these exist as function parameters, for example:
+
+.. code:: python
+
+   odetoolbox.analysis(indict, disable_stiffness_check=True)
+
+If the command line is used, they can be passed as arguments:
+
+.. code:: bash
+
+   ./ode-analyzer.py tests/lorenz_attractor.json --disable-stiffness-check
+
+The following flags exist:
 
 .. list-table::
    :header-rows: 1
