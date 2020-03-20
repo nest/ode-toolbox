@@ -384,7 +384,8 @@ In the next step, variables are unmarked as analytically solvable if they depend
    <img src="https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_2.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
 
 
-The analytic solution for all green nodes is computed in the form of a propagator matrix. See the section :ref:"Computing the propagator matrix" for more details.
+The analytic solution for all green nodes is computed in the form of a propagator matrix. See the section :ref:`Computing the propagator matrix` for more details.
+
 
 Numeric solver selection criteria
 ---------------------------------
