@@ -1,6 +1,12 @@
 ODE-toolbox
 ===========
 
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   index
+
 .. role:: python(code)
    :language: python
 
