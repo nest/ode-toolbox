@@ -180,7 +180,8 @@ html_theme = 'sphinx_rtd_theme'
 
 html_theme_options = {
     'logo_only': True,
-    'navigation_depth': 2
+    'navigation_depth': 2,
+    'collapse_navigation': False
 }
 html_logo = "https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/ode-toolbox-logo.png"
 
