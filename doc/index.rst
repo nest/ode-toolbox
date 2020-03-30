@@ -428,7 +428,7 @@ Internal representation
 
 For users who want to modify/extend ODE-toolbox.
 
-Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a :py:class:`odetoolbox.system_of_shapes.SystemOfShapes` instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{C}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{C}` containing the nonlinear terms.
+Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a :py:class:`odetoolbox.system_of_shapes.SystemOfShapes` instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{c}` containing the nonlinear terms.
 
 
 Converting direct functions of time
