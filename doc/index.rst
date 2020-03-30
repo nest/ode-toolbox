@@ -343,19 +343,19 @@ The analysis output is returned in the form of a Python dictionary, or an equiva
 
 During analysis, ODE-toolbox rewrites the differential notation from single quotation marks into characters that are typically compatible with variable names; by default every quotation mark is rewritten into the string specified as the global parameter :python:`differential_order_symbol` (by default, :python:`"__d"`).
 
-ODE-toolbox will return a list of solvers. Each solver has the following keys: 
+ODE-toolbox will return a list of solvers. **Each solver has the following keys:**
 
 - :python:`"solver"`\ : a string containing the solver recommendation. Starts with either :python:`"analytical"` or :python:`"numeric"`\ .
 - :python:`"state_variables"`\ : an unordered list containing all variable symbols.
 - :python:`"initial_values"`\ : a dictionary that maps each variable symbol (in string form) to a SymPy expression. For example :python:`"g" : "e / tau"`.
 - :python:`"parameters"`\ : only present when parameters were supplied in the input. The input parameters are copied into the output for convenience.
 
-Analytic solvers have the following extra entries:
+**Analytic solvers have the following extra entries:**
 
 -  :python:`"update_expressions"`\ : a dictionary that maps each variable symbol (in string form) to a SymPy propagator expression. The interpretation of an entry :python:`"g" : "g * __P__g__g + h * __P__g__h"` is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:`t` to the next step :math:`t + \Delta t`, we assign the new value :python:`"g * __P__g__g + h * __P__g__h"` to the variable :python:`g`. Note that the expression is always evaluated at the old time :math:`t`; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
 -  :python:`propagators`\ : a dictionary that maps each propagator matrix entry to its defining expression; for example :python:`"__P__g__h" : "__h*exp(-__h/tau)"`
 
-Numeric solvers have the following extra entries:
+**Numeric solvers have the following extra entries:**
 
 - :python:`"update_expressions"`\ : a dictionary that maps each variable symbol (in string form) to a SymPy expression that is its Jacobian, that is, for a symbol :math:`x`, the expression is equal to :math:`\frac{\delta x}{\delta t}`.
 
@@ -448,15 +448,15 @@ This algorithm is implemented in :py:meth:`odetoolbox.shapes.Shape.from_function
 Computing the propagator matrix
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The propagator matrix :math:`P` is derived from the system matrix by matrix exponentiation:
+The propagator matrix :math:`\mathbf{P}` is derived from the system matrix by matrix exponentiation:
 
 .. math::
 
-   P = \exp(A \cdot h)
+   \mathbf{P} = \exp(\mathbf{A} \cdot h)
 
-If the imaginary unit :math:`i` is found in any of the entries in :math:`P`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
+If the imaginary unit :math:`i` is found in any of the entries in :math:`\mathbf{P}`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
 
-In some cases, elements of :math:`P` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated.
+In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated.
 
 
 Working with large expressions
@@ -520,13 +520,13 @@ Some operations on SymPy expressions can be quite slow (see the section :ref:`Wo
 
 Even dynamical systems of moderate size can require a few minutes of processing time, in large part due to SymPy calls, and solver selection.
 
-To speed up processing, a caching mechanism analyses the final system matrix :math:`A` and rewrites it as a block-diagonal matrix :math:`A = \text{diag}(B_1, B_2, \dots, B_k)`, were each of :math:`B_1, B_2, \dots, B_k` is square.
+To speed up processing, a caching mechanism analyses the final system matrix :math:`\mathbf{A}` and rewrites it as a block-diagonal matrix :math:`\mathbf{A} = \text{diag}(\mathbf{B}_1, \mathbf{B}_2, \dots, \mathbf{B}_k)`, were each of :math:`\mathbf{B}_1, \mathbf{B}_2, \dots, \mathbf{B}_k` is square.
 
 For propagators, we note that
 
 .. math::
 
-   e^{At} = \text{diag}(e^{B_1t}, e^{B_2t}, \dots, e^{B_kt})
+   e^{\mathbf{A}t} = \text{diag}(e^{\mathbf{B}_1t}, e^{\mathbf{B}_2t}, \dots, e^{\mathbf{B}_kt})
 
 
 API documentation
@@ -564,7 +564,7 @@ References
 Acknowledgements
 ----------------
 
-Logo due to Konstantin Perun.
+Logo design by Konstantin Perun and Charl Linssen.
 
 This software was initially supported by the JARA-HPC Seed Fund *NESTML - A modeling language for spiking neuron and synapse models for NEST* and the Initiative and Networking Fund of the Helmholtz Association and the Helmholtz Portfolio Theme *Simulation and Modeling for the Human Brain*.
 
