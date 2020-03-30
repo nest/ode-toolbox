@@ -520,7 +520,7 @@ Some operations on SymPy expressions can be quite slow (see the section :ref:`Wo
 
 Even dynamical systems of moderate size can require a few minutes of processing time, in large part due to SymPy calls, and solver selection.
 
-To speed up processing, a caching mechanism analyses the final system matrix :math:`\mathbf{A}` and rewrites it as a block-diagonal matrix :math:`\mathbf{A} = \text{diag}(\mathbf{B}_1, \mathbf{B}_2, \dots, \mathbf{B}_k)`, were each of :math:`\mathbf{B}_1, \mathbf{B}_2, \dots, \mathbf{B}_k` is square.
+To speed up processing, a caching mechanism analyses the final system matrix :math:`\mathbf{A}` and rewrites it as a block-diagonal matrix :math:`\mathbf{A} = \text{diag}(\mathbf{B}_1, \mathbf{B}_2, \dots, \mathbf{B}_k)`, where each of :math:`\mathbf{B}_1, \mathbf{B}_2, \dots, \mathbf{B}_k` is square.
 
 For propagators, we note that
 
@@ -564,7 +564,7 @@ References
 Acknowledgements
 ----------------
 
-Logo design by Konstantin Perun and Charl Linssen.
+Logo design by Konstantin Perun.
 
 This software was initially supported by the JARA-HPC Seed Fund *NESTML - A modeling language for spiking neuron and synapse models for NEST* and the Initiative and Networking Fund of the Helmholtz Association and the Helmholtz Portfolio Theme *Simulation and Modeling for the Human Brain*.
 
