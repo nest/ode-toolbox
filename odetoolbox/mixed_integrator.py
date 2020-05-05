@@ -57,6 +57,9 @@ except ImportError as ie:
 
 
 class ParametersIncompleteException(Exception):
+    """
+    Thrown in case not all parameters are assigned a numerical value before integration was attempted.
+    """
     def __init__(self, message):
         self.message = message
 
@@ -68,7 +71,7 @@ class MixedIntegrator(Integrator):
 
     def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False):
         r"""
-        :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
+        :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. :python:`odeiv.step_rk4`
         :param system_of_shapes: Dynamical system to solve.
         :param shapes: List of shapes in the dynamical system.
         :param analytic_solver_dict: Analytic solver dictionary from ODE-toolbox analysis result.
@@ -79,7 +82,7 @@ class MixedIntegrator(Integrator):
         :param integration_accuracy_abs: Absolute integration accuracy.
         :param integration_accuracy_rel: Relative integration accuracy.
         :param sim_time: How long to simulate for.
-        :param alias_spikes: Whether to alias spike times to the numerical integration grid. `False` means that precise integration will be used for spike times whenever possible. `True` means that after taking a timestep :math:`dt`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
+        :param alias_spikes: Whether to alias spike times to the numerical integration grid. :python:`False` means that precise integration will be used for spike times whenever possible. :python:`True` means that after taking a timestep :math:`dt`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
         """
         super(MixedIntegrator, self).__init__()
 
@@ -414,7 +417,7 @@ class MixedIntegrator(Integrator):
 
     def numerical_jacobian(self, t, y, params):
         r"""
-        Compute the numerical values of the Jacobian matrix at the current time `t` and state `y`.
+        Compute the numerical values of the Jacobian matrix at the current time :python:`t` and state :python:`y`.
 
         If the dynamics of variables :math:`x_1, \ldots, x_N` is defined as :math:`x_i' = f_i`, then row :math:`i` of the Jacobian matrix :math:`\mathbf{J}_i = \left[\begin{matrix}\frac{\partial f_i}{\partial x_0} & \cdots & \frac{\partial f_i}{\partial x_N}\end{matrix}\right]`.
 
@@ -445,7 +448,7 @@ class MixedIntegrator(Integrator):
 
     def step(self, t, y, params):
         r"""
-        "Stepping function": compute derivative at a particular state.
+        "Stepping function": compute the (numerical) value of the derivative of :python:`y` over time, at the current time :python:`t` and state :python:`y`.
 
         :param t: Current time.
         :param y: Current state vector of the dynamical system.

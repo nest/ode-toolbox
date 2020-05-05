@@ -92,7 +92,7 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
         initial_values = { sympy.Symbol(k) : v for k, v in initial_values.items() }
 
         indict = open_json("iaf_cond_alpha_mixed_test.json")
-        analysis_json, shape_sys, shapes = odetoolbox.analysis_(indict, disable_stiffness_check=True, disable_analytic_solver=True)
+        analysis_json, shape_sys, shapes = odetoolbox._analysis(indict, disable_stiffness_check=True, disable_analytic_solver=True)
         print("Got analysis result from ode-toolbox: ")
         print(json.dumps(analysis_json, indent=2))
         assert len(analysis_json) == 1

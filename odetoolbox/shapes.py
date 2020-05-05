@@ -27,7 +27,7 @@ import sympy
 import sympy.parsing.sympy_parser
 
 
-def is_sympy_type(var):
+def _is_sympy_type(var):
     return isinstance(var, tuple(sympy.core.all_classes))
 
 
@@ -104,7 +104,7 @@ class Shape():
         if not len(initial_values) == order:
             raise Exception(str(len(initial_values)) + " initial values specified, while " + str(order) + " were expected based on differential equation definition")
         for iv_name, iv in initial_values.items():
-            if not is_sympy_type(iv):
+            if not _is_sympy_type(iv):
                 raise Exception("initial value for %s is not a SymPy expression: \"%r\"" % (iv_name, iv))
             differential_order = iv_name.count("'")
             if differential_order > 0:
@@ -126,7 +126,7 @@ class Shape():
             raise Exception(str(len(derivative_factors)) + " derivative factors specified, while " + str(order) + " were expected based on differential equation definition")
 
         for df in derivative_factors:
-            if not is_sympy_type(df):
+            if not _is_sympy_type(df):
                 raise Exception("Derivative factor \"%r\" is not a SymPy expression" % df)
 
         self.derivative_factors = derivative_factors
@@ -146,6 +146,11 @@ class Shape():
             self.upper_bound = sympy.simplify(self.upper_bound)
 
         logging.debug("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
+
+
+    def __str__(self):
+        s = "Shape \"" + str(self.symbol) + "\" of order " + str(self.order)
+        return s
 
 
     def is_homogeneous(self, shapes=None, differential_order_symbol="__d"):
@@ -172,11 +177,6 @@ class Shape():
                 return False
 
         return True
-
-
-    def __str__(self):
-        s = "Shape \"" + str(self.symbol) + "\" of order " + str(self.order)
-        return s
 
 
     def get_initial_value(self, sym: str):
@@ -355,7 +355,7 @@ class Shape():
         Split an expression into the form ``a_0 * x[0] + a_1 * x[1] + ... + c``. The coefficients ``a_0...a_n`` are returned as ``lin_factors``. The nonlinear remainder is returned as ``nonlin_term``.
         """
 
-        assert all([is_sympy_type(sym) for sym in x])
+        assert all([_is_sympy_type(sym) for sym in x])
 
         lin_factors = []
         logging.debug("Splitting expression " + str(expr) + " into symbols " + str(x))

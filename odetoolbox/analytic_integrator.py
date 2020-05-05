@@ -140,7 +140,7 @@ class AnalyticIntegrator(Integrator):
 
     def set_initial_values(self, vals):
         r"""
-        Set initial values, i.e. the state of the system at t = 0. This will additionally cause the system state to be reset to t = 0.
+        Set initial values, i.e. the state of the system at :math:`t = 0`. This will additionally cause the system state to be reset to :math:`t = 0`.
 
         :param vals: New initial values.
         """
@@ -159,7 +159,7 @@ class AnalyticIntegrator(Integrator):
         self.reset()
 
 
-    def update_step(self, delta_t, initial_values):
+    def _update_step(self, delta_t, initial_values):
         r"""
         Apply propagator to update the state, starting from `initial_values`, by timestep `delta_t`.
 
@@ -226,7 +226,7 @@ class AnalyticIntegrator(Integrator):
 
             delta_t = spike_t - t_curr
             if delta_t > 0:
-                state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
+                state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
 
             #
             #   delta impulse increment
@@ -254,7 +254,7 @@ class AnalyticIntegrator(Integrator):
 
         delta_t = t - t_curr
         if delta_t > 0:
-            state_at_t_curr = self.update_step(delta_t, state_at_t_curr)
+            state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
             t_curr = t
 
         return state_at_t_curr

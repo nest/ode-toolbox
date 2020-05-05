@@ -67,7 +67,7 @@ default_config = {
 }
 
 
-def dependency_analysis(shape_sys, shapes, differential_order_symbol):
+def _dependency_analysis(shape_sys, shapes, differential_order_symbol):
     r"""
     Perform dependency analysis and plot dependency graph.
     """
@@ -82,7 +82,7 @@ def dependency_analysis(shape_sys, shapes, differential_order_symbol):
     return dependency_edges, node_is_lin
 
 
-def read_global_config(indict, default_config):
+def _read_global_config(indict, default_config):
     r"""
     Process global configuration options.
     """
@@ -96,7 +96,7 @@ def read_global_config(indict, default_config):
     return options_dict
 
 
-def from_json_to_shapes(indict, options_dict):
+def _from_json_to_shapes(indict, options_dict):
     r"""
     Process the input, construct Shape instances.
 
@@ -121,11 +121,11 @@ def from_json_to_shapes(indict, options_dict):
     return shapes
 
 
-def analysis_(indict, disable_stiffness_check=False, disable_analytic_solver=False, debug=False):
+def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=False, debug=False):
 
     global default_config
 
-    init_logging_(debug)
+    _init_logging(debug)
 
     logging.info("ode-toolbox: analysing input:")
     logging.info(json.dumps(indict, indent=4, sort_keys=True))
@@ -135,10 +135,10 @@ def analysis_(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
         solvers_json = {}
         return solvers_json
 
-    options_dict = read_global_config(indict, default_config)
-    shapes = from_json_to_shapes(indict, options_dict)
+    options_dict = _read_global_config(indict, default_config)
+    shapes = _from_json_to_shapes(indict, options_dict)
     shape_sys = SystemOfShapes.from_shapes(shapes)
-    dependency_edges, node_is_lin = dependency_analysis(shape_sys, shapes, differential_order_symbol=options_dict["differential_order_symbol"])
+    dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=options_dict["differential_order_symbol"])
 
 
     #
@@ -256,23 +256,27 @@ def analysis_(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
     return solvers_json, shape_sys, shapes
 
 
+def _init_logging(debug: bool):
+    """
+    Initialise message logging.
+
+    :param debug: Set to :python:`True` to increase the verbosity.
+    """
+    if debug:
+        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
+
+
 def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solver : bool=False, debug : bool=True):
     r"""
-    The main entry point of the analysis.
+    The main entry point of the ODE-toolbox API.
 
-    This function expects a single dictionary that describes the input to the analysis. The exact format of the input is described in the ODE-toolbox documentation.
-
+    :param indict: Input dictionary for the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#input
     :param disable_stiffness_check: Whether to perform stiffness checking.
     :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
 
     :return: The result of the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#output
     """
-    d, _, _ = analysis_(indict, disable_stiffness_check=disable_stiffness_check, disable_analytic_solver=disable_analytic_solver, debug=debug)
+    d, _, _ = _analysis(indict, disable_stiffness_check=disable_stiffness_check, disable_analytic_solver=disable_analytic_solver, debug=debug)
     return d
-
-
-def init_logging_(debug: bool):
-    if debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
-    else:
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
