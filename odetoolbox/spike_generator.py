@@ -63,8 +63,8 @@ class SpikeGenerator():
         r"""
         Generate spike trains for the given simulation length. Uses a Poisson distribution to create biologically realistic characteristics of the spike-trains.
 
-        :param T: Spikes are generated in the window [0, T]. T is in s.
-        :param min_isi: Minimum time between two consecutive spikes, in s.
+        :param T: Spikes are generated in the window :math:`[0, T]`.
+        :param min_isi: Minimum time between two consecutive spikes.
 
         :return: spike_times: For each symbol: a list with spike times
         :rtype: Dict(str -> List(float))

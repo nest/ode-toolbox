@@ -54,7 +54,7 @@ class Shape():
 
        x''' = c0*x + c1*x' + c2*x'' + x*y + x**2
 
-    the ``symbol`` of the ODE would be ``x`` (i.e. without any qualifiers), ``order`` would be 3, ``derivative_factors`` would contain the linear part in the form of the list ``[c0, c1, c2]``, and the nonlinear part is stored in ``diff_rhs_derivatives``.
+    the :python:`symbol` of the ODE would be :python:`x` (i.e. without any qualifiers), :python:`order` would be 3, :python:`derivative_factors` would contain the linear part in the form of the list :python:`[c0, c1, c2]`, and the nonlinear part :python:`x*y + x**2` is stored in :python:`diff_rhs_derivatives`.
     """
 
     EXPRESSION_SIMPLIFICATION_THRESHOLD = 1000
@@ -91,7 +91,7 @@ class Shape():
 
         :param symbol: Symbolic name of the shape without additional qualifiers like prime symbols or similar.
         :param order: Order of the ODE representing the shape.
-        :param initial_values: Initial values of the ODE representing the shape. The dict contains :math:`order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
+        :param initial_values: Initial values of the ODE representing the shape. The dict contains :python:`order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
         :param derivative_factors: The factors for the derivatives that occur in the ODE. This list has to contain :path:`order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. :python:`[c0, c1, c2]` for the given example.
         :param diff_rhs_derivatives: Nonlinear part of the ODE representing the shape, i.e. :python:`x*y + x**2` for the given example.
         """
@@ -162,7 +162,7 @@ class Shape():
 
     def is_homogeneous(self, shapes=None, differential_order_symbol="__d"):
         r"""
-        :return: False if and only if the shape has a nonzero right-hand side.
+        :return: :python:`False` if and only if the shape has a nonzero right-hand side.
         :rtype: bool
         """
 
@@ -238,7 +238,7 @@ class Shape():
 
     def is_lin_const_coeff(self, shapes=None):
         r"""
-        :return: True if and only if the shape is linear and constant coefficient in all known variable symbols in `shapes`.
+        :return: :python:`True` if and only if the shape is linear and constant coefficient in all known variable symbols in :python:`shapes`.
         :rtype: bool
         """
 
@@ -344,7 +344,7 @@ class Shape():
 
     def reconstitute_expr(self, derivative_symbol="__d"):
         r"""
-        Recreate sympy expression from internal representation (linear coefficients and nonlinear part).
+        Recreate SymPy expression from internal representation (linear coefficients and nonlinear part).
 
         :param differential_order_symbol: String used for identifying differential order. XXX: only ``"__d"`` is supported for now.
         """
@@ -359,7 +359,7 @@ class Shape():
     @staticmethod
     def split_lin_nonlin(expr, x):
         r"""
-        Split an expression into the form ``a_0 * x[0] + a_1 * x[1] + ... + c``. The coefficients ``a_0...a_n`` are returned as ``lin_factors``. The nonlinear remainder is returned as ``nonlin_term``.
+        Split an expression into the form :python:`a_0 * x[0] + a_1 * x[1] + ... + c`. The coefficients :python:`a_0` ... :python:`a_n` are returned as :python:`lin_factors`. The nonlinear remainder is returned as :python:`nonlin_term`.
         """
 
         assert all([_is_sympy_type(sym) for sym in x])

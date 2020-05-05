@@ -110,36 +110,36 @@ class StiffnessTester(object):
 
     def check_stiffness(self, raise_errors=False):
         r"""
-        Perform stiffness testing.
+        Perform stiffness testing: use implicit and explicit solvers to simulate the dynamical system, then decide which is the better solver to use.
 
-        The idea is not to compare if the given implicit method or the explicit method is better suited for this small simulation, for instance by comparing runtimes, but to instead check for tendencies of stiffness. If we find that the average step size of the implicit evolution method is a lot larger than the average step size of the explicit method, then this ODE system could be stiff. Especially if it become significantly more stiff when a different step size is used or when parameters are changed, an implicit evolution scheme could become increasingly important.
-
-        It is important to note here, that this analysis depends significantly on the parameters that are assigned for a dynamical system. If these are changed significantly in magnitude, the result of the analysis can also change significantly.
+        For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#numeric-solver-selection-criteria
         """
         assert PYGSL_AVAILABLE
 
         try:
-            step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
-            step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
+            step_min_exp, step_average_exp, runtime_exp = self._evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
+            step_min_imp, step_average_imp, runtime_imp = self._evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
         except ParametersIncompleteException:
             print("Stiffness test not possible because numerical values were not specified for all parameters.")
             return None
 
         # print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 
-        return self.draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
+        return self._draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
-    def evaluate_integrator(self, integrator, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
+    def _evaluate_integrator(self, integrator, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
         r"""
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
 
         This function will reset the numpy random seed.
 
         :param max_step_size: The maximal stepsize for one evolution step in miliseconds
-        :param integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
-        :param y: The 'state variables' in f(y)=y'
-        :return: Average and minimal step size.
+        :param integrator: A method from the GSL library for evolving ODEs, e.g. :python:`odeiv.step_rk4`.
+
+        :return h_min: Minimum recommended step size.
+        :return h_avg: Average recommended step size.
+        :return runtime: Wall clock runtime.
         """
         assert PYGSL_AVAILABLE
 
@@ -174,9 +174,11 @@ class StiffnessTester(object):
         return h_min, h_avg, runtime
 
 
-    def draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, machine_precision_dist_ratio=10, avg_step_size_ratio=6):
+    def _draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, machine_precision_dist_ratio=10, avg_step_size_ratio=6):
         r"""
-        Decide which is the best integrator to use for a certain system of ODEs
+        Decide which is the best integrator to use.
+
+        For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#numeric-solver-selection-criteria
 
         :param step_min_imp: Minimum recommended step size returned for implicit solver.
         :param step_min_exp: Minimum recommended step size returned for explicit solver.
