@@ -113,6 +113,9 @@ class StiffnessTester(object):
         Perform stiffness testing: use implicit and explicit solvers to simulate the dynamical system, then decide which is the better solver to use.
 
         For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#numeric-solver-selection-criteria
+
+        :return: Either :python:`"implicit"`, :python:`"explicit"` or :python:`"warning"`.
+        :rtype: str
         """
         assert PYGSL_AVAILABLE
 
@@ -128,14 +131,15 @@ class StiffnessTester(object):
         return self._draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
-    def _evaluate_integrator(self, integrator, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
+    def _evaluate_integrator(self, integrator, h_min_lower_bound=1E-12, raise_errors=True, debug=True):
         r"""
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
 
         This function will reset the numpy random seed.
 
-        :param max_step_size: The maximal stepsize for one evolution step in miliseconds
         :param integrator: A method from the GSL library for evolving ODEs, e.g. :python:`odeiv.step_rk4`.
+        :param h_min_lower_bound: The minimum acceptable step size. Integration will terminate with an error if this step size is reached.
+        :param raise_errors: Stop and raise exception when error occurs, or try to continue.
 
         :return h_min: Minimum recommended step size.
         :return h_avg: Average recommended step size.
@@ -167,7 +171,7 @@ class StiffnessTester(object):
          integration_accuracy_rel=self.integration_accuracy_rel,
          sim_time=self.sim_time,
          alias_spikes=self.alias_spikes)
-        h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(h_min_lower_bound=1E-12, raise_errors=raise_errors, debug=debug))
+        h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(h_min_lower_bound=h_min_lower_bound, raise_errors=raise_errors, debug=debug))
 
         logging.info("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 
