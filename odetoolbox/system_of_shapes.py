@@ -30,22 +30,27 @@ from .shapes import Shape
 
 
 def _is_zero(x):
-    """In the ideal case, we would like to use sympy.simplify() to do simplification of an expression before comparing it to zero. However, for expressions of moderate size (e.g. a few dozen terms involving exp() functions), it becomes unbearably slow. We therefore use this internal function, so that the simplification function can be easily switched over.
-    
+    r"""
+    In the ideal case, we would like to use sympy.simplify() to do simplification of an expression before comparing it to zero. However, for expressions of moderate size (e.g. a few dozen terms involving exp() functions), it becomes unbearably slow. We therefore use this internal function, so that the simplification function can be easily switched over.
+
     Tests by expand_mul only, suitable for polynomials and rational functions.
-    
+
     Ref.: https://github.com/sympy/sympy PR #13877 by @normalhuman et al. merged on Jan 27, 2018
     """
     return bool(sympy.expand_mul(x).is_zero)
 
 
 class SystemOfShapes(object):
-    """
+    r"""
+    Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
     """
 
     def __init__(self, x, A : sympy.Matrix, C, shapes):
-        """
-        :param A: Jacobian of the system (square matrix).
+        r"""
+        Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
+
+        :param A: Matrix containing linear part.
+        :param C: Vector containing nonlinear part.
         """
         logging.info("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", C = " + str(C))
         assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
@@ -63,7 +68,6 @@ class SystemOfShapes(object):
 
 
     def get_dependency_edges(self):
-
         E = []
 
         for i, sym1 in enumerate(self.x_):
@@ -78,11 +82,9 @@ class SystemOfShapes(object):
 
 
     def get_lin_cc_symbols(self, E, differential_order_symbol="__d"):
-        """retrieve the variable symbols of those shapes that are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with "__d" suffixes up to the order of the shape."""
-
-        #
-        # initial pass: is a node linear and constant coefficient by itself?
-        #
+        r"""
+        Retrieve the variable symbols of those shapes that are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with ``"__d"`` suffixes up to the order of the shape.
+        """
 
         node_is_lin = {}
         for shape in self.shapes_:
@@ -98,7 +100,7 @@ class SystemOfShapes(object):
 
 
     def propagate_lin_cc_judgements(self, node_is_lin, E):
-        """
+        r"""
         Propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient.
         """
 
@@ -119,8 +121,10 @@ class SystemOfShapes(object):
 
 
     def get_jacobian_matrix(self):
-        """
-        Get the Jacobian matrix
+        r"""
+        Get the Jacobian matrix.
+
+        If the dynamics of variables :math:`x_1, \ldots, x_N` is defined as :math:`x_i' = f_i`, then row :math:`i` of the Jacobian matrix :math:`\mathbf{J}_i = \left[\begin{matrix}\frac{\partial f_i}{\partial x_0} & \cdots & \frac{\partial f_i}{\partial x_N}\end{matrix}\right]`.
         """
         N = len(self.x_)
         J = sympy.zeros(N, N)
@@ -134,8 +138,8 @@ class SystemOfShapes(object):
 
 
     def get_sub_system(self, symbols):
-        """
-        Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in `symbols` do not dependend on any of the other symbols that will be thrown away.
+        r"""
+        Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in ``symbols`` do not dependend on any of the other symbols that will be thrown away.
         """
 
         idx = [ i for i, sym in enumerate(self.x_) if sym in symbols ]
@@ -160,7 +164,7 @@ class SystemOfShapes(object):
 
 
     def generate_propagator_solver(self, output_timestep_symbol="__h"):
-        """
+        r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
 
@@ -205,7 +209,7 @@ class SystemOfShapes(object):
 
 
     def generate_numeric_solver(self):
-        """
+        r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
         """
 
@@ -221,7 +225,7 @@ class SystemOfShapes(object):
 
 
     def reconstitute_expr(self):
-        """
+        r"""
         Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + C).
         """
 
@@ -243,7 +247,8 @@ class SystemOfShapes(object):
 
     @classmethod
     def from_shapes(cls, shapes):
-        r"""Construct the global system matrix including all shapes.
+        r"""
+        Construct the global system matrix including all shapes.
 
         Global dynamics
 
@@ -289,11 +294,8 @@ class SystemOfShapes(object):
             #
 
             for order in range(shape.order - 1):
-                #_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * order)][0]
                 A[i + order, i + order + 1] = 1.     # the n-th order derivative is at row n, starting at 0, until you reach the variable symbol without any "__d" suffixes
 
             i += shape.order
 
         return SystemOfShapes(x, A, C, shapes)
-
-

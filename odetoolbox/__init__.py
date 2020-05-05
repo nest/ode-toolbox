@@ -19,7 +19,9 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import print_function
+from .sympy_printer import SympyPrinter
+from .system_of_shapes import SystemOfShapes
+from .shapes import Shape
 
 import copy
 import json
@@ -27,12 +29,6 @@ import logging
 
 import sympy
 sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
-
-from .sympy_printer import SympyPrinter
-from .system_of_shapes import SystemOfShapes
-#from odetoolbox.analytic import compute_analytical_solution
-#from odetoolbox.numeric import compute_numeric_solution
-from .shapes import Shape
 
 
 try:
@@ -72,7 +68,9 @@ default_config = {
 
 
 def dependency_analysis(shape_sys, shapes, differential_order_symbol):
-    """perform dependency analysis, plot dependency graph"""
+    r"""
+    Perform dependency analysis and plot dependency graph.
+    """
     logging.info("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
     node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges, differential_order_symbol=differential_order_symbol)
@@ -85,9 +83,9 @@ def dependency_analysis(shape_sys, shapes, differential_order_symbol):
 
 
 def read_global_config(indict, default_config):
-    """process global configuration options"""
-
-
+    r"""
+    Process global configuration options.
+    """
     logging.info("Processing global options...")
     options_dict = copy.deepcopy(default_config)
     if "options" in indict.keys():
@@ -99,7 +97,12 @@ def read_global_config(indict, default_config):
 
 
 def from_json_to_shapes(indict, options_dict):
-    """process the input, construct Shape instances"""
+    r"""
+    Process the input, construct Shape instances.
+
+    :param indict: ODE-toolbox input dictionary.
+    :param indict: ODE-toolbox global configuration dictionary.
+    """
 
     logging.info("Processing input shapes...")
     shapes = []
@@ -122,7 +125,7 @@ def analysis_(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
 
     global default_config
 
-    init_logging(debug)
+    init_logging_(debug)
 
     logging.info("ode-toolbox: analysing input:")
     logging.info(json.dumps(indict, indent=4, sort_keys=True))
@@ -227,7 +230,6 @@ def analysis_(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
                 if "propagators" in solver_json.keys():
                     for sym, expr in solver_json["propagators"].items():
                         if param_name in [str(sym) for sym in list(expr.atoms())]:
-                        #if len(expr.atoms(param_name)) > 0:
                             symbol_appears_in_any_expr = True
                             break
 
@@ -255,10 +257,10 @@ def analysis_(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
 
 
 def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solver : bool=False, debug : bool=True):
-    """
+    r"""
     The main entry point of the analysis.
 
-    This function expects a single dictionary that describes the input to the analysis. The exact format of the input is described in the ode-toolbox documentation.
+    This function expects a single dictionary that describes the input to the analysis. The exact format of the input is described in the ODE-toolbox documentation.
 
     :param disable_stiffness_check: Whether to perform stiffness checking.
     :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
@@ -269,7 +271,7 @@ def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solv
     return d
 
 
-def init_logging(debug: bool):
+def init_logging_(debug: bool):
     if debug:
         logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
     else:

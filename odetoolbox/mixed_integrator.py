@@ -19,8 +19,6 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import print_function
-
 from inspect import getmembers
 import logging
 import math
@@ -64,15 +62,25 @@ class ParametersIncompleteException(Exception):
 
 
 class MixedIntegrator(Integrator):
-    """
+    r"""
     Mixed numeric+analytic integrator. Supply with a result from odetoolbox analysis; calculates numeric approximation of the solution.
     """
 
     def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False):
-        """
+        r"""
         :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. `odeiv.step_rk4`
+        :param system_of_shapes: Dynamical system to solve.
+        :param shapes: List of shapes in the dynamical system.
+        :param analytic_solver_dict: Analytic solver dictionary from ODE-toolbox analysis result.
+        :param parameters: Dictionary mapping parameter name (as string) to value expression.
+        :param spike_times: For each variable, used as a key, the list of times at which a spike occurs.
+        :param random_seed: Random number generator seed.
+        :param max_step_size: The maximum step size taken by the integrator.
+        :param integration_accuracy_abs: Absolute integration accuracy.
+        :param integration_accuracy_rel: Relative integration accuracy.
+        :param sim_time: How long to simulate for.
+        :param alias_spikes: Whether to alias spike times to the numerical integration grid. `False` means that precise integration will be used for spike times whenever possible. `True` means that after taking a timestep :math:`dt`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
         """
-
         super(MixedIntegrator, self).__init__()
 
         assert PYGSL_AVAILABLE
@@ -100,7 +108,6 @@ class MixedIntegrator(Integrator):
                 self.analytic_solver_dict["parameters"] = {}
             self.analytic_solver_dict["parameters"].update(self._parameters)
         self.analytic_integrator = None
-        #self.initial_values = { sym : str(self.get_initial_value(sym)) for sym in self._system_of_shapes.x_ }
         self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy()
         self._update_expr_wrapped = {}
 
@@ -109,8 +116,6 @@ class MixedIntegrator(Integrator):
             self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
         self.all_variable_symbols = [ sympy.Symbol(str(sym).replace("'", "__d")) for sym in self.all_variable_symbols ]
 
-        #if not self.analytic_solver_dict is None:
-        #    self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
         for sym, expr in self._update_expr.items():
             try:
                 self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
@@ -120,7 +125,6 @@ class MixedIntegrator(Integrator):
         for i in range(self.symbolic_jacobian_.shape[0]):
             for j in range(self.symbolic_jacobian_.shape[1]):
                 self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals), args=self.all_variable_symbols, backend="cython")
-        #self._update_expr = { sym : sympy.parsing.sympy_parser.parse_expr(expr, global_dict=Shape._sympy_globals) for sym, expr in self._system_of_shapes.generate_numeric_solver()["update_expressions"].items() }
 
 
         #
@@ -130,12 +134,14 @@ class MixedIntegrator(Integrator):
         self.set_spike_times(spike_times)
 
 
-    def integrate_ode(self, initial_values=None, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
-        """
+    def integrate_ode(self, initial_values=None, h_min_lower_bound=5E-9, raise_errors=True, debug=False):
+        r"""
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train.
 
+        :param initial_values: A dictionary mapping variable names (as strings) to initial value expressions.
         :param h_min_lower_bound: The minimum acceptable step size.
         :param raise_errors: Stop and raise exception when error occurs, or try to continue.
+        :param debug: Return extra values useful for debugging.
 
         :return: Average and minimal step size, and elapsed wall clock time.
         """
@@ -150,7 +156,6 @@ class MixedIntegrator(Integrator):
         #
 
         all_spike_times, all_spike_times_sym = self.get_sorted_spike_times()
-
 
 
         #
@@ -379,7 +384,7 @@ class MixedIntegrator(Integrator):
         # adjust the axes slightly towards the right
         for _ax in ax:
             pos1 = _ax.get_position()
-            pos2 = [pos1.x0 + 0.05, pos1.y0,  pos1.width, pos1.height]
+            pos2 = [pos1.x0 + 0.05, pos1.y0, pos1.width, pos1.height]
             _ax.set_position(pos2)
 
         for i in range(y_log.shape[1]):
@@ -402,23 +407,20 @@ class MixedIntegrator(Integrator):
 
         ax[-1].set_xlabel("Time [s]")
         fig.suptitle(str(self.numeric_integrator))
-        #plt.show()
         fn = os.path.join(dir, "mixed_integrator_[run=" + str(hash(self)) + "]_[run=" + str(self.numeric_integrator) + "].png")
         plt.savefig(fn, dpi=600)
         plt.close(fig)
 
 
     def numerical_jacobian(self, t, y, params):
-        """Callback function that compute the jacobian matrix for the current
-        state vector `y`.
+        r"""
+        Compute the Jacobian matrix for the current state `t`, `y`.
 
-        :param t: current time in the step (from 0 to step_size)
-        :param y: the current state vector of the ODE system
-        :param params: Prescribed GSL parameters (not used here).
+        :param t: Current time.
+        :param y: Current state vector of the dynamical system.
+        :param params: GSL parameters (not used here).
 
-        :return: dfdy that contains the jacobian matrix with respect
-        to y. `dfdt` is not computed and set to zero matrix now.
-
+        :return: Jacobian matrix :math:`\mathbf{J} = \left[\begin{matrix}\end{matrix}\right]`
         """
         dimension = len(y)
         dfdy = np.zeros((dimension, dimension), np.float)
@@ -429,29 +431,26 @@ class MixedIntegrator(Integrator):
         if not self.analytic_integrator is None:
             self._locals.update(self.analytic_integrator.get_value(t))
 
-        # y holds the state of all the symbols in the numeric part of the system; add those for the analytic part
         y = [ self._locals[str(sym)] for sym in self.all_variable_symbols ]
 
-        # evaluate every entry of the `jacobian_matrix` and store the
-        # result in the corresponding entry of the `dfdy`
         for row in range(0, dimension):
             for col in range(0, dimension):
                 dfdy[row, col] = self.symbolic_jacobian_wrapped[row, col](*y)
-                #dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))
+                #dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))	# non-wrapped version
 
         return dfdy, dfdt
 
 
     def step(self, t, y, params):
-        """Callback function to compute an integration step.
+        r"""
+        "Stepping function": compute derivative at a particular state.
 
-        :param t: current time in the step (from 0 to step_size)
-        :param y: the current state vector of the ODE system
-        :param params: Prescribed GSL parameters (not used here).
+        :param t: Current time.
+        :param y: Current state vector of the dynamical system.
+        :param params: GSL parameters (not used here).
 
         :return: Updated state vector
         """
-
         self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
 
         #
@@ -465,12 +464,12 @@ class MixedIntegrator(Integrator):
         y = [ self._locals[str(sym)] for sym in self.all_variable_symbols ]
 
         try:
-            #return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]
+            #return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]	# non-wrapped version
             _ret = [ self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_ ]
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")
-            for k,v in self._locals.items():
+            for k, v in self._locals.items():
                 print("    ", k, "=", v)
             raise
 

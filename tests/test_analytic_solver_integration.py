@@ -63,40 +63,57 @@ def open_json(fname):
 
 
 class TestAnalyticSolverIntegration(unittest.TestCase):
-    '''Numerical comparison between ode-toolbox calculated propagators, hand-calculated propagators expressed in Python, and numerical integration, for the iaf_cond_alpha neuron.
+    r"""
+    Numerical comparison between ode-toolbox calculated propagators, hand-calculated propagators expressed in Python, and numerical integration, for the iaf_cond_alpha neuron.
 
     The function tested is the alpha-shaped postsynaptic kernel.
 
     Definition of alpha function:
 
-        g'' = -g / tau^2 - 2*g' / tau
+    .. math::
 
-    Let z1 = g
-        z2 = g'
+       g'' = -g / \tau^2 - 2 g' / \tau
 
-    Then z1' = z2
-         z2' = -z1 / tau^2 - 2*z2 / tau
+    Let
 
-    Or equivalently
+    .. math::
 
-        Z' = S * Z
-
-    with
-
-        S = [ 0         1      ]
-            [ -1/tau^2  -2/tau ]
-
-    Exact solution: let
-
-        P = exp[h * S]
-
-          = [ (h/tau_syn + 1) * np.exp(-h/tau_syn)      h*np.exp(-h/tau_syn)                ]
-            [ -h*np.exp(-h/tau_syn)/tau_syn**2          (-h/tau_syn + 1)*np.exp(-h/tau_syn) ]
+       z_1 = g
+       z_2 = g'
 
     Then
 
-        z(t + h) = P * z(t)
-    '''
+    .. math::
+
+       z_1' = z_2
+       z_2' = -z_1 / \tau^2 - 2 z_2 / \tau
+
+    Or equivalently
+
+    .. math::
+
+        \mathbf{Z}' = \mathbf{S} \cdot \mathbf{Z}
+
+    with
+
+    .. math::
+
+       \mathbf{S} = \left[\begin{matrix}0 & 1 \\ -1/\tau^2 & -2/\tau\end{matrix}\right]
+
+    Exact solution: let
+
+    .. math::
+
+       \mathbf{P} &= \exp(h \cdot S)\\
+                  &= \left[\begin{matrix}(h/\tau + 1) * \exp(-h/tau_syn) & h\cdot\exp(-h/\tau) \\
+                                         -h \cdot \exp(-h/\tau)/\tau^2   & (-h/\tau + 1)\cdot\exp(-h/\tau)\end{matrix}\right]
+
+    Then
+
+    .. math::
+
+        \mathbf{Z}(t + h) = \mathbf{P} \cdot \mathbf{Z}(t)
+    """
 
     def test_analytic_solver_integration_psc_alpha(self):
         debug = True
@@ -110,7 +127,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         c_m = 1E-6    # [F]
         v_abs_init = -1000.   # [mV]
         i_ex_init = [0., e / tau_syn]   # [A]
-        spike_times = [10E-3] # [s]
+        spike_times = [10E-3]  # [s]
         for spike_time in spike_times:
             assert spike_time < T, "spike needs to occur before end of simulation"
 
@@ -132,7 +149,6 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
             _d_i_ex = np.array([i_ex[1], -i_ex[0] / tau_syn**2 - 2 * i_ex[1] / tau_syn])
             _d_V_abs_expr_ = -V_abs / tau + 3 * i_ex[0] / c_m    # factor 3 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory and gap currents (which are of the exact same shape/magnitude at all times)
             _delta_vec = np.concatenate((_d_i_ex, [_d_V_abs_expr_]))
-            #print("\treturning " + str(_delta_vec))
 
             return _delta_vec
 
@@ -253,7 +269,6 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
             for _ax in ax:
                 _ax.legend()
                 _ax.grid(True)
-                #_ax.set_xlim(49., 55.)
 
             ax[-1].set_xlabel("Time [ms]")
 
@@ -279,6 +294,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         np.testing.assert_allclose(i_ex__[1, :] / np.amax(np.abs(i_ex__[1, :])), i_ex[1, :] / np.amax(np.abs(i_ex__[1, :])), atol=_num_norm_atol, rtol=_num_norm_rtol)
 
         np.testing.assert_allclose(v_abs / np.amax(v_abs), state["V_abs"] / np.amax(v_abs), atol=_num_norm_atol, rtol=_num_norm_rtol)
+
 
 if __name__ == '__main__':
     unittest.main()

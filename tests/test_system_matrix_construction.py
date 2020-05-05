@@ -38,7 +38,6 @@ from sympy import exp, sympify
 import scipy
 import scipy.special
 import scipy.linalg
-from scipy.integrate import solve_ivp
 
 
 def open_json(fname):
@@ -89,6 +88,7 @@ class TestSystemMatrixConstruction(unittest.TestCase):
         V, W = sympy.symbols("V W")
         assert shape_sys.C_ == sympy.Matrix([[500.0*E_Ca*g_Ca*sympy.tanh(V/15 + sympy.S("1/15"))/C_m + 500.0*E_Ca*g_Ca/C_m + 1000.0*E_L*g_L/C_m + 1000.0*I_ext/C_m - 1000.0*V*W*g_K/C_m - 500.0*V*g_Ca*sympy.tanh(V/15 + sympy.S("1/15"))/C_m], \
                                              [                                                                                         -200.0*W*sympy.cosh(V/60) + 100.0*sympy.cosh(V/60)*sympy.tanh(V/30) + 100.0*sympy.cosh(V/60)]])
+
 
 if __name__ == '__main__':
     unittest.main()

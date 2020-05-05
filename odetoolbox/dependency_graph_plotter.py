@@ -1,13 +1,41 @@
+#
+# dependency_graph_plotter.py
+#
+# This file is part of the NEST ODE toolbox.
+#
+# Copyright (C) 2017 The NEST Initiative
+#
+# The NEST ODE toolbox is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 2 of
+# the License, or (at your option) any later version.
+#
+# The NEST ODE toolbox is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 import sympy
 
 
 class DependencyGraphPlotter:
-    """
+    r"""
     Use graphviz to plot a dependency graph between state variables.
     """
 
     @classmethod
     def plot_graph(cls, shapes, dependency_edges, node_is_lin, fn=None):
+        r"""
+        Plot graph and write to file.
+
+        :param shapes: List of Shape instances.
+        :param dependency_edges: List of edges returned from dependency analysis.
+        :param fn: Filename to write PNG image as.
+        """
 
         from graphviz import Digraph
 
@@ -27,7 +55,7 @@ class DependencyGraphPlotter:
                 with dot.subgraph(name="cluster_" + str(shape.symbol)) as sg:
                     nodes.append("cluster_" + str(shape.symbol))
                     for i in range(shape.order):
-                        sg.node(str(shape.symbol) + i * "'", style=style, color=colour)#, str(shape.symbol) + str(i))
+                        sg.node(str(shape.symbol) + i * "'", style=style, color=colour)
             else:
                 dot.node(str(shape.symbol), style=style, color=colour)
                 nodes.append(str(shape.symbol))

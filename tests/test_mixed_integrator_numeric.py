@@ -47,8 +47,6 @@ import sympy.parsing.sympy_parser
 import scipy
 import scipy.special
 import scipy.linalg
-from scipy.integrate import solve_ivp
-
 
 try:
     import pygsl.odeiv as odeiv
@@ -65,10 +63,11 @@ def open_json(fname):
 
 
 class TestMixedIntegrationNumeric(unittest.TestCase):
-    '''Numerical validation of MixedIntegrator. Note that this test uses all-numeric (no analytic part) integration to test for time grid aliasing effects of spike times.
+    """
+    Numerical validation of MixedIntegrator. Note that this test uses all-numeric (no analytic part) integration to test for time grid aliasing effects of spike times.
 
     Simulate a conductance-based integrate-and-fire neuron which is receiving spikes. Check for a match of the final system state with a numerical reference value that was validated by hand.
-    '''
+    """
 
     @pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Need GSL integrator to perform test")
     def test_mixed_integrator_numeric(self):
@@ -105,7 +104,7 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
                  integrator,
                  shape_sys,
                  shapes,
-                 analytic_solver_dict=None, #analysis_json[0],
+                 analytic_solver_dict=None,
                  parameters=indict["parameters"],
                  spike_times=spike_times,
                  random_seed=123,
@@ -135,24 +134,22 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
 
 
     def _timeseries_plot(self, t_log, h_log, y_log, sym_list, basedir="/tmp", fn_snip="", title_snip=""):
-        if 1:
-            fig, ax = plt.subplots(len(y_log[0]), sharex=True)
-            for i, sym in enumerate(sym_list):
-                ax[i].plot(1E3 * np.array(t_log), np.array(y_log)[:, i], label=str(sym))
+        fig, ax = plt.subplots(len(y_log[0]), sharex=True)
+        for i, sym in enumerate(sym_list):
+            ax[i].plot(1E3 * np.array(t_log), np.array(y_log)[:, i], label=str(sym))
 
-            for _ax in ax:
-                _ax.legend()
-                _ax.grid(True)
-                #_ax.set_xlim(49., 55.)
+        for _ax in ax:
+            _ax.legend()
+            _ax.grid(True)
 
-            ax[-1].set_xlabel("Time [ms]")
-            fig.suptitle("Timeseries for mixed integrator numeric test" + title_snip)
+        ax[-1].set_xlabel("Time [ms]")
+        fig.suptitle("Timeseries for mixed integrator numeric test" + title_snip)
 
-            #plt.show()
-            fn = os.path.join(basedir, "test_mixed_integrator_numeric_" + fn_snip + ".png")
-            print("Saving to " + fn)
-            plt.savefig(fn, dpi=600)
-            plt.close(fig)
+        fn = os.path.join(basedir, "test_mixed_integrator_numeric_" + fn_snip + ".png")
+        print("Saving to " + fn)
+        plt.savefig(fn, dpi=600)
+        plt.close(fig)
+
 
 if __name__ == '__main__':
     unittest.main()

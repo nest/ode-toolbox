@@ -36,6 +36,7 @@ except:
 
 import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
+from odetoolbox.spike_generator import SpikeGenerator
 
 from math import e
 from sympy import exp, sympify
@@ -43,8 +44,6 @@ from sympy import exp, sympify
 import scipy
 import scipy.special
 import scipy.linalg
-from scipy.integrate import solve_ivp
-from odetoolbox.spike_generator import SpikeGenerator
 
 
 def open_json(fname):
@@ -55,7 +54,9 @@ def open_json(fname):
 
 
 class TestAnalyticIntegrator(unittest.TestCase):
-    """Test that analytic integrator returns the same result when caching is disabled and enabled."""
+    """
+    Test that analytic integrator returns the same result when caching is disabled and enabled.
+    """
 
     def test_analytic_integrator_iaf_psc_alpha(self):
         debug = True
@@ -118,11 +119,9 @@ class TestAnalyticIntegrator(unittest.TestCase):
             for _ax in ax:
                 _ax.legend()
                 _ax.grid(True)
-                #_ax.set_xlim(49., 55.)
 
             ax[-1].set_xlabel("Time [ms]")
 
-            #plt.show()
             fn = "/tmp/test_analytic_integrator.png"
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)
@@ -132,6 +131,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
         np.testing.assert_allclose(state[True]["timevec"], state[False]["timevec"])
         for sym, val in state_.items():
             np.testing.assert_allclose(state[True][sym], state[False][sym])
+
 
 if __name__ == "__main__":
     import pytest

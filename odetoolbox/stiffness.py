@@ -19,14 +19,12 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import print_function
-
-from inspect import getmembers
 import logging
 import math
 import numpy as np
 import numpy.random
 import random
+
 from .mixed_integrator import MixedIntegrator
 from .mixed_integrator import ParametersIncompleteException
 from .shapes import Shape
@@ -56,6 +54,19 @@ except ImportError as ie:
 class StiffnessTester(object):
 
     def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, stimuli=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=100., alias_spikes=False):
+        r"""
+        :param system_of_shapes: Dynamical system to solve.
+        :param shapes: List of shapes in the dynamical system.
+        :param analytic_solver_dict: Analytic solver dictionary from ODE-toolbox analysis result.
+        :param parameters: Dictionary mapping parameter name (as string) to value expression.
+        :param stimuli: Dictionary containing spiking stimuli.
+        :param random_seed: Random number generator seed.
+        :param max_step_size: The maximum step size taken by the integrator.
+        :param integration_accuracy_abs: Absolute integration accuracy.
+        :param integration_accuracy_rel: Relative integration accuracy.
+        :param sim_time: How long to simulate for.
+        :param alias_spikes: Whether to alias spike times to the numerical integration grid. `False` means that precise integration will be used for spike times whenever possible. `True` means that after taking a timestep :math:`dt`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
+        """
         self.alias_spikes = alias_spikes
         self.max_step_size = max_step_size
         self.integration_accuracy_abs = integration_accuracy_abs
@@ -98,14 +109,15 @@ class StiffnessTester(object):
 
 
     def check_stiffness(self, raise_errors=False):
-        """Perform stiffness testing.
+        r"""
+        Perform stiffness testing.
 
         The idea is not to compare if the given implicit method or the explicit method is better suited for this small simulation, for instance by comparing runtimes, but to instead check for tendencies of stiffness. If we find that the average step size of the implicit evolution method is a lot larger than the average step size of the explicit method, then this ODE system could be stiff. Especially if it become significantly more stiff when a different step size is used or when parameters are changed, an implicit evolution scheme could become increasingly important.
 
-        It is important to note here, that this analysis depends significantly on the parameters that are assigned for an ODE system. If these are changed significantly in magnitude, the result of the analysis can also change significantly.
+        It is important to note here, that this analysis depends significantly on the parameters that are assigned for a dynamical system. If these are changed significantly in magnitude, the result of the analysis can also change significantly.
         """
         assert PYGSL_AVAILABLE
-        
+
         try:
             step_min_exp, step_average_exp, runtime_exp = self.evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
             step_min_imp, step_average_imp, runtime_imp = self.evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
@@ -113,13 +125,13 @@ class StiffnessTester(object):
             print("Stiffness test not possible because numerical values were not specified for all parameters.")
             return None
 
-        #print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
+        # print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 
         return self.draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
 
     def evaluate_integrator(self, integrator, h_min_lower_bound=5E-9, raise_errors=True, debug=True):
-        """
+        r"""
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
 
         This function will reset the numpy random seed.
@@ -139,7 +151,7 @@ class StiffnessTester(object):
         #
         #  initialise and run mixed integrator
         #
-        
+
         logging.info("Simulating for " + str(self.sim_time) + " with max_step_size = " + str(self.max_step_size))
 
         mixed_integrator = MixedIntegrator(
@@ -163,18 +175,14 @@ class StiffnessTester(object):
 
 
     def draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, machine_precision_dist_ratio=10, avg_step_size_ratio=6):
-        """Decide which is the best integrator to use for a certain system of ODEs
+        r"""
+        Decide which is the best integrator to use for a certain system of ODEs
 
-        1. If the minimal step size is close to machine precision for one of the methods but not for the other, this suggest that the other is more stable and should be used instead.
-
-        2. If the ODE system is stiff the average step size of the implicit method tends to be larger. This indicates that the ODE system is possibly stiff (and that it could be even more stiff for minor changes in stepsize and parameters). 
-
-        :param step_min_imp: data measured during solving
-        :param step_min_exp: data measured during solving
-        :param step_average_imp: data measured during solving
-        :param step_average_exp: data measured during solving
+        :param step_min_imp: Minimum recommended step size returned for implicit solver.
+        :param step_min_exp: Minimum recommended step size returned for explicit solver.
+        :param step_average_imp: Average recommended step size returned for implicit solver.
+        :param step_average_exp: Average recommended step size returned for explicit solver.
         """
-
         machine_precision = np.finfo(float).eps
 
         if step_min_imp > machine_precision_dist_ratio * machine_precision and step_min_exp < machine_precision_dist_ratio * machine_precision:

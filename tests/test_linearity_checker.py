@@ -1,5 +1,5 @@
 #
-# test_solution_computation.py
+# test_linearity_checker.py
 #
 # This file is part of the NEST ODE toolbox.
 #
@@ -38,6 +38,7 @@ class TestLinearityChecker(unittest.TestCase):
             self.assertTrue(shape.is_lin_const_coeff())
             self.assertTrue(shape.is_lin_const_coeff(shapes=shapes))
 
+
     def test_non_linear(self):
         shape_inh = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         shape_exc = Shape.from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
@@ -51,6 +52,7 @@ class TestLinearityChecker(unittest.TestCase):
         self.assertFalse(shape_V_m.is_lin_const_coeff(shapes=shapes))
         self.assertTrue(shape_V_m_alt.is_lin_const_coeff())	# should be True if is_lin_const_coeff() does not know about the `I_in` symbol
         self.assertFalse(shape_V_m_alt.is_lin_const_coeff(shapes=shapes))	# should be False if is_lin_const_coeff() does know about the `I_in` symbol
+
 
 if __name__ == '__main__':
     unittest.main()

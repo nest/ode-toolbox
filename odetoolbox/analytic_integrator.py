@@ -29,13 +29,15 @@ from .integrator import Integrator
 
 
 class AnalyticIntegrator(Integrator):
-    """
-    Integrate a dynamical system by means of the propagators returned by odetoolbox
+    r"""
+    Integrate a dynamical system by means of the propagators returned by odetoolbox.
     """
 
     def __init__(self, solver_dict, spike_times, enable_caching=True):
-        """
+        r"""
+        :param solve_dict: The results dictionary returned by a call to odetoolbox.analysis().
         :param spike_times: For each variable, used as a key, the list of times at which a spike occurs.
+        :param enable_caching: Allow caching of results between requested times.
         """
 
         super(AnalyticIntegrator, self).__init__()
@@ -115,24 +117,29 @@ class AnalyticIntegrator(Integrator):
 
 
     def enable_cache_update(self):
+        r"""
+        Allow caching of results between requested times.
+        """
         self.enable_cache_update_ = True
 
 
     def disable_cache_update(self):
+        r"""
+        Disallow caching of results between requested times.
+        """
         self.enable_cache_update_ = False
 
 
     def reset(self):
+        r"""
+        Reset time to zero and state to initial values.
+        """
         self.t_curr = 0.
         self.state_at_t_curr = self.initial_values.copy()
 
 
-    def get_variable_symbols(self):
-        return self.initial_values.keys()
-
-
     def set_initial_values(self, vals):
-        """
+        r"""
         Set initial values, i.e. the state of the system at t = 0. This will additionally cause the system state to be reset to t = 0.
 
         :param vals: New initial values.
@@ -152,17 +159,20 @@ class AnalyticIntegrator(Integrator):
         self.reset()
 
 
-    def update_step(self, delta_t, initial_values, debug=True):
-        #new_state = { k : np.nan for k in initial_values.keys() }
+    def update_step(self, delta_t, initial_values):
+        r"""
+        Apply propagator to update the state, starting from `initial_values`, by timestep `delta_t`.
+
+        :param delta_t: Timestep to take.
+        :param initial_values: A dictionary mapping variable names (as strings) to initial value expressions.
+        """
+
         new_state = {}
 
         #
         #    replace expressions by their numeric values
         #
 
-        """self.subs_dict["__h"] = delta_t
-        for state_variable2 in self.all_variable_symbols:
-            self.subs_dict[state_variable2] = initial_values[state_variable2]"""
         y = [delta_t] + [initial_values[str(sym)] for sym in self.all_variable_symbols]
 
 
@@ -171,14 +181,17 @@ class AnalyticIntegrator(Integrator):
         #
 
         for state_variable, expr in self.update_expressions.items():
-            #expr = float(expr.evalf(subs=self.subs_dict))
-            #new_state[state_variable] = expr
             new_state[state_variable] = self.update_expressions_wrapped[state_variable](*y)
 
         return new_state
 
 
-    def get_value(self, t, debug=True):
+    def get_value(self, t):
+        r"""
+        Get numerical solution of the dynamical system at time ``t``.
+
+        :param t: The time to compute the solution for.
+        """
 
         if (not self.enable_caching) \
          or t < self.t_curr:
@@ -233,6 +246,7 @@ class AnalyticIntegrator(Integrator):
         if self.enable_cache_update_:
             self.t_curr = t_curr
             self.state_at_t_curr = state_at_t_curr
+
 
         #
         #   apply propagator to update the state from `t_curr` to `t`

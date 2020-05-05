@@ -1,5 +1,5 @@
 #
-# test_integration.py
+# test_lorenz_attractor.py
 #
 # This file is part of the NEST ODE toolbox.
 #
@@ -36,7 +36,6 @@ from sympy import exp, sympify
 import scipy
 import scipy.special
 import scipy.linalg
-from scipy.integrate import solve_ivp
 
 try:
     import pygsl
@@ -67,6 +66,7 @@ class TestLorenzAttractor(unittest.TestCase):
          == sympy.parsing.sympy_parser.parse_expr("rho*x - x*z - y", global_dict=Shape._sympy_globals).simplify()
         assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["z"], global_dict=Shape._sympy_globals).simplify() \
          == sympy.parsing.sympy_parser.parse_expr("-beta*z + x*y", global_dict=Shape._sympy_globals).simplify()
+
 
 if __name__ == '__main__':
     unittest.main()

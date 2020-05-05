@@ -26,12 +26,12 @@ import numpy as np
 
 
 class Integrator():
-    """
-    Integrate a dynamical system by means of the propagators returned by odetoolbox (base class).
+    r"""
+    Integrate a dynamical system by means of the propagators returned by ODE-toolbox (base class).
     """
 
     def set_spike_times(self, spike_times):
-        """
+        r"""
         Internally converts to a global, sorted list of spike times.
 
         :param spike_times: For each variable, used as a key, the list of spike times associated with it.
@@ -63,8 +63,19 @@ class Integrator():
 
 
     def get_spike_times(self):
+        r"""
+        Get spike times.
+
+        :return spike_times: For each variable, used as a key, the list of spike times associated with it.
+        """
         return self.spike_times
 
 
     def get_sorted_spike_times(self):
+        r"""
+        Returns a global, sorted list of spike times.
+
+        :return all_spike_times: A sorted list of all spike times for all variables.
+        :return all_spike_times_sym: For the spike at time `all_spike_times[i]`, the variables to which that spike applies are listed in `all_spike_times_sym[i]`.
+        """
         return self.all_spike_times, self.all_spike_times_sym
