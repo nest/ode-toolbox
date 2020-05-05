@@ -118,6 +118,8 @@ extensions = [
     'sphinx.ext.mathjax',
 ]
 
+autodoc_default_flags = ['private-members', 'special-members', 'show-inheritance']
+
 mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
 # Add any paths that contain templates here, relative to this directory.

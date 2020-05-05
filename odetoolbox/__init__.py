@@ -101,7 +101,7 @@ def from_json_to_shapes(indict, options_dict):
     Process the input, construct Shape instances.
 
     :param indict: ODE-toolbox input dictionary.
-    :param indict: ODE-toolbox global configuration dictionary.
+    :param options_dict: ODE-toolbox global configuration dictionary.
     """
 
     logging.info("Processing input shapes...")
@@ -265,7 +265,7 @@ def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solv
     :param disable_stiffness_check: Whether to perform stiffness checking.
     :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
 
-    :return: The result of the analysis, again as a dictionary.
+    :return: The result of the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#output
     """
     d, _, _ = analysis_(indict, disable_stiffness_check=disable_stiffness_check, disable_analytic_solver=disable_analytic_solver, debug=debug)
     return d

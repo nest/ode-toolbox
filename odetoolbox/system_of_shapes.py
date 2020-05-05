@@ -44,7 +44,6 @@ class SystemOfShapes(object):
     r"""
     Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
     """
-
     def __init__(self, x, A : sympy.Matrix, C, shapes):
         r"""
         Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
@@ -85,7 +84,6 @@ class SystemOfShapes(object):
         r"""
         Retrieve the variable symbols of those shapes that are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with ``"__d"`` suffixes up to the order of the shape.
         """
-
         node_is_lin = {}
         for shape in self.shapes_:
             if shape.is_lin_const_coeff(self.shapes_) and shape.is_homogeneous(self.shapes_):
@@ -103,7 +101,6 @@ class SystemOfShapes(object):
         r"""
         Propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient.
         """
-
         queue = [ sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc ]
         while len(queue) > 0:
 
@@ -141,7 +138,6 @@ class SystemOfShapes(object):
         r"""
         Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in ``symbols`` do not dependend on any of the other symbols that will be thrown away.
         """
-
         idx = [ i for i, sym in enumerate(self.x_) if sym in symbols ]
         idx_compl = [ i for i, sym in enumerate(self.x_) if not sym in symbols ]
 
@@ -167,7 +163,6 @@ class SystemOfShapes(object):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
-
         #
         #   generate the propagator matrix
         #
@@ -212,7 +207,6 @@ class SystemOfShapes(object):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
         """
-
         update_expr = self.reconstitute_expr()
         all_state_symbols = [ str(sym) for sym in self.x_ ]
         initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_state_symbols }
@@ -228,7 +222,6 @@ class SystemOfShapes(object):
         r"""
         Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + C).
         """
-
         update_expr = {}
 
         for row, x in enumerate(self.x_):
@@ -248,17 +241,13 @@ class SystemOfShapes(object):
     @classmethod
     def from_shapes(cls, shapes):
         r"""
-        Construct the global system matrix including all shapes.
-
-        Global dynamics
+        Construct the global system matrix :math:`\mathbf{A}` and nonlinear parts vector :math:`\mathbf{c}` on the basis of all shapes in ``shapes``, and such that
 
         .. math::
 
-            x' = Ax + C
+           \mathbf{x}' = \mathbf{Ax} + \mathbf{c}
 
-        where :math:`x` and :math:`C` are column vectors of length :math:`N` and :math:`A` is an :math:`N \times N` matrix.
         """
-
         if len(shapes) == 0:
             N = 0
         else:

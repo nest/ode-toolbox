@@ -414,13 +414,15 @@ class MixedIntegrator(Integrator):
 
     def numerical_jacobian(self, t, y, params):
         r"""
-        Compute the Jacobian matrix for the current state `t`, `y`.
+        Compute the numerical values of the Jacobian matrix at the current time `t` and state `y`.
+
+        If the dynamics of variables :math:`x_1, \ldots, x_N` is defined as :math:`x_i' = f_i`, then row :math:`i` of the Jacobian matrix :math:`\mathbf{J}_i = \left[\begin{matrix}\frac{\partial f_i}{\partial x_0} & \cdots & \frac{\partial f_i}{\partial x_N}\end{matrix}\right]`.
 
         :param t: Current time.
         :param y: Current state vector of the dynamical system.
         :param params: GSL parameters (not used here).
 
-        :return: Jacobian matrix :math:`\mathbf{J} = \left[\begin{matrix}\end{matrix}\right]`
+        :return: Jacobian matrix :math:`\mathbf{J}`.
         """
         dimension = len(y)
         dfdy = np.zeros((dimension, dimension), np.float)
