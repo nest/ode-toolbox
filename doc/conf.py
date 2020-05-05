@@ -121,13 +121,7 @@ extensions = [
 autodoc_default_flags = ['private-members', 'show-inheritance']
 
 ### show only __init__() and __str__() methods
-def skip(app, what, name, obj, would_skip, options):
-    if name in ["__init__", "__str__"]:
-        return False
-    return would_skip
 
-def setup(app):
-    app.connect("autodoc-skip-member", skip)
 
 mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
@@ -216,10 +210,16 @@ github_doc_root = ''
 intersphinx_mapping = {'https://docs.python.org/': None}
 
 
+def skip(app, what, name, obj, would_skip, options):
+    if name in ["__init__", "__str__"]:
+        return False
+    return would_skip
+
 def setup(app):
     app.add_stylesheet('css/custom.css')
     app.add_stylesheet('css/pygments.css')
     app.add_javascript("js/custom.js")
+    app.connect("autodoc-skip-member", skip)
 
 
 # -- Options for LaTeX output ---------------------------------------------
