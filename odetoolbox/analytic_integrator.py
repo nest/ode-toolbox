@@ -188,7 +188,7 @@ class AnalyticIntegrator(Integrator):
 
     def get_value(self, t):
         r"""
-        Get numerical solution of the dynamical system at time ``t``.
+        Get numerical solution of the dynamical system at time :python:`t`.
 
         :param t: The time to compute the solution for.
         """

@@ -60,8 +60,7 @@ class ParametersIncompleteException(Exception):
     """
     Thrown in case not all parameters are assigned a numerical value before integration was attempted.
     """
-    def __init__(self, message):
-        self.message = message
+    pass
 
 
 class MixedIntegrator(Integrator):

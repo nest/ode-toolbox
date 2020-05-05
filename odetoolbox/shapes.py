@@ -199,7 +199,7 @@ class Shape():
 
     def get_state_variables(self, derivative_symbol="'"):
         r"""
-        Get all variable symbols for this shape, ordered according to derivative order: ``[sym, dsym/dt, d^2sym/dt^2, ...]``
+        Get all variable symbols for this shape, ordered according to derivative order: :python:`[sym, dsym/dt, d^2sym/dt^2, ...]`
 
         :return: all_symbols
         :rtype: list of sympy.Symbol
@@ -214,7 +214,7 @@ class Shape():
 
     def get_all_variable_symbols(self, shapes=None, derivative_symbol="'"):
         r"""
-        Get all variable symbols for this shape and all other shapes in ``shapes``, without duplicates, in no particular order.
+        Get all variable symbols for this shape and all other shapes in :python:`shapes`, without duplicates, in no particular order.
 
         :return: all_symbols
         :rtype: list of sympy.Symbol
@@ -264,12 +264,12 @@ class Shape():
     @classmethod
     def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol="__d", _debug=False):
         r"""
-        Create a ``Shape`` instance from an input dictionary.
+        Create a :python:`Shape` instance from an input dictionary.
 
-        :param indict: Input dictionary, i.e. one element of the ``"dynamics"`` list supplied in the ODE-toolbox input dictionary.
-        :param all_variable_symbols: All known variable symbols. ``None`` or list of string.
+        :param indict: Input dictionary, i.e. one element of the :python:`"dynamics"` list supplied in the ODE-toolbox input dictionary.
+        :param all_variable_symbols: All known variable symbols. :python:`None` or list of string.
         :param time_symbol: sympy Symbol representing the independent time variable.
-        :param differential_order_symbol: String used for identifying differential order. XXX: only ``"__d"`` is supported for now.
+        :param differential_order_symbol: String used for identifying differential order. XXX: only :python:`"__d"` is supported for now.
         """
         if not "expression" in indict:
             raise MalformedInputException("No `expression` keyword found in input")
@@ -346,7 +346,7 @@ class Shape():
         r"""
         Recreate SymPy expression from internal representation (linear coefficients and nonlinear part).
 
-        :param differential_order_symbol: String used for identifying differential order. XXX: only ``"__d"`` is supported for now.
+        :param differential_order_symbol: String used for identifying differential order. XXX: only :python:`"__d"` is supported for now.
         """
         expr = self.diff_rhs_derivatives
         derivative_symbols = self.get_state_variables(derivative_symbol=derivative_symbol)
@@ -404,11 +404,11 @@ class Shape():
         r"""
         Create a Shape object given a function of time.
 
-        For a complete description of the algorithm, please see the ODE-toolbox documentation pages.
+        For a complete description of the algorithm, see https://ode-toolbox.readthedocs.io/en/latest/index.html#converting-direct-functions-of-time
 
-        :param symbol: The variable name of the shape (e.g. ``"alpha"``, ``"I"``)
+        :param symbol: The variable name of the shape (e.g. :python:`"alpha"`, :python:`"I"`)
         :param definition: The definition of the shape (e.g. :python:`"(e/tau_syn_in) * t *  exp(-t/tau_syn_in)"`)
-        :param all_variable_symbols: All known variable symbols. ``None`` or list of string.
+        :param all_variable_symbols: All known variable symbols. :python:`None` or list of string.
 
         :return: The canonical representation of the postsynaptic shape
         :rtype: Shape
@@ -544,14 +544,14 @@ class Shape():
     @classmethod
     def from_ode(cls, symbol: str, definition: str, initial_values: dict, all_variable_symbols=None, lower_bound=None, upper_bound=None, differential_order_symbol="__d", debug=False, **kwargs):
         r"""
-        Create a Shape object given an ODE and initial values.
+        Create a :python:`Shape` object given an ODE and initial values.
 
         Note that shapes are only aware of their own state variables: if an equation for :math:`x` depends on another state variable :math:`y` of another shape, then :math:`y` will appear in the nonlinear part of :math:`x`.
 
         :param symbol: The symbol (variable name) of the ODE.
         :param definition: The definition of the ODE.
         :param initial_values: A dictionary mapping initial values to expressions.
-        :param all_variable_symbols: All known variable symbols. ``None`` or list of string.
+        :param all_variable_symbols: All known variable symbols. :python:`None` or list of string.
 
         :Example:
 

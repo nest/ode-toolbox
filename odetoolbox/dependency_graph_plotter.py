@@ -34,6 +34,7 @@ class DependencyGraphPlotter:
 
         :param shapes: List of Shape instances.
         :param dependency_edges: List of edges returned from dependency analysis.
+        :param node_is_lin: List of Booleans returned from dependency analysis.
         :param fn: Filename to write PNG image as.
         """
 

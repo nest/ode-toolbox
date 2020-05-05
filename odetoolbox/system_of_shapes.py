@@ -100,6 +100,9 @@ class SystemOfShapes(object):
     def propagate_lin_cc_judgements(self, node_is_lin, E):
         r"""
         Propagate: if a node depends on a node that is not linear and constant coefficient, it cannot be linear and constant coefficient.
+
+        :param node_is_lin: Initial assumption about whether node is linear and constant coefficient.
+        :param E: List of edges returned from dependency analysis.
         """
         queue = [ sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc ]
         while len(queue) > 0:
@@ -136,7 +139,7 @@ class SystemOfShapes(object):
 
     def get_sub_system(self, symbols):
         r"""
-        Return a new instance which discards all symbols and equations except for those in `symbols`. This is probably only sensible when the elements in ``symbols`` do not dependend on any of the other symbols that will be thrown away.
+        Return a new :python:`SystemOfShapes` instance which discards all symbols and equations except for those in :python:`symbols`. This is probably only sensible when the elements in :python:`symbols` do not dependend on any of the other symbols that will be thrown away.
         """
         idx = [ i for i, sym in enumerate(self.x_) if sym in symbols ]
         idx_compl = [ i for i, sym in enumerate(self.x_) if not sym in symbols ]
