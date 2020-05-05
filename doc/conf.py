@@ -118,7 +118,16 @@ extensions = [
     'sphinx.ext.mathjax',
 ]
 
-autodoc_default_flags = ['private-members', 'special-members', 'show-inheritance']
+autodoc_default_flags = ['private-members', 'show-inheritance']
+
+### show only __init__() and __str__() methods
+def skip(app, what, name, obj, would_skip, options):
+    if name in ["__init__", "__str__"]:
+        return False
+    return would_skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)
 
 mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 

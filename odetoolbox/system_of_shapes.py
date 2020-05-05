@@ -44,18 +44,18 @@ class SystemOfShapes(object):
     r"""
     Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
     """
-    def __init__(self, x, A : sympy.Matrix, C, shapes):
+    def __init__(self, x, A : sympy.Matrix, c, shapes):
         r"""
         Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
 
         :param A: Matrix containing linear part.
-        :param C: Vector containing nonlinear part.
+        :param c: Vector containing nonlinear part.
         """
-        logging.info("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", C = " + str(C))
-        assert x.shape[0] == A.shape[0] == A.shape[1] == C.shape[0]
+        logging.info("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", c = " + str(c))
+        assert x.shape[0] == A.shape[0] == A.shape[1] == c.shape[0]
         self.x_ = x
         self.A_ = A
-        self.C_ = C
+        self.c_ = c
         self.shapes_ = shapes
 
 
@@ -74,7 +74,7 @@ class SystemOfShapes(object):
                 if not _is_zero(self.A_[j, i]):
                     E.append((sym2, sym1))
                 else:
-                    if not _is_zero(sympy.diff(self.C_[j], sym1)):
+                    if not _is_zero(sympy.diff(self.c_[j], sym1)):
                         E.append((sym2, sym1))
 
         return E
@@ -119,14 +119,14 @@ class SystemOfShapes(object):
 
     def get_jacobian_matrix(self):
         r"""
-        Get the Jacobian matrix.
+        Get the Jacobian matrix as symbolic expressions. Entries in the matrix are sympy expressions.
 
         If the dynamics of variables :math:`x_1, \ldots, x_N` is defined as :math:`x_i' = f_i`, then row :math:`i` of the Jacobian matrix :math:`\mathbf{J}_i = \left[\begin{matrix}\frac{\partial f_i}{\partial x_0} & \cdots & \frac{\partial f_i}{\partial x_N}\end{matrix}\right]`.
         """
         N = len(self.x_)
         J = sympy.zeros(N, N)
         for i, sym in enumerate(self.x_):
-            expr = self.C_[i]
+            expr = self.c_[i]
             for v in self.A_[i, :]:
                 expr += v
             for j, sym2 in enumerate(self.x_):
@@ -144,19 +144,19 @@ class SystemOfShapes(object):
         x_sub = self.x_[idx, :]
         A_sub = self.A_[idx, :][:, idx]
 
-        C_old = self.C_.copy()
+        c_old = self.c_.copy()
         for _idx in idx:
-            C_old[_idx] += self.A_[_idx, idx_compl].dot(self.x_[idx_compl, :])
-            if len(str(C_old[_idx])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+            c_old[_idx] += self.A_[_idx, idx_compl].dot(self.x_[idx_compl, :])
+            if len(str(c_old[_idx])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
                 logging.warning("Skipping simplification of an expression that exceeds sympy simplification threshold")
             else:
-                C_old[_idx] = sympy.simplify(C_old[_idx])
+                c_old[_idx] = sympy.simplify(c_old[_idx])
 
-        C_sub = C_old[idx, :]
+        c_sub = c_old[idx, :]
 
         shapes_sub = [shape for shape in self.shapes_ if shape.symbol in symbols]
 
-        return SystemOfShapes(x_sub, A_sub, C_sub, shapes_sub)
+        return SystemOfShapes(x_sub, A_sub, c_sub, shapes_sub)
 
 
     def generate_propagator_solver(self, output_timestep_symbol="__h"):
@@ -188,7 +188,7 @@ class SystemOfShapes(object):
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
-            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) + " + " + str(self.C_[row])
+            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) + " + " + str(self.c_[row])
             update_expr[str(self.x_[row])] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals))
 
         all_state_symbols = [ str(sym) for sym in self.x_ ]
@@ -220,7 +220,7 @@ class SystemOfShapes(object):
 
     def reconstitute_expr(self):
         r"""
-        Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + C).
+        Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + c).
         """
         update_expr = {}
 
@@ -228,7 +228,7 @@ class SystemOfShapes(object):
             update_expr_terms = []
             for col, y in enumerate(self.x_):
                 update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
-            update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.C_[row]) + ")"
+            update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.c_[row]) + ")"
             update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
             if len(str(update_expr[str(x)])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
                 logging.warning("Shape \"" + str(x) + "\" initialised with an expression that exceeds sympy simplification threshold")
@@ -255,7 +255,7 @@ class SystemOfShapes(object):
 
         x = sympy.zeros(N, 1)
         A = sympy.zeros(N, N)
-        C = sympy.zeros(N, 1)
+        c = sympy.zeros(N, 1)
 
         i = 0
         for shape in shapes:
@@ -275,7 +275,7 @@ class SystemOfShapes(object):
 
             lin_factors, nonlin_term = Shape.split_lin_nonlin(shape_expr, x)
             A[highest_diff_sym_idx, :] = lin_factors[np.newaxis, :]
-            C[highest_diff_sym_idx] = nonlin_term
+            c[highest_diff_sym_idx] = nonlin_term
 
 
             #
@@ -287,4 +287,4 @@ class SystemOfShapes(object):
 
             i += shape.order
 
-        return SystemOfShapes(x, A, C, shapes)
+        return SystemOfShapes(x, A, c, shapes)

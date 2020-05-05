@@ -352,7 +352,7 @@ class Shape():
     @staticmethod
     def split_lin_nonlin(expr, x):
         r"""
-        Split an expression into the form ``a_0 * x[0] + a_1 * x[1] + ... + C``. The coefficients ``a_0...a_n`` are returned as ``lin_factors``. The nonlinear remainder is returned as ``nonlin_term``.
+        Split an expression into the form ``a_0 * x[0] + a_1 * x[1] + ... + c``. The coefficients ``a_0...a_n`` are returned as ``lin_factors``. The nonlinear remainder is returned as ``nonlin_term``.
         """
 
         assert all([is_sympy_type(sym) for sym in x])
