@@ -29,6 +29,7 @@ import os
 import sys
 
 import odetoolbox
+from odetoolbox.shapes import MalformedInputException
 
 
 if __name__ == "__main__":
@@ -60,7 +61,7 @@ if __name__ == "__main__":
                                      disable_stiffness_check=parsed_args.disable_stiffness_check,
                                      disable_analytic_solver=parsed_args.disable_analytic_solver,
                                      debug=parsed_args.debug)
-    except odetoolbox.MalformedInput as e:
+    except MalformedInputException as e:
         logging.error("The input JSON file could not be parsed; error: " + e.message)
         sys.exit(1)
 

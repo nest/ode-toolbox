@@ -76,6 +76,6 @@ class Integrator():
         Returns a global, sorted list of spike times.
 
         :return all_spike_times: A sorted list of all spike times for all variables.
-        :return all_spike_times_sym: For the spike at time `all_spike_times[i]`, the variables to which that spike applies are listed in `all_spike_times_sym[i]`.
+        :return all_spike_times_sym: For the spike at time :python:`all_spike_times[i]`, the variables to which that spike applies are listed in :python:`all_spike_times_sym[i]`.
         """
         return self.all_spike_times, self.all_spike_times_sym

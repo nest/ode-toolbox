@@ -65,7 +65,7 @@ class StiffnessTester(object):
         :param integration_accuracy_abs: Absolute integration accuracy.
         :param integration_accuracy_rel: Relative integration accuracy.
         :param sim_time: How long to simulate for.
-        :param alias_spikes: Whether to alias spike times to the numerical integration grid. `False` means that precise integration will be used for spike times whenever possible. `True` means that after taking a timestep :math:`dt`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
+        :param alias_spikes: Whether to alias spike times to the numerical integration grid. `False` means that precise integration will be used for spike times whenever possible. `True` means that after taking a timestep :math:`dt` and arriving at :math:`t`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
         """
         self.alias_spikes = alias_spikes
         self.max_step_size = max_step_size

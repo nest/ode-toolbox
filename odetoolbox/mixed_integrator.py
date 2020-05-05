@@ -66,7 +66,7 @@ class ParametersIncompleteException(Exception):
 
 class MixedIntegrator(Integrator):
     r"""
-    Mixed numeric+analytic integrator. Supply with a result from odetoolbox analysis; calculates numeric approximation of the solution.
+    Mixed numeric+analytic integrator. Supply with a result from ODE-toolbox analysis; calculates numeric approximation of the solution.
     """
 
     def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False):
@@ -82,7 +82,7 @@ class MixedIntegrator(Integrator):
         :param integration_accuracy_abs: Absolute integration accuracy.
         :param integration_accuracy_rel: Relative integration accuracy.
         :param sim_time: How long to simulate for.
-        :param alias_spikes: Whether to alias spike times to the numerical integration grid. :python:`False` means that precise integration will be used for spike times whenever possible. :python:`True` means that after taking a timestep :math:`dt`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
+        :param alias_spikes: Whether to alias spike times to the numerical integration grid. :python:`False` means that precise integration will be used for spike times whenever possible. :python:`True` means that after taking a timestep :math:`dt` and arriving at :math:`t`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
         """
         super(MixedIntegrator, self).__init__()
 

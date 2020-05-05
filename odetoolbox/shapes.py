@@ -27,6 +27,13 @@ import sympy
 import sympy.parsing.sympy_parser
 
 
+class MalformedInputException(Exception):
+    """
+    Thrown in case an error occurred while processing malformed input.
+    """
+    pass
+
+
 def _is_sympy_type(var):
     return isinstance(var, tuple(sympy.core.all_classes))
 
@@ -37,15 +44,15 @@ class Shape():
 
     .. math::
 
-        x^{(n)} = N + \sum_{i=0}^{n-1} c_i x^{(i)}
+       x^{(n)} = N + \sum_{i=0}^{n-1} c_i x^{(i)}
 
     Any constant or nonlinear part is here contained in the term N.
 
     In the input and output, derivatives are indicated by adding one prime (single quotation mark) for each derivative order. For example, in the expression
 
-    .. code:: text
+    ::
 
-        x''' = c0*x + c1*x' + c2*x'' + x*y + x**2
+       x''' = c0*x + c1*x' + c2*x'' + x*y + x**2
 
     the ``symbol`` of the ODE would be ``x`` (i.e. without any qualifiers), ``order`` would be 3, ``derivative_factors`` would contain the linear part in the form of the list ``[c0, c1, c2]``, and the nonlinear part is stored in ``diff_rhs_derivatives``.
     """
@@ -84,55 +91,55 @@ class Shape():
 
         :param symbol: Symbolic name of the shape without additional qualifiers like prime symbols or similar.
         :param order: Order of the ODE representing the shape.
-        :param initial_values: Initial values of the ODE representing the shape. The dict contains `order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
-        :param derivative_factors: The factors for the derivatives that occur in the ODE. This list has to contain `order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. a0 df_d0, iv_d1, ... for the derivatives d0, d1, ...
-        :param diff_rhs_derivatives: Nonlinear part of the ODE representing the shape.
+        :param initial_values: Initial values of the ODE representing the shape. The dict contains :math:`order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
+        :param derivative_factors: The factors for the derivatives that occur in the ODE. This list has to contain :path:`order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. :python:`[c0, c1, c2]` for the given example.
+        :param diff_rhs_derivatives: Nonlinear part of the ODE representing the shape, i.e. :python:`x*y + x**2` for the given example.
         """
         if not type(symbol) is sympy.Symbol:
-            raise Exception("symbol is not a SymPy symbol: \"%r\"" % symbol)
+            raise MalformedInputException("symbol is not a SymPy symbol: \"%r\"" % symbol)
 
         self.symbol = symbol
 
         if str(symbol) in Shape._sympy_globals.keys():
-            raise Exception("The symbol name " + str(symbol) + " clashes with a predefined symbol by the same name")
+            raise MalformedInputException("The symbol name " + str(symbol) + " clashes with a predefined symbol by the same name")
 
         if not type(order) is int:
-            raise Exception("order is not an integer: \"%d\"" % order)
+            raise MalformedInputException("order should be of type int, but has type " + str(type(order)))
 
         self.order = order
 
         if not len(initial_values) == order:
-            raise Exception(str(len(initial_values)) + " initial values specified, while " + str(order) + " were expected based on differential equation definition")
+            raise MalformedInputException(str(len(initial_values)) + " initial values specified, while " + str(order) + " were expected based on differential equation definition")
         for iv_name, iv in initial_values.items():
             if not _is_sympy_type(iv):
-                raise Exception("initial value for %s is not a SymPy expression: \"%r\"" % (iv_name, iv))
+                raise MalformedInputException("initial value for %s is not a SymPy expression: \"%r\"" % (iv_name, iv))
             differential_order = iv_name.count("'")
             if differential_order > 0:
                 iv_basename = iv_name[:-differential_order]
             else:
                 iv_basename = iv_name
             if not iv_basename == str(symbol):
-                raise Exception("Initial value specified for unknown variable \"" + str(iv_basename) + "\" in differential equation for variable \"" + str(symbol) + "\"")
+                raise MalformedInputException("Initial value specified for unknown variable \"" + str(iv_basename) + "\" in differential equation for variable \"" + str(symbol) + "\"")
             if differential_order >= self.order:
-                raise Exception("Initial value \"" + str(iv_name) + "\" specifies initial value for degree " + str(differential_order) + ", which is too high in order-" + str(self.order) + " differential equation")
+                raise MalformedInputException("Initial value \"" + str(iv_name) + "\" specifies initial value for degree " + str(differential_order) + ", which is too high in order-" + str(self.order) + " differential equation")
 
         self.initial_values = initial_values
 
         for sym in initial_values.keys():
             if derivative_symbol in str(sym):
-                raise Exception("Input variable name \"" + str(sym) + "\" should not contain the string \"" + derivative_symbol + "\", which is used to indicate variable differential order")
+                raise MalformedInputException("Input variable name \"" + str(sym) + "\" should not contain the string \"" + derivative_symbol + "\", which is used to indicate variable differential order")
 
         if not len(derivative_factors) == order:
-            raise Exception(str(len(derivative_factors)) + " derivative factors specified, while " + str(order) + " were expected based on differential equation definition")
+            raise MalformedInputException(str(len(derivative_factors)) + " derivative factors specified, while " + str(order) + " were expected based on differential equation definition")
 
         for df in derivative_factors:
             if not _is_sympy_type(df):
-                raise Exception("Derivative factor \"%r\" is not a SymPy expression" % df)
+                raise MalformedInputException("Derivative factor \"%r\" is not a SymPy expression" % df)
 
         self.derivative_factors = derivative_factors
 
         if len(str(diff_rhs_derivatives)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
-            logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds sympy simplification threshold")
+            logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds SymPy simplification threshold")
             self.diff_rhs_derivatives = diff_rhs_derivatives
         else:
             self.diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
@@ -265,21 +272,21 @@ class Shape():
         :param differential_order_symbol: String used for identifying differential order. XXX: only ``"__d"`` is supported for now.
         """
         if not "expression" in indict:
-            raise Exception("No `expression` keyword found in input")
+            raise MalformedInputException("No `expression` keyword found in input")
 
         if not indict["expression"].count("=") == 1:
-            raise Exception("Expecting exactly one \"=\" symbol in defining expression: \"" + str(indict["expression"]) + "\"")
+            raise MalformedInputException("Expecting exactly one \"=\" symbol in defining expression: \"" + str(indict["expression"]) + "\"")
 
         lhs, rhs = indict["expression"].split("=")
         lhs_ = re.findall("\S+", lhs)
         if not len(lhs_) == 1:
-            raise Exception("Error while parsing expression \"" + indict["expression"] + "\"")
+            raise MalformedInputException("Error while parsing expression \"" + indict["expression"] + "\"")
         lhs = lhs_[0]
         rhs = rhs.strip()
 
         symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", lhs)
         if symbol_match is None:
-            raise Exception("Error while parsing symbol name in \"" + lhs + "\"")
+            raise MalformedInputException("Error while parsing symbol name in \"" + lhs + "\"")
         symbol = symbol_match.group()
         order = len(re.findall("'", lhs))
 
@@ -287,39 +294,39 @@ class Shape():
         if not "initial_value" in indict.keys() \
          and not "initial_values" in indict.keys() \
          and order > 0:
-            raise Exception("No initial values specified for order " + str(order) + " equation with variable symbol \"" + symbol + "\"")
+            raise MalformedInputException("No initial values specified for order " + str(order) + " equation with variable symbol \"" + symbol + "\"")
 
         if "initial_value" in indict.keys() \
          and "initial_values" in indict.keys():
-            raise Exception("`initial_value` and `initial_values` cannot be specified simultaneously for equation with variable symbol \"" + symbol + "\"")
+            raise MalformedInputException("`initial_value` and `initial_values` cannot be specified simultaneously for equation with variable symbol \"" + symbol + "\"")
 
         if "initial_value" in indict.keys():
             if not order == 1:
-                raise Exception("Single initial value specified for equation that is not first order in equation with variable symbol \"" + symbol + "\"")
+                raise MalformedInputException("Single initial value specified for equation that is not first order in equation with variable symbol \"" + symbol + "\"")
             initial_values[symbol] = indict["initial_value"]
 
         if "initial_values" in indict.keys():
             if not len(indict["initial_values"]) == order:
-                raise Exception("Wrong number of initial values specified for order " + str(order) + " equation with variable symbol \"" + symbol + "\"")
+                raise MalformedInputException("Wrong number of initial values specified for order " + str(order) + " equation with variable symbol \"" + symbol + "\"")
 
             initial_val_specified = [False] * order
             for iv_lhs, iv_rhs in indict["initial_values"].items():
                 symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", iv_lhs)
                 if symbol_match is None:
-                    raise Exception("Error trying to parse initial value variable symbol from string \"" + iv_lhs + "\"")
+                    raise MalformedInputException("Error trying to parse initial value variable symbol from string \"" + iv_lhs + "\"")
                 iv_symbol = symbol_match.group()
                 if not iv_symbol == symbol:
-                    raise Exception("Initial value variable symbol \"" + iv_symbol + "\" does not match equation variable symbol \"" + symbol + "\"")
+                    raise MalformedInputException("Initial value variable symbol \"" + iv_symbol + "\" does not match equation variable symbol \"" + symbol + "\"")
                 iv_order = len(re.findall("'", iv_lhs))
                 if iv_order >= order:
-                    raise Exception("In defintion of initial value for variable \"" + iv_symbol + "\": differential order (" + str(iv_order) + ") exceeds that of overall equation order (" + str(order) + ")")
+                    raise MalformedInputException("In defintion of initial value for variable \"" + iv_symbol + "\": differential order (" + str(iv_order) + ") exceeds that of overall equation order (" + str(order) + ")")
                 if initial_val_specified[iv_order]:
-                    raise Exception("Initial value for order " + str(iv_order) + " specified more than once")
+                    raise MalformedInputException("Initial value for order " + str(iv_order) + " specified more than once")
                 initial_val_specified[iv_order] = True
                 initial_values[iv_symbol + iv_order * "'"] = iv_rhs
 
             if not all(initial_val_specified):
-                raise Exception("Initial value not specified for all differential orders for variable \"" + iv_symbol + "\"")
+                raise MalformedInputException("Initial value not specified for all differential orders for variable \"" + iv_symbol + "\"")
 
         lower_bound = None
         if "lower_bound" in indict.keys():

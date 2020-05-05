@@ -30,12 +30,12 @@ from .integrator import Integrator
 
 class AnalyticIntegrator(Integrator):
     r"""
-    Integrate a dynamical system by means of the propagators returned by odetoolbox.
+    Integrate a dynamical system by means of the propagators returned by ODE-toolbox.
     """
 
     def __init__(self, solver_dict, spike_times, enable_caching=True):
         r"""
-        :param solve_dict: The results dictionary returned by a call to odetoolbox.analysis().
+        :param solve_dict: The results dictionary returned by a call to :python:`odetoolbox.analysis()`.
         :param spike_times: For each variable, used as a key, the list of times at which a spike occurs.
         :param enable_caching: Allow caching of results between requested times.
         """
@@ -140,7 +140,7 @@ class AnalyticIntegrator(Integrator):
 
     def set_initial_values(self, vals):
         r"""
-        Set initial values, i.e. the state of the system at :math:`t = 0`. This will additionally cause the system state to be reset to :math:`t = 0`.
+        Set initial values, i.e. the state of the system at :math:`t = 0`. This will additionally cause the system state to be reset to :math:`t = 0` and the new initial conditions.
 
         :param vals: New initial values.
         """

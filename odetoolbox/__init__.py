@@ -52,10 +52,6 @@ if PLOT_DEPENDENCY_GRAPH:
     from .dependency_graph_plotter import DependencyGraphPlotter
 
 
-class MalformedInput(Exception):
-    pass
-
-
 default_config = {
     "input_time_symbol" : "t",
     "output_timestep_symbol" : "__h",
