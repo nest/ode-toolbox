@@ -51,7 +51,7 @@ class SystemOfShapes(object):
         :param A: Matrix containing linear part.
         :param c: Vector containing nonlinear part.
         """
-        logging.info("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", c = " + str(c))
+        logging.debug("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", c = " + str(c))
         assert x.shape[0] == A.shape[0] == A.shape[1] == c.shape[0]
         self.x_ = x
         self.A_ = A

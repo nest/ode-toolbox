@@ -352,7 +352,7 @@ class Shape():
         derivative_symbols = self.get_state_variables(derivative_symbol=derivative_symbol)
         for derivative_factor, derivative_symbol in zip(self.derivative_factors, derivative_symbols):
             expr += derivative_factor * derivative_symbol
-        logging.info("Shape " + str(self.symbol) + ": reconstituting expr with derivative_factors = " + str(self.derivative_factors) + ", derivative_symbols = " + str(derivative_symbols) + ", expr = " + str(expr))
+        logging.info("Shape " + str(self.symbol) + ": reconstituting expression " + str(expr))
         return expr
 
 

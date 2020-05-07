@@ -264,7 +264,7 @@ def _init_logging(debug: bool):
         logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
 
 
-def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solver : bool=False, debug : bool=True):
+def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solver : bool=False, debug : bool=False):
     r"""
     The main entry point of the ODE-toolbox API.
 
