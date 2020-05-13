@@ -258,10 +258,11 @@ def _init_logging(debug: bool):
 
     :param debug: Set to :python:`True` to increase the verbosity.
     """
+    fmt = '%(levelname)s:%(message)s'
     if debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
+        logging.basicConfig(level=logging.DEBUG, format=fmt)
     else:
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(message)s')
+        logging.basicConfig(level=logging.INFO, format=fmt)
 
 
 def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solver : bool=False, debug : bool=False):

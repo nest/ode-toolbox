@@ -20,6 +20,7 @@
 #
 
 import sympy
+import logging
 
 
 class DependencyGraphPlotter:
@@ -72,5 +73,5 @@ class DependencyGraphPlotter:
             dot.edge(str(e[0]), str(e[1]))
 
         if not fn is None:
-            print("Saving to " + fn)
+            logging.info("Saving dependency graph plot to " + fn)
             dot.render(fn)
