@@ -1,0 +1,39 @@
+{
+  "dynamics": [
+    {
+      "expression": "qrs''' = -qrs + 2*qrs' + 3*qrs'' + 42",
+      "initial_values": {
+        "qrs" : "0",
+        "qrs'" : "0",
+        "qrs''": "0"
+      }
+    },
+    {
+        "expression": "s' = -q + 2*r + 3*s + 42",
+        "initial_value": "0"
+    },
+    {
+        "expression": "r' = s",
+        "initial_value": "0"
+    },
+    {
+        "expression": "q' = r",
+        "initial_value": "0"
+    },
+    {
+        "expression": "qr' = ss",
+        "initial_value": "0"
+    },
+    {
+        "expression": "ss'' = -qr + 2*ss + 3*ss' + 42",
+        "initial_values": {
+            "ss" : "0",
+            "ss'" : "0"
+        }
+    }
+  ],
+  "options":
+  {
+    "output_timestep_symbol": "__h"
+  }
+}

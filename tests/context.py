@@ -1,5 +1,5 @@
 #
-# shapes.py
+# context.py
 #
 # This file is part of the NEST ODE toolbox.
 #

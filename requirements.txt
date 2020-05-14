@@ -1,3 +1,5 @@
-pygsl
-numpy >= 1.8.2
 sympy >= 1.1.1
+scipy
+numpy >= 1.8.2
+pytest
+cython

@@ -1,0 +1,33 @@
+{
+  "__info": "A canonical example of a stiff system of equations: ex. 11.57, Dahmen, W., and Reusken, A. (2005). Numerik fuer Naturwissenschaftler. Berlin: Springer",
+
+  "parameters": {
+    "a": "-100"
+  },
+
+  "dynamics": [
+    {
+      "expression": "y1' = a*y1",
+      "initial_value": "1"
+    },
+    {
+      "expression": "y2' = -2 * y2 + y1",
+      "initial_value": "1"
+    }
+  ],
+  
+  "options": {
+    "sim_time": "1",
+    "max_step_size": ".1",
+    "integration_accuracy_abs" : "1E-5",
+    "integration_accuracy_rel" : "1E-5"
+  },
+
+  "stimuli": [
+    {
+      "variables" : ["y1"],
+      "type" : "regular",
+      "rate" : "4"
+    }
+  ]
+}

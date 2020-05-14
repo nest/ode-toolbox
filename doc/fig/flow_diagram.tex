@@ -1,0 +1,41 @@
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{pgfkeys}
+\usetikzlibrary{arrows}
+\usetikzlibrary{shapes}
+\usetikzlibrary{shapes.geometric}
+\usepackage{amssymb}
+
+\usepackage{graphicx}
+\begin{document}
+
+\usetikzlibrary{positioning}
+
+\begin{tikzpicture}[>=latex',line join=bevel,every node/.style={inner sep=10,outer sep=0}]
+%%
+\node (start) at (29.5bp,251.0bp) [draw,double,ellipse,double distance=.7mm,inner sep=7,align=center] {Read input $\frac{d^{n_i} x_i}{dt^{n_i}}$\\[1mm]$(0\leq i < N, n\geq 0)$};
+  \node (gennumeric) at (29.5bp,105.0bp) [draw,rectangle,align=center] {Generate\\Jacobian};
+  \node (is_stiff) at (29.5bp,38bp) [draw,rectangle,align=center] {Solver\\benchmarking};
+  \node (message) [thick,fill=green!20,inner sep=7,draw,ellipse,align=center,right=of is_stiff,xshift=97]{Solver\\recommendation};
+  \node (message2) [thick,fill=green!20,inner sep=7,draw,ellipse,right=of gennumeric,align=center,xshift=99]{First-order update\\expressions for all $x_i$};
+  \node (input) at (29.5bp,178.0bp) [draw,rectangle,align=center] {Subset that is linear,\\homogeneous and\\constant coefficient?};
+  \node (analyticgen) [thick,inner sep=7,draw,rectangle, right=of input,align=center] {Find analytic\\solution};
+  \node (analytic) [thick,fill=green!20,inner sep=7,draw,ellipse, right=of analyticgen,align=center] {Propagator\\matrices};
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+%   \draw (36.5bp,145bp) node {no};
+%   \draw [->] (is_stiff) -- (message) node[midway,xshift=10,yshift=2] {yes};
+  \draw [->] (is_stiff) -- (message);
+  \draw (95bp,183.0bp) node {yes};
+  \draw [->] (input) -- (gennumeric);
+  \draw [->] (input) --  (analyticgen);
+  \draw [->] (analyticgen) --  (analytic);
+  \draw [->] (analyticgen) --  (is_stiff);
+  \draw [->] (gennumeric) --  (is_stiff);
+%   \draw (150bp,150.0bp) node {Always generate};
+%   \draw (150bp,140.0bp) node {numeric solver?};
+  \draw [->] (start) --  (input);
+  \draw [->] (gennumeric) --  (message2);
+  
+\end{tikzpicture}
+\end{document}
