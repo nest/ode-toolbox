@@ -24,7 +24,7 @@ In addition to continuous dynamics, discrete events can be used to model instant
 
 ODE-toolbox is intended to be run "off-line", before commencing the actual simulation. It processes a JSON encoded input of a dynamical system, and produces its output encoded as JSON.
 
-.. figure:: https://raw.githubusercontent.com/nest/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/ode-toolbox-flow-diagram.png
+.. figure:: https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/ode-toolbox-flow-diagram.png
    :alt: Flow diagram: input JSON to ODE-toolbox to output JSON
    :width: 1223px
    :height: 294px
@@ -33,7 +33,7 @@ ODE-toolbox is intended to be run "off-line", before commencing the actual simul
 
 The internal processing carried out by ODE-toolbox can be visually summarised as follows, starting from a system of ODEs and functions of time on the left, and generating propagator matrices, Jacobian (first-order) update expressions, and finally performing solver benchmarking to recommend a particular numerical solver. Each of these steps will be described in depth in the following sections.
 
-.. figure:: https://raw.githubusercontent.com/nest/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/ode-toolbox-flow-diagram-detailed.png
+.. figure:: https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/ode-toolbox-flow-diagram-detailed.png
    :alt: Detailed flow diagram
 
 ODE-toolbox is written in Python and leverages SymPy for the symbolic manipulation of equations. It was initially developed in the context of the `NESTML <https://github.com/nest/nestml>`__ project, in which the main focus was on the class of spiking neurons presently available in the `NEST <https://github.com/nest/nest-simulator>`__ simulator. It can, however, be used in a standalone fashion, and is broadly applicable to continuous-time dynamical systems as well as systems that undergo instantaneous events (such as neuronal spikes or impulsive forces).
@@ -64,7 +64,7 @@ To install, clone the repository, go to the root directory and then run the foll
 
 If you wish to install into your home directory, add the option :bash:`--user` to the above call.
 
-For further installation hints, please see `.travis.yml <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/.travis.yml>`__.
+For further installation hints, please see `.travis.yml <https://github.com/nest/ode-toolbox/blob/master/.travis.yml>`__.
 
 Testing
 ~~~~~~~
@@ -98,7 +98,7 @@ ODE-toolbox can be used in two ways:
       indict = json.load(open("tests/lorenz_attractor.json"))
       odetoolbox.analysis(indict)
 
-   See the tests (e.g. `test\_lorenz\_attractor.py <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/test_lorenz_attractor.py>`__) for more examples.
+   See the tests (e.g. `test\_lorenz\_attractor.py <https://github.com/nest/ode-toolbox/blob/master/tests/test_lorenz_attractor.py>`__) for more examples.
 
 The JSON file and Python dictionary are completely equivalent in content and form, described in the :ref:`Input` section below.
 
@@ -138,7 +138,7 @@ Input
 
 The JSON input dictionary that is passed to ODE-toolbox contains :ref:`dynamics <Dynamics>`, :ref:`numerical parameters <Parameters>`, and :ref:`global options <Global options>`. Documentation may optionally be provided as a string.
 
-All expressions are parsed as SymPy expressions, and subsequently simplified through :python:`sympy.simplify()`. There are several predefined symbols, such as :python:`e` and :python:`E` for Euler's number, trigonometric functions, etc. :python:`t` is assumed to represent time. The list of predefined symbols is defined in `shapes.py <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/odetoolbox/shapes.py>`_, as the static member :python:`Shape._sympy_globals`. Variable names should be chosen such that they do not conflict with the predefined symbols.
+All expressions are parsed as SymPy expressions, and subsequently simplified through :python:`sympy.simplify()`. There are several predefined symbols, such as :python:`e` and :python:`E` for Euler's number, trigonometric functions, etc. :python:`t` is assumed to represent time. The list of predefined symbols is defined in `shapes.py <https://github.com/nest/ode-toolbox/blob/master/odetoolbox/shapes.py>`_, as the static member :python:`Shape._sympy_globals`. Variable names should be chosen such that they do not conflict with the predefined symbols.
 
 Dynamics
 ~~~~~~~~
@@ -378,21 +378,21 @@ During processing, a dependency graph is generated, where each node corresponds 
 
 .. raw:: html
 
-   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_0.png" alt="Dependency graph" width="620" height="283">
+   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/eq_analysis_0.png" alt="Dependency graph" width="620" height="283">
 
 
 Each variable is subsequently marked according to whether it can, by itself, be analytically solved. This is indicated by a green colour.
 
 .. raw:: html
 
-   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_1.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
+   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/eq_analysis_1.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
 
 
 In the next step, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable. In this example, ``V_abs`` is unmarked as it depends on the nonlinear excitatory kernel.
 
 .. raw:: html
 
-   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/eq_analysis_2.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
+   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/eq_analysis_2.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
 
 
 The analytic solution for all green nodes is computed in the form of a propagator matrix. See the section :ref:`Computing the propagator matrix` for more details.
@@ -475,24 +475,24 @@ Examples
 
 Several example input files can be found under ``tests/*.json``. Some highlights:
 
--  `Lorenz attractor <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/lorenz_attractor.json>`__
--  `Morris-Lecar neuron model <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/morris_lecar.json>`__
--  `Integrate-and-fire neuron with alpha-kernel postsynaptic currents <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/mixed_analytic_numerical_with_stiffness.json>`__, including Poisson spike generator for stiffness test
--  `Integrate-and-fire neuron with alpha-kernel postsynaptic conductances <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/iaf_cond_alpha_odes_stiff.json>`__
--  `Canonical, two-dimensional stiff system <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/stiff_system.json>`__ Example 11.57 from Dahmen, W., and Reusken, A. (2005). Numerik fuer Naturwissenschaftler. Berlin: Springer
+-  `Lorenz attractor <https://github.com/nest/ode-toolbox/blob/master/tests/lorenz_attractor.json>`__
+-  `Morris-Lecar neuron model <https://github.com/nest/ode-toolbox/blob/master/tests/morris_lecar.json>`__
+-  `Integrate-and-fire neuron with alpha-kernel postsynaptic currents <https://github.com/nest/ode-toolbox/blob/master/tests/mixed_analytic_numerical_with_stiffness.json>`__, including Poisson spike generator for stiffness test
+-  `Integrate-and-fire neuron with alpha-kernel postsynaptic conductances <https://github.com/nest/ode-toolbox/blob/master/tests/iaf_cond_alpha_odes_stiff.json>`__
+-  `Canonical, two-dimensional stiff system <https://github.com/nest/ode-toolbox/blob/master/tests/stiff_system.json>`__ Example 11.57 from Dahmen, W., and Reusken, A. (2005). Numerik fuer Naturwissenschaftler. Berlin: Springer
 
 
 Stiffness testing
 ~~~~~~~~~~~~~~~~~
 
-This example correponds to the unit test in `test_stiffness.py <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/test_stiffness.py>`_, which simulates the Morris-Lecar neuron model in `morris_lecar.json <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/morris_lecar.json>`_. The plot shows the two state variables of the model, ``V`` and ``W``, while in the lower panel the solver timestep recommendation is plotted at each step. This recommendation is returned by each GSL solver. Note that the ``avg_step_size_ratio`` selection criterion parameter refers to the *average* of this value across the entire simulation period.
+This example correponds to the unit test in `test_stiffness.py <https://github.com/nest/ode-toolbox/blob/master/tests/test_stiffness.py>`_, which simulates the Morris-Lecar neuron model in `morris_lecar.json <https://github.com/nest/ode-toolbox/blob/master/tests/morris_lecar.json>`_. The plot shows the two state variables of the model, ``V`` and ``W``, while in the lower panel the solver timestep recommendation is plotted at each step. This recommendation is returned by each GSL solver. Note that the ``avg_step_size_ratio`` selection criterion parameter refers to the *average* of this value across the entire simulation period.
 
 .. raw:: html
 
-   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/stiffness_example.png" alt="timeseries plots of V, W, and recommended timestep" width="620" height="434">
+   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/stiffness_example.png" alt="timeseries plots of V, W, and recommended timestep" width="620" height="434">
 
 
-`test_stiffness.py <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/test_stiffness.py>`_ tests that for a tighter integration accuracy, the solver recommendation for this example changes from "explicit" (non-stiff) to "implicit" (stiff).
+`test_stiffness.py <https://github.com/nest/ode-toolbox/blob/master/tests/test_stiffness.py>`_ tests that for a tighter integration accuracy, the solver recommendation for this example changes from "explicit" (non-stiff) to "implicit" (stiff).
 
 
 From ODE-toolbox results dictionary to simulation
@@ -500,18 +500,18 @@ From ODE-toolbox results dictionary to simulation
 
 ODE-toolbox provides two classes that can perform numerical simulation on the basis of the results dictionary returned by ODE-toolbox: :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, which simulates on the basis of propagators and returns precise values, and :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator`, which in addition performs numerical integration using GSL (for example, using :python:`pygsl.odeiv.step_rk4` or :python:`pygsl.odeiv.step_bsimp`). These integrators both use :python:`sympy.parsing.sympy_parser` to parse the expression strings from the ODE-toolbox results dictionary, and then use the SymPy expression :python:`evalf()` method to evaluate to a floating-point value.
 
-The file `test_analytic_solver_integration.py <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/test_analytic_solver_integration.py>`_ contains an integration test that uses :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator` and the propagators returned from ODE-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ODE-toolbox. The following results figure shows perfect agreement between the three simulation methods:
+The file `test_analytic_solver_integration.py <https://github.com/nest/ode-toolbox/blob/master/tests/test_analytic_solver_integration.py>`_ contains an integration test that uses :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator` and the propagators returned from ODE-toolbox to simulate a simple dynamical system; in this case, an integrate-and-fire neuron with alpha-shaped postsynaptic currents. It compares the obtained result to a handwritten solution, which is simulated analytically and numerically independent of ODE-toolbox. The following results figure shows perfect agreement between the three simulation methods:
 
 .. raw:: html
 
-   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
+   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
 
 
-The file `test_mixed_integrator_numeric.py <https://github.com/nest/ode-toolbox/blob/merge_shape_ode_concepts-dev/tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator` and the results dictionary from ODE-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
+The file `test_mixed_integrator_numeric.py <https://github.com/nest/ode-toolbox/blob/master/tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator` and the results dictionary from ODE-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
 
 .. raw:: html
 
-   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/test_mixed_integrator_numeric.png" alt="g_in, g_in__d, g_ex, g_ex__d, V_m timeseries plots" width="620" height="451">
+   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/test_mixed_integrator_numeric.png" alt="g_in, g_in__d, g_ex, g_ex__d, V_m timeseries plots" width="620" height="451">
 
 
 Caching of results
