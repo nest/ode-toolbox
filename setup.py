@@ -29,7 +29,7 @@ models."""
 
 setup (
     name = "odetoolbox",
-    version = "2.0",
+    version = "2.0-post-dev",
     author = "The NEST Initiative",
     classifiers = [
         'Development Status :: 4 - Beta',
