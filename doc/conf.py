@@ -188,7 +188,7 @@ html_theme_options = {
     'navigation_depth': 2,
     'collapse_navigation': False
 }
-html_logo = "https://raw.githubusercontent.com/clinssen/ode-toolbox/merge_shape_ode_concepts-dev/doc/fig/ode-toolbox-logo.png"
+html_logo = "https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/ode-toolbox-logo.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
