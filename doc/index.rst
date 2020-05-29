@@ -1,8 +1,7 @@
 ODE-toolbox
 ===========
 
-Automatic selection and generation of integration schemes for systems of ordinary differential equations
---------------------------------------------------------------------------------------------------------
+**Automatic selection and generation of integration schemes for systems of ordinary differential equations**
 
 .. toctree::
    :hidden:
