@@ -28,7 +28,7 @@ In addition to continuous dynamics, discrete events can be used to model instant
 
 setup (
     name = "odetoolbox",
-    version = "2.0",
+    version = "2.0-post-dev",
     author = "The NEST Initiative",
     classifiers = [
         'Development Status :: 4 - Beta',
