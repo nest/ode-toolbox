@@ -34,10 +34,6 @@ class MalformedInputException(Exception):
     pass
 
 
-def _is_sympy_type(var):
-    return isinstance(var, tuple(sympy.core.all_classes))
-
-
 class Shape():
     r"""
     This class provides a canonical representation of a shape function independently of the way in which the user specified the shape. It assumes a differential equation of the general form (where bracketed superscript :math:`{}^{(n)}` indicates the :math:`n`-th derivative with respect to time):
@@ -111,7 +107,7 @@ class Shape():
         if not len(initial_values) == order:
             raise MalformedInputException(str(len(initial_values)) + " initial values specified, while " + str(order) + " were expected based on differential equation definition")
         for iv_name, iv in initial_values.items():
-            if not _is_sympy_type(iv):
+            if not isinstance(iv, sympy.Basic):
                 raise MalformedInputException("initial value for %s is not a SymPy expression: \"%r\"" % (iv_name, iv))
             differential_order = iv_name.count("'")
             if differential_order > 0:
@@ -133,7 +129,7 @@ class Shape():
             raise MalformedInputException(str(len(derivative_factors)) + " derivative factors specified, while " + str(order) + " were expected based on differential equation definition")
 
         for df in derivative_factors:
-            if not _is_sympy_type(df):
+            if not isinstance(df, sympy.Basic):
                 raise MalformedInputException("Derivative factor \"%r\" is not a SymPy expression" % df)
 
         self.derivative_factors = derivative_factors
@@ -362,7 +358,7 @@ class Shape():
         Split an expression into the form :python:`a_0 * x[0] + a_1 * x[1] + ... + c`. The coefficients :python:`a_0` ... :python:`a_n` are returned as :python:`lin_factors`. The nonlinear remainder is returned as :python:`nonlin_term`.
         """
 
-        assert all([_is_sympy_type(sym) for sym in x])
+        assert all([isinstance(sym, sympy.Basic) for sym in x])
 
         lin_factors = []
         logging.debug("Splitting expression " + str(expr) + " into symbols " + str(x))
