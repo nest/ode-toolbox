@@ -19,7 +19,18 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import sympy
 from sympy.printing import StrPrinter
+
+
+def _is_sympy_type(var):
+    if sympy.__version__[:3] == "1.4":
+        return isinstance(var, tuple(sympy.core.all_classes))
+
+    if sympy.__version__[:5] == "1.6.1":
+        return isinstance(var, sympy.Basic)
+
+    raise Exception("Unsupported sympy version used")
 
 
 class SympyPrinter(StrPrinter):
