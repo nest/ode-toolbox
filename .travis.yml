@@ -33,7 +33,7 @@ install:
   - export PYTHON_VERSION=`python -c "import sys; print('.'.join(map(str, [sys.version_info.major, sys.version_info.minor])))"`
   - if [ $PYTHON_VERSION == "3.5" ]; then
     pip uninstall --yes sympy ;
-    pip install sympy==1.4
+    pip install sympy==1.4 ;
     fi
   - echo `python -c "import sympy; print('Using sympy version: ' + str(sympy.__version__))"`
 
