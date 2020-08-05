@@ -35,7 +35,7 @@ install:
     pip uninstall --yes sympy ;
     pip install sympy==1.4 ;
     fi
-  - echo `python -c "import sympy; print(\"Using sympy version: \" + str(sympy.__version__))"`
+  - python -c "import sympy; print(\"Using sympy version: \" + str(sympy.__version__))"
 
 script:
   - python setup.py install
