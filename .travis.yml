@@ -31,9 +31,8 @@ install:
   - pip install cython
   - pip install codecov pytest-cov
   - export PYTHON_VERSION=`python -c "import sys; print('.'.join(map(str, [sys.version_info.major, sys.version_info.minor])))"`
-
-script:
-  - echo "Python version detected: $PYTHON_VERSION"
+  - echo "Python version detected:"
+  - echo $PYTHON_VERSION
   - if [ $PYTHON_VERSION == "3.5" ]; then
     pip uninstall --yes sympy ;
     pip install sympy==1.4 ;
@@ -41,6 +40,7 @@ script:
   - echo "Using sympy version:"
   - python -c "import sympy; print(sympy.__version__)"
 
+script:
   - python setup.py install
   #- coverage run -m pytest -s --pdb tests
   - travis_wait 60 python -m pytest -s --pdb -o log_cli=true -o log_cli_level="DEBUG" --cov=./ tests
