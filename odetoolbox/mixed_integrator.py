@@ -100,7 +100,7 @@ class MixedIntegrator(Integrator):
             self._parameters = {}
         else:
             self._parameters = parameters
-        self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() if not isinstance(v, tuple(sympy.core.all_classes)) else v for k, v in self._parameters.items() }
+        self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() if not isinstance(v, sympy.Basic) else v for k, v in self._parameters.items() }
         self._locals = self._parameters.copy()
         self.random_seed = random_seed
 
