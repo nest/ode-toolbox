@@ -31,10 +31,11 @@ import sympy.utilities.autowrap
 from sympy.utilities.autowrap import CodeGenArgumentListError
 import time
 
-from .shapes import Shape
 from .analytic_integrator import AnalyticIntegrator
-from .spike_generator import SpikeGenerator
 from .integrator import Integrator
+from .shapes import Shape
+from .spike_generator import SpikeGenerator
+from .sympy_printer import _is_sympy_type
 
 
 try:
@@ -100,7 +101,7 @@ class MixedIntegrator(Integrator):
             self._parameters = {}
         else:
             self._parameters = parameters
-        self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() if not isinstance(v, sympy.Basic) else v for k, v in self._parameters.items() }
+        self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() if not _is_sympy_type(v) else v for k, v in self._parameters.items() }
         self._locals = self._parameters.copy()
         self.random_seed = random_seed
 
