@@ -1,0 +1,30 @@
+{
+  "parameters": {
+    "C_m": "1",
+    "g_Ca": "1.1",
+    "g_K": "2",
+    "g_L": ".5",
+    "E_Ca": "100",
+    "E_K": "-70",
+    "E_L": "-50",
+    "I_ext": "30"
+  },
+
+  "dynamics": [
+    {
+      "expression": "V' = (I_ext - g_Ca * (.5 + .5*tanh((V + 1) / 15)) * (V - E_Ca) - g_K * W * (V - E_K) - g_L * (V - E_L)) / C_m * 1E3",
+      "initial_value": "-25"
+    },
+    {
+      "expression": "W' = (.5 + .5 * tanh(V / 30) - W) / (5 / cosh(V / 60)) * 1E3",
+      "initial_value": ".15"
+    }
+  ],
+
+  "options": {
+    "sim_time": "45E-3",
+    "max_step_size": ".25E-3",
+    "integration_accuracy_abs" : "1E-9",
+    "integration_accuracy_rel" : "1E-9"
+  }
+}
