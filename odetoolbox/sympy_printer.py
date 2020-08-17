@@ -24,11 +24,17 @@ from sympy.printing import StrPrinter
 
 
 def _is_sympy_type(var):
-    if sympy.__version__[:3] == "1.4":
+    # for sympy version <= 1.4.*
+    try:
         return isinstance(var, tuple(sympy.core.all_classes))
+    except:
+        pass
 
-    if sympy.__version__[:5] == "1.6.1":
+    # for sympy version >= 1.5
+    try:
         return isinstance(var, sympy.Basic)
+    except:
+        pass
 
     raise Exception("Unsupported sympy version used")
 
