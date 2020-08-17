@@ -42,8 +42,8 @@ install:
 
 script:
   - python setup.py install
-  #- coverage run -m pytest -s --pdb tests
-  - travis_wait 60 python -m pytest -s --pdb -o log_cli=true -o log_cli_level="DEBUG" --cov=./ tests
+  #- coverage run -m pytest -s tests
+  - travis_wait 60 python -m pytest -s -o log_cli=true -o log_cli_level="DEBUG" --cov=./ tests
 
 after_success:
   - codecov
