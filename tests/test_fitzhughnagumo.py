@@ -66,12 +66,12 @@ def open_json(fname):
     return indict
 
 
-class TestMixedIntegrationNumeric(unittest.TestCase):
+class TestFitxhughNagumo(unittest.TestCase):
     
     """
-    Numerical validation of MixedIntegrator. Note that this test uses all-numeric (no analytic part) integration to test for time grid aliasing effects of spike times.
-
-    Simulate a conductance-based integrate-and-fire neuron which is receiving spikes. Check for a match of the final system state with a numerical reference value that was validated by hand.
+    Implementing the fitzhughNagumo model starting from equilibrium values, and performing a test that if the external current crosses a certain threshold value, regular spikes are obtained.
+    This function tests if the number of spikes cross 20 in that case. 
+    Additionally, plots of V and W vs time are obtained for different values of current, and a FI curve is also plotted. 
     """
     
     def initial__values(self, curr):
@@ -83,14 +83,14 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
        return float(final_val_V), float(final_val_W)
 
     @pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Need GSL integrator to perform test")
-    def test_mixed_integrator_numeric(self):
+    def test_fitzhugh_nagumo(self):
         debug = True
 
         h = 1    # [ms] #time steps
         T = 1000  # [ms] #total simulation time 
         n = 25 #total number of current values between 0 and 1
-        I_ext = np.linspace(0,1,n)
-        time_analysis_start = 200
+        I_ext = np.linspace(0,1,n) #external current
+        time_analysis_start = 200 #starting our ananlysis after 200 ms
         N1 = (int)((time_analysis_start)/h) #index of the starting time
         num_peaks = np.zeros(n)
         indict = open_json("fitzhughnagumo.json")
