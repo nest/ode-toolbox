@@ -26,12 +26,11 @@ import pytest
 import unittest
 import sympy
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.solvers import solve
 from sympy import Symbol
-#np.seterr(under="warn")
+
 
 try:
     import matplotlib as mpl
@@ -126,9 +125,9 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
             num_peaks[j] = (int)(len(peaks)/((T-200)*0.001)) #frequency (in Hz) of the peaks for every value of current
             if(I_ext[j] >(1/3)):
                 assert(num_peaks[j]>20)
-            if(INTEGRATION_TEST_DEBUG_PLOTS==True):
+            if INTEGRATION_TEST_DEBUG_PLOTS:
                 self._timeseries_plot(N1,t_log, h_log, y_log, sym_list, basedir="", fn_snip = " I= " + str(I_ext[j]) + " peaks= " + str(num_peaks[j]), title_snip= " I= " + str(I_ext[j]) + " peaks= " + str(num_peaks[j]))
-        if(INTEGRATION_TEST_DEBUG_PLOTS==True):
+        if INTEGRATION_TEST_DEBUG_PLOTS:
             self._FI_curve(I_ext,num_peaks,basedir="",fn_snip = "FI curve", title_snip = "FI curve")
 
     def _timeseries_plot(self,N1, t_log, h_log, y_log, sym_list, basedir="", fn_snip="", title_snip=""):
