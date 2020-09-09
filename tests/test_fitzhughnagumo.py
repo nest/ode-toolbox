@@ -121,7 +121,6 @@ class TestFitxhughNagumo(unittest.TestCase):
             h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = mixed_integrator.integrate_ode(
              initial_values=initial_values,
              h_min_lower_bound=1E-12, raise_errors=True, debug=True) # debug needs to be True here to obtain the right return values
-            import pdb;pdb.set_trace()
             peaks, _ = find_peaks(np.array(y_log)[N1:,0], height = 1.5 ) #finding peaks above 1.5 microvolts ignoring the first 200 ms
             num_peaks[j] = (int)(len(peaks)/((T-200)*0.001)) #frequency (in Hz) of the peaks for every value of current
             if(I_ext[j] >(1/3)):
