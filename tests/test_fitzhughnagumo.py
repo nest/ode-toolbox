@@ -121,6 +121,7 @@ class TestFitxhughNagumo(unittest.TestCase):
             h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = mixed_integrator.integrate_ode(
              initial_values=initial_values,
              h_min_lower_bound=1E-12, raise_errors=True, debug=True) # debug needs to be True here to obtain the right return values
+            import pdb;pdb.set_trace()
             peaks, _ = find_peaks(np.array(y_log)[N1:,0], height = 1.5 ) #finding peaks above 1.5 microvolts ignoring the first 200 ms
             num_peaks[j] = (int)(len(peaks)/((T-200)*0.001)) #frequency (in Hz) of the peaks for every value of current
             if(I_ext[j] >(1/3)):
@@ -133,7 +134,7 @@ class TestFitxhughNagumo(unittest.TestCase):
     def _timeseries_plot(self,N1, t_log, h_log, y_log, sym_list, basedir="", fn_snip="", title_snip=""):
         fig, ax = plt.subplots(len(y_log[0]), sharex=True)
         for i, sym in enumerate(sym_list):
-            ax[i].plot(1E3 * np.array(t_log)[N1:], np.array(y_log)[N1:, i], label=str(sym))
+            ax[i].plot(np.array(t_log)[N1:], np.array(y_log)[N1:, i], label=str(sym))
 
         for _ax in ax:
             _ax.legend()
