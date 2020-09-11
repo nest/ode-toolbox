@@ -20,10 +20,7 @@ stages:
 jobs:
   include:
     - stage: pycodestyle
-      script: python3 -m pycodestyle . --ignore=E241,E501,E303,E714,E713,E714,E252 --exclude=doc
-
-#    - stage: tests
-#      script: travis_wait 60 python -m pytest -s -o log_cli=true -o log_cli_level="DEBUG" --cov=./ tests
+      script: python3 -m pycodestyle ode-toolbox -v --ignore=E241,E501,E303,E714,E713,E714,E252 --exclude=ode-toolbox/doc
 
 before_install:
   - if [ $WITH_GSL == 1 ]; then
