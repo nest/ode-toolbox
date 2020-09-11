@@ -32,7 +32,7 @@ class TestLinearityChecker(unittest.TestCase):
     def test_linear(self):
         shape_inh = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         shape_exc = Shape.from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
-        shape_V_m = Shape.from_ode("V_m", "-V_m/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m" : "0."})
+        shape_V_m = Shape.from_ode("V_m", "-V_m/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."})
         shapes = [shape_inh, shape_exc, shape_V_m]
         for shape in shapes:
             self.assertTrue(shape.is_lin_const_coeff())
@@ -42,16 +42,16 @@ class TestLinearityChecker(unittest.TestCase):
     def test_non_linear(self):
         shape_inh = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         shape_exc = Shape.from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
-        shape_V_m = Shape.from_ode("V_m", "-V_m**2/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m" : "0."})
-        shape_V_m_alt = Shape.from_ode("V_m", "-I_in*V_m/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m" : "0."})
+        shape_V_m = Shape.from_ode("V_m", "-V_m**2/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."})
+        shape_V_m_alt = Shape.from_ode("V_m", "-I_in*V_m/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."})
         shapes = [shape_inh, shape_exc, shape_V_m]
         for shape in [shape_inh, shape_exc]:
             self.assertTrue(shape.is_lin_const_coeff())
             self.assertTrue(shape.is_lin_const_coeff(shapes=shapes))
         self.assertFalse(shape_V_m.is_lin_const_coeff())
         self.assertFalse(shape_V_m.is_lin_const_coeff(shapes=shapes))
-        self.assertTrue(shape_V_m_alt.is_lin_const_coeff())	# should be True if is_lin_const_coeff() does not know about the `I_in` symbol
-        self.assertFalse(shape_V_m_alt.is_lin_const_coeff(shapes=shapes))	# should be False if is_lin_const_coeff() does know about the `I_in` symbol
+        self.assertTrue(shape_V_m_alt.is_lin_const_coeff())		# should be True if is_lin_const_coeff() does not know about the `I_in` symbol
+        self.assertFalse(shape_V_m_alt.is_lin_const_coeff(shapes=shapes))		# should be False if is_lin_const_coeff() does know about the `I_in` symbol
 
 
 if __name__ == '__main__':

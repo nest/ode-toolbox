@@ -26,20 +26,20 @@ from odetoolbox.shapes import Shape
 
 
 def test_ode_shape():
-    shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha" : "0", "alpha'" : "e/tau"})
+    shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha": "0", "alpha'": "e/tau"})
     assert not shape_inh.derivative_factors is None
 
 
 def test_ode_shape_fails_too_high_order_deriv():
     with pytest.raises(Exception):
-        Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha" : "0", "alpha''" : "e/tau"})
+        Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha": "0", "alpha''": "e/tau"})
 
 
 def test_ode_shape_fails_missing_deriv():
     with pytest.raises(Exception):
-        shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha'" : "e/tau"})
+        shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha'": "e/tau"})
 
 
 def test_ode_shape_fails_unknown_symbol():
     with pytest.raises(Exception):
-        shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"xyz" : "0", "alpha" : "e/tau"})
+        shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"xyz": "0", "alpha": "e/tau"})

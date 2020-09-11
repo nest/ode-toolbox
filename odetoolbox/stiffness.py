@@ -35,7 +35,7 @@ try:
     mpl.use('Agg', warn=False)
     import matplotlib.pyplot as plt
     STIFFNESS_DEBUG_PLOT = True
-except:
+except ImportError:
     STIFFNESS_DEBUG_PLOT = False
 
 import sympy
@@ -80,7 +80,7 @@ class StiffnessTester(object):
             self.parameters = {}
         else:
             self.parameters = parameters
-        self.parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self.parameters.items() }
+        self.parameters = {k: sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self.parameters.items()}
         self._locals = self.parameters.copy()
         if stimuli is None:
             self._stimuli = []
@@ -158,19 +158,18 @@ class StiffnessTester(object):
 
         logging.info("Simulating for " + str(self.sim_time) + " with max_step_size = " + str(self.max_step_size))
 
-        mixed_integrator = MixedIntegrator(
-         integrator,
-         self.system_of_shapes,
-         self.shapes,
-         analytic_solver_dict=self.analytic_solver_dict,
-         parameters=self.parameters,
-         spike_times=spike_times,
-         random_seed=self.random_seed,
-         max_step_size=self.max_step_size,
-         integration_accuracy_abs=self.integration_accuracy_abs,
-         integration_accuracy_rel=self.integration_accuracy_rel,
-         sim_time=self.sim_time,
-         alias_spikes=self.alias_spikes)
+        mixed_integrator = MixedIntegrator(integrator,
+                                           self.system_of_shapes,
+                                           self.shapes,
+                                           analytic_solver_dict=self.analytic_solver_dict,
+                                           parameters=self.parameters,
+                                           spike_times=spike_times,
+                                           random_seed=self.random_seed,
+                                           max_step_size=self.max_step_size,
+                                           integration_accuracy_abs=self.integration_accuracy_abs,
+                                           integration_accuracy_rel=self.integration_accuracy_rel,
+                                           sim_time=self.sim_time,
+                                           alias_spikes=self.alias_spikes)
         h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(h_min_lower_bound=h_min_lower_bound, raise_errors=raise_errors, debug=debug))
 
         logging.info("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))

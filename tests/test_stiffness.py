@@ -50,12 +50,12 @@ class TestStiffnessChecker(unittest.TestCase):
         indict["parameters"]["a"] = "-100"
         result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
         assert len(result) == 1 \
-         and result[0]["solver"].endswith("implicit")
+               and result[0]["solver"].endswith("implicit")
 
         indict["parameters"]["a"] = "-1"
         result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
         assert len(result) == 1 \
-         and result[0]["solver"].endswith("explicit")
+               and result[0]["solver"].endswith("explicit")
 
 
     def test_morris_lecar_stiff(self):
@@ -65,13 +65,13 @@ class TestStiffnessChecker(unittest.TestCase):
         indict["options"]["integration_accuracy_rel"] = 1E-9
         result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
         assert len(result) == 1 \
-         and result[0]["solver"].endswith("implicit")
+               and result[0]["solver"].endswith("implicit")
 
         indict["options"]["integration_accuracy_abs"] = 1E-3
         indict["options"]["integration_accuracy_rel"] = 1E-3
         result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
         assert len(result) == 1 \
-         and result[0]["solver"].endswith("explicit")
+               and result[0]["solver"].endswith("explicit")
 
 
 if __name__ == "__main__":
