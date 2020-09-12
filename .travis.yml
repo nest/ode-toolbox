@@ -20,7 +20,7 @@ stages:
 jobs:
   include:
     - stage: pycodestyle
-      script: python3 -m pycodestyle /home/travis/build/nest/ode-toolbox -v --ignore=E241,E501,E303,E714,E713,E714,E252 --exclude=/home/travis/build/nest/ode-toolbox/doc,/home/travis/build/nest/ode-toolbox/.eggs
+      script: python3 -m pycodestyle /home/travis/build/nest/ode-toolbox -v --ignore=E241,E501,E303,E714,E713,E714,E252 --exclude=/home/travis/build/nest/ode-toolbox/doc,/home/travis/build/nest/ode-toolbox/.eggs,/home/travis/build/nest/ode-toolbox/build,/home/travis/build/nest/ode-toolbox/.git,/home/travis/build/nest/ode-toolbox/odetoolbox.egg-info,/home/travis/build/nest/ode-toolbox/dist
 
 before_install:
   - if [ $WITH_GSL == 1 ]; then
