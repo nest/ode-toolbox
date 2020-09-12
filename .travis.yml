@@ -50,5 +50,8 @@ install:
   - python -c "import sympy; print(sympy.__version__)"
   - python setup.py install
 
+script:
+  - travis_wait 60 python -m pytest -s -o log_cli=true -o log_cli_level="DEBUG" --cov=./ tests
+
 after_success:
   - codecov
