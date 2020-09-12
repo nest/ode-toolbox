@@ -27,13 +27,13 @@ def _is_sympy_type(var):
     # for sympy version <= 1.4.*
     try:
         return isinstance(var, tuple(sympy.core.all_classes))
-    except:
+    except:  # noqa
         pass
 
     # for sympy version >= 1.5
     try:
         return isinstance(var, sympy.Basic)
-    except:
+    except:  # noqa
         pass
 
     raise Exception("Unsupported sympy version used")

@@ -44,7 +44,7 @@ try:
     import matplotlib.pyplot as plt
     INTEGRATOR_DEBUG_PLOT = True
     INTEGRATOR_DEBUG_PLOT_DIR = "/tmp"
-except:
+except ImportError:
     INTEGRATOR_DEBUG_PLOT = False
 
 
@@ -101,7 +101,7 @@ class MixedIntegrator(Integrator):
             self._parameters = {}
         else:
             self._parameters = parameters
-        self._parameters = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() if not _is_sympy_type(v) else v for k, v in self._parameters.items() }
+        self._parameters = {k: sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() if not _is_sympy_type(v) else v for k, v in self._parameters.items()}
         self._locals = self._parameters.copy()
         self.random_seed = random_seed
 
@@ -117,7 +117,7 @@ class MixedIntegrator(Integrator):
         self.all_variable_symbols = list(self._system_of_shapes.x_)
         if not self.analytic_solver_dict is None:
             self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
-        self.all_variable_symbols = [ sympy.Symbol(str(sym).replace("'", "__d")) for sym in self.all_variable_symbols ]
+        self.all_variable_symbols = [sympy.Symbol(str(sym).replace("'", "__d")) for sym in self.all_variable_symbols]
 
         for sym, expr in self._update_expr.items():
             try:
@@ -166,9 +166,9 @@ class MixedIntegrator(Integrator):
         #
 
         if not self.analytic_solver_dict is None:
-            analytic_integrator_spike_times = { sym : st for sym, st in self.get_spike_times().items() if str(sym) in self.analytic_solver_dict["state_variables"] }
+            analytic_integrator_spike_times = {sym: st for sym, st in self.get_spike_times().items() if str(sym) in self.analytic_solver_dict["state_variables"]}
             self.analytic_integrator = AnalyticIntegrator(self.analytic_solver_dict, analytic_integrator_spike_times)
-            analytic_integrator_initial_values = { sym : iv for sym, iv in initial_values.items() if sym in self.analytic_integrator.get_all_variable_symbols() }
+            analytic_integrator_initial_values = {sym: iv for sym, iv in initial_values.items() if sym in self.analytic_integrator.get_all_variable_symbols()}
             self.analytic_integrator.set_initial_values(analytic_integrator_initial_values)
 
 
@@ -181,7 +181,7 @@ class MixedIntegrator(Integrator):
                 initial_values[sym] = float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._parameters))
 
         upper_bound_crossed = False
-        y = np.array([ initial_values[sym] for sym in self._system_of_shapes.x_ ])
+        y = np.array([initial_values[sym] for sym in self._system_of_shapes.x_])
 
         if debug:
             y_log = [y]
@@ -201,7 +201,6 @@ class MixedIntegrator(Integrator):
         np.seterr(over='raise')
         try:
             h_min = np.inf
-            #simulation_slices = int(round(sim_time / max_step_size))
 
             #
             #    grab starting wall clock time
@@ -298,7 +297,7 @@ class MixedIntegrator(Integrator):
                 #    evaluate to numeric values those ODEs that are solved analytically
                 #
 
-                self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
+                self._locals.update({str(sym): y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
 
                 if not self.analytic_integrator is None:
                     self._locals.update(self.analytic_integrator.get_value(t))
@@ -363,7 +362,7 @@ class MixedIntegrator(Integrator):
         if not self.analytic_integrator is None:
             analytic_syms = self.analytic_integrator.get_value(0.).keys()
             analytic_dim = len(analytic_syms)
-            analytic_y_log = { sym : [] for sym in analytic_syms }
+            analytic_y_log = {sym: [] for sym in analytic_syms}
             for t in t_log:
                 for sym in analytic_syms:
                     val_dict = self.analytic_integrator.get_value(t)
@@ -431,17 +430,17 @@ class MixedIntegrator(Integrator):
         dfdy = np.zeros((dimension, dimension), np.float)
         dfdt = np.zeros((dimension,))
 
-        self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
+        self._locals.update({str(sym): y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
 
         if not self.analytic_integrator is None:
             self._locals.update(self.analytic_integrator.get_value(t))
 
-        y = [ self._locals[str(sym)] for sym in self.all_variable_symbols ]
+        y = [self._locals[str(sym)] for sym in self.all_variable_symbols]
 
         for row in range(0, dimension):
             for col in range(0, dimension):
                 dfdy[row, col] = self.symbolic_jacobian_wrapped[row, col](*y)
-                #dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))	# non-wrapped version
+                # dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))	# non-wrapped version
 
         return dfdy, dfdt
 
@@ -456,7 +455,7 @@ class MixedIntegrator(Integrator):
 
         :return: Updated state vector
         """
-        self._locals.update({ str(sym) : y[i] for i, sym in enumerate(self._system_of_shapes.x_) })
+        self._locals.update({str(sym): y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
 
         #
         #   update state of analytically solved variables to time `t`
@@ -466,11 +465,11 @@ class MixedIntegrator(Integrator):
             self._locals.update(self.analytic_integrator.get_value(t))
 
         # y holds the state of all the symbols in the numeric part of the system; add those for the analytic part
-        y = [ self._locals[str(sym)] for sym in self.all_variable_symbols ]
+        y = [self._locals[str(sym)] for sym in self.all_variable_symbols]
 
         try:
-            #return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]	# non-wrapped version
-            _ret = [ self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_ ]
+            # return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]	# non-wrapped version
+            _ret = [self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_]
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")

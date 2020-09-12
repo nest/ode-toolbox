@@ -19,20 +19,18 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-
 import json
 import os
 import unittest
 import sympy
 import numpy as np
-#np.seterr(under="warn")
 
 try:
     import matplotlib as mpl
     mpl.use('Agg')
     import matplotlib.pyplot as plt
     INTEGRATION_TEST_DEBUG_PLOTS = True
-except:
+except ImportError:
     INTEGRATION_TEST_DEBUG_PLOTS = False
 
 
@@ -135,14 +133,11 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         timevec = np.linspace(0., T, N)
         spike_times_idx = [np.argmin((spike_time - timevec)**2) for spike_time in spike_times]
 
-
-
         #
-        #   compute numerical reference timeseries
+        # compute numerical reference timeseries
         #
 
         def f(t, y):
-            #print("In f(t=" + str(t) + ", y=" + str(y) + ")")
             i_ex = y[0:2]
             V_abs = y[2]
 
@@ -189,10 +184,10 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         #   timeseries using hand-calculated propagators (only for alpha postsynaptic currents, not V_abs)
         #
 
-        P = scipy.linalg.expm(h * np.array([[0., 1.], [-1/tau_syn**2, -2/tau_syn]]))
+        P = scipy.linalg.expm(h * np.array([[0., 1.], [-1 / tau_syn**2, -2 / tau_syn]]))
 
-        P_ = np.array([[ (h/tau_syn + 1) * np.exp(-h/tau_syn),  h*np.exp(-h/tau_syn)], \
-                       [ -h*np.exp(-h/tau_syn)/tau_syn**2,   (-h/tau_syn + 1)*np.exp(-h/tau_syn) ]])
+        P_ = np.array([[(h / tau_syn + 1) * np.exp(-h / tau_syn), h * np.exp(-h / tau_syn)],
+                       [-h * np.exp(-h / tau_syn) / tau_syn**2, (-h / tau_syn + 1) * np.exp(-h / tau_syn)]])
 
         np.testing.assert_allclose(P, P_)
 
@@ -218,26 +213,26 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
 
-        ODE_INITIAL_VALUES = { "V_abs" : v_abs_init, "I_shape_ex" : 0., "I_shape_ex__d" : 0., "I_shape_in" : 0., "I_shape_in__d" : 0., "I_shape_gap1" : 0., "I_shape_gap2" : 0. }
+        ODE_INITIAL_VALUES = {"V_abs": v_abs_init, "I_shape_ex": 0., "I_shape_ex__d": 0., "I_shape_in": 0., "I_shape_in__d": 0., "I_shape_gap1": 0., "I_shape_gap2": 0.}
 
-        _parms = {"Tau" : tau,
-                 "Tau_syn_in" : tau_syn,
-                 "Tau_syn_ex" : tau_syn,
-                 "Tau_syn_gap" : tau_syn,
-                 "C_m" : c_m,
-                 "I_e" : 0.,
-                 "currents" : 0.,
-                 "e" : sympy.exp(1) }
+        _parms = {"Tau": tau,
+                  "Tau_syn_in": tau_syn,
+                  "Tau_syn_ex": tau_syn,
+                  "Tau_syn_gap": tau_syn,
+                  "C_m": c_m,
+                  "I_e": 0.,
+                  "currents": 0.,
+                  "e": sympy.exp(1)}
 
         if not "parameters" in solver_dict.keys():
             solver_dict["parameters"] = {}
         solver_dict["parameters"].update(_parms)
 
-        spike_times_ = { "I_shape_ex__d" : spike_times, "I_shape_in__d" : spike_times, "I_shape_gap2" : spike_times }
+        spike_times_ = {"I_shape_ex__d": spike_times, "I_shape_in__d": spike_times, "I_shape_gap2": spike_times}
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times_)
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
 
-        state = { sym : [] for sym in solver_dict["state_variables"] }
+        state = {sym: [] for sym in solver_dict["state_variables"]}
         state["timevec"] = []
         for step, t in enumerate(timevec):
             print("Step " + str(step) + " of " + str(N))

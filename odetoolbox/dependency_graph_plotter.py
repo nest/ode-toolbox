@@ -41,7 +41,7 @@ class DependencyGraphPlotter:
 
         from graphviz import Digraph
 
-        E = [ (str(sym1).replace("__d", "'"), str(sym2).replace("__d", "'")) for sym1, sym2 in dependency_edges ]
+        E = [(str(sym1).replace("__d", "'"), str(sym2).replace("__d", "'")) for sym1, sym2 in dependency_edges]
 
         dot = Digraph(comment="Dependency graph", engine="dot", format="pdf")
         dot.attr(compound="true")
