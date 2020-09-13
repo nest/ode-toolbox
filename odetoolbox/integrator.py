@@ -23,6 +23,7 @@ import logging
 import sympy
 import sympy.matrices
 import numpy as np
+from typing import Dict
 
 
 class Integrator():
@@ -30,18 +31,21 @@ class Integrator():
     Integrate a dynamical system by means of the propagators returned by ODE-toolbox (base class).
     """
 
-    def set_spike_times(self, spike_times):
+    def set_spike_times(self, spike_times: Dict[str,float]): #spike_times is a dictionary
         r"""
         Internally converts to a global, sorted list of spike times.
 
         :param spike_times: For each variable, used as a key, the list of spike times associated with it.
         """
-
+        
         if spike_times is None:
-            self.spike_times = []
+            self.spike_times = {}
+        
         else:
             self.spike_times = spike_times.copy()
-
+            
+            
+        
         assert all([type(sym) is str for sym in self.spike_times.keys()]), "Spike time keys need to be of type str"
 
         self.all_spike_times = []
