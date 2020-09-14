@@ -23,17 +23,17 @@ import io
 import math
 import numpy as np
 import random
+from typing import Mapping, List
 
 
 class SpikeGenerator():
 
     @classmethod
-    def spike_times_from_json(cls, stimuli, sim_time, derivative_symbol="__d"):
+    def spike_times_from_json(cls, stimuli, sim_time, derivative_symbol="__d") -> Mapping[str, List[float]]:
         r"""
         Read or generate spike times according to a JSON specification.
 
         :return: spike_times: Each variable symbol is a key in the dictionary, and the list of spike times is the corresponding value. Symbol names use `derivative_symbol` to indicate differential order.
-        :rtype: Dict[str -> List[float]]
         """
         spike_times = {}
         for stimulus in stimuli:
@@ -59,7 +59,7 @@ class SpikeGenerator():
 
 
     @classmethod
-    def _generate_homogeneous_poisson_spikes(cls, T : float, rate : float, min_isi : float=1E-6):
+    def _generate_homogeneous_poisson_spikes(cls, T: float, rate: float, min_isi: float=1E-6):
         r"""
         Generate spike trains for the given simulation length. Uses a Poisson distribution to create biologically realistic characteristics of the spike-trains.
 
@@ -82,7 +82,7 @@ class SpikeGenerator():
 
 
     @classmethod
-    def _generate_regular_spikes(cls, T : float, rate : float):
+    def _generate_regular_spikes(cls, T: float, rate: float):
         r"""
         Generate spike trains for the given simulation length.
 

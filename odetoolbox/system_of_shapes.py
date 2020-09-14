@@ -44,7 +44,7 @@ class SystemOfShapes(object):
     r"""
     Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
     """
-    def __init__(self, x, A : sympy.Matrix, c, shapes):
+    def __init__(self, x, A: sympy.Matrix, c, shapes):
         r"""
         Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
 
@@ -104,14 +104,14 @@ class SystemOfShapes(object):
         :param node_is_lin: Initial assumption about whether node is linear and constant coefficient.
         :param E: List of edges returned from dependency analysis.
         """
-        queue = [ sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc ]
+        queue = [sym for sym, is_lin_cc in node_is_lin.items() if not is_lin_cc]
         while len(queue) > 0:
 
             n = queue.pop(0)
 
             if not node_is_lin[n]:
                 # mark dependent neighbours as also not lin_cc
-                dependent_neighbours = [ n1 for (n1, n2) in E if n2 == n ]    # nodes that depend on n
+                dependent_neighbours = [n1 for (n1, n2) in E if n2 == n]    # nodes that depend on n
                 for n_neigh in dependent_neighbours:
                     if node_is_lin[n_neigh]:
                         node_is_lin[n_neigh] = False
@@ -141,8 +141,8 @@ class SystemOfShapes(object):
         r"""
         Return a new :python:`SystemOfShapes` instance which discards all symbols and equations except for those in :python:`symbols`. This is probably only sensible when the elements in :python:`symbols` do not dependend on any of the other symbols that will be thrown away.
         """
-        idx = [ i for i, sym in enumerate(self.x_) if sym in symbols ]
-        idx_compl = [ i for i, sym in enumerate(self.x_) if not sym in symbols ]
+        idx = [i for i, sym in enumerate(self.x_) if sym in symbols]
+        idx_compl = [i for i, sym in enumerate(self.x_) if not sym in symbols]
 
         x_sub = self.x_[idx, :]
         A_sub = self.A_[idx, :][:, idx]
@@ -194,14 +194,14 @@ class SystemOfShapes(object):
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) + " + " + str(self.c_[row])
             update_expr[str(self.x_[row])] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals))
 
-        all_state_symbols = [ str(sym) for sym in self.x_ ]
+        all_state_symbols = [str(sym) for sym in self.x_]
 
-        initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_state_symbols }
+        initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
 
-        solver_dict = {"propagators" : P_expr,
-                       "update_expressions" : update_expr,
-                       "state_variables" : all_state_symbols,
-                       "initial_values" : initial_values}
+        solver_dict = {"propagators": P_expr,
+                       "update_expressions": update_expr,
+                       "state_variables": all_state_symbols,
+                       "initial_values": initial_values}
 
         return solver_dict
 
@@ -211,12 +211,12 @@ class SystemOfShapes(object):
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
         """
         update_expr = self.reconstitute_expr()
-        all_state_symbols = [ str(sym) for sym in self.x_ ]
-        initial_values = { sym : str(self.get_initial_value(sym)) for sym in all_state_symbols }
+        all_state_symbols = [str(sym) for sym in self.x_]
+        initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
 
-        solver_dict = {"update_expressions" : update_expr,
-                       "state_variables" : all_state_symbols,
-                       "initial_values" : initial_values}
+        solver_dict = {"update_expressions": update_expr,
+                       "state_variables": all_state_symbols,
+                       "initial_values": initial_values}
 
         return solver_dict
 

@@ -62,8 +62,8 @@ class Integrator():
                     self.all_spike_times_sym.append([sym])
 
         idx = np.argsort(self.all_spike_times)
-        self.all_spike_times = [ self.all_spike_times[i] for i in idx ]
-        self.all_spike_times_sym = [ self.all_spike_times_sym[i] for i in idx ]
+        self.all_spike_times = [self.all_spike_times[i] for i in idx]
+        self.all_spike_times_sym = [self.all_spike_times_sym[i] for i in idx]
 
 
     def get_spike_times(self):
