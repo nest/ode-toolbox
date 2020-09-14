@@ -194,7 +194,7 @@ class AnalyticIntegrator(Integrator):
         """
 
         if (not self.enable_caching) \
-         or t < self.t_curr:
+           or t < self.t_curr:
             self.reset()
 
         t_curr = self.t_curr

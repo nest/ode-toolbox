@@ -30,7 +30,7 @@ try:
     mpl.use('Agg')
     import matplotlib.pyplot as plt
     INTEGRATION_TEST_DEBUG_PLOTS = True
-except:
+except ImportError:
     INTEGRATION_TEST_DEBUG_PLOTS = False
 
 
@@ -77,10 +77,10 @@ class TestAnalyticIntegrator(unittest.TestCase):
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
 
-        ODE_INITIAL_VALUES = { "I" : 0., "I__d" : 0. }
+        ODE_INITIAL_VALUES = {"I": 0., "I__d": 0.}
 
-        _parms = {"Tau" : 2E-3,    # [s]
-                  "e" : sympy.exp(1) }
+        _parms = {"Tau": 2E-3,    # [s]
+                  "e": sympy.exp(1)}
 
         if not "parameters" in solver_dict.keys():
             solver_dict["parameters"] = {}
@@ -90,9 +90,9 @@ class TestAnalyticIntegrator(unittest.TestCase):
 
         N = int(np.ceil(T / h) + 1)
         timevec = np.linspace(0., T, N)
-        state = { True: {}, False: {} }
+        state = {True: {}, False: {}}
         for use_caching in [False, True]:
-            state[use_caching] = { sym : [] for sym in solver_dict["state_variables"] }
+            state[use_caching] = {sym: [] for sym in solver_dict["state_variables"]}
             state[use_caching]["timevec"] = []
             analytic_integrator = AnalyticIntegrator(solver_dict, spike_times, enable_caching=use_caching)
             analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)

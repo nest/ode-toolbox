@@ -26,18 +26,16 @@ import pytest
 import unittest
 import sympy
 import numpy as np
-#np.seterr(under="warn")
 
 try:
     import matplotlib as mpl
     mpl.use('Agg')
     import matplotlib.pyplot as plt
     INTEGRATION_TEST_DEBUG_PLOTS = True
-except:
+except ImportError:
     INTEGRATION_TEST_DEBUG_PLOTS = False
 
-
-from .context import odetoolbox
+import odetoolbox
 from odetoolbox.mixed_integrator import MixedIntegrator
 
 from math import e
@@ -74,22 +72,22 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
         debug = True
 
         h = 1E-3    # [s]
-        T = 5E-3    # [s]
+        T = 5.    # [s]
 
         # neuron parameters
         tau = 20E-3    # [s]
         tau_syn = 5E-3    # [s]
         c_m = 1E-6    # [F]
 
-        initial_values = { "V_m" : -82.123E-3, "g_in" : 8.9E-9, "g_in__d" : .43, "g_ex" : 2.4E-9, "g_ex__d" : .06 }
-        spike_times = { "g_ex__d" : np.array([1E-3, 2E-3, 3E-3]), "g_in__d" : np.array([.5E-3, 1.5E-3, 2.5E-3]) }
+        initial_values = {"V_m": -82.123E-3, "g_in": 8.9E-9, "g_in__d": .43, "g_ex": 2.4E-9, "g_ex__d": .06}
+        spike_times = {"g_ex__d": np.array([1E-3, 2E-3, 3E-3]), "g_in__d": np.array([.5E-3, 1.5E-3, 2.5E-3])}
 
         ###
 
         N = int(np.ceil(T / h) + 1)
         timevec = np.linspace(0., T, N)
 
-        initial_values = { sympy.Symbol(k) : v for k, v in initial_values.items() }
+        initial_values = {sympy.Symbol(k): v for k, v in initial_values.items()}
 
         indict = open_json("iaf_cond_alpha_mixed_test.json")
         analysis_json, shape_sys, shapes = odetoolbox._analysis(indict, disable_stiffness_check=True, disable_analytic_solver=True)
@@ -100,32 +98,32 @@ class TestMixedIntegrationNumeric(unittest.TestCase):
 
         for alias_spikes in [False, True]:
             for integrator in [odeiv.step_rk4, odeiv.step_bsimp]:
-                mixed_integrator = MixedIntegrator(
-                 integrator,
-                 shape_sys,
-                 shapes,
-                 analytic_solver_dict=None,
-                 parameters=indict["parameters"],
-                 spike_times=spike_times,
-                 random_seed=123,
-                 max_step_size=h,
-                 integration_accuracy_abs=1E-5,
-                 integration_accuracy_rel=1E-5,
-                 sim_time=T,
-                 alias_spikes=alias_spikes)
-                h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = mixed_integrator.integrate_ode(
-                 initial_values=initial_values,
-                 h_min_lower_bound=1E-12, raise_errors=True, debug=True) # debug needs to be True here to obtain the right return values
+                mixed_integrator = MixedIntegrator(integrator,
+                                                   shape_sys,
+                                                   shapes,
+                                                   analytic_solver_dict=None,
+                                                   parameters=indict["parameters"],
+                                                   spike_times=spike_times,
+                                                   random_seed=123,
+                                                   max_step_size=h,
+                                                   integration_accuracy_abs=1E-5,
+                                                   integration_accuracy_rel=1E-5,
+                                                   sim_time=T,
+                                                   alias_spikes=alias_spikes)
+                h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = \
+                    mixed_integrator.integrate_ode(initial_values=initial_values,
+                                                   h_min_lower_bound=1E-12,
+                                                   raise_errors=True,
+                                                   debug=True)		# debug needs to be True here to obtain the right return values
 
                 if INTEGRATION_TEST_DEBUG_PLOTS:
-                    self._timeseries_plot(
-                     t_log,
-                     h_log,
-                     y_log,
-                     sym_list=sym_list,
-                     basedir="/tmp",
-                     fn_snip="_[alias=" + str(alias_spikes) + "]_" + str(integrator),
-                     title_snip=" alias spikes: " + str(alias_spikes) + ", " + str(integrator))
+                    self._timeseries_plot(t_log,
+                                          h_log,
+                                          y_log,
+                                          sym_list=sym_list,
+                                          basedir="/tmp",
+                                          fn_snip="_[alias=" + str(alias_spikes) + "]_" + str(integrator),
+                                          title_snip=" alias spikes: " + str(alias_spikes) + ", " + str(integrator))
 
                 if alias_spikes:
                     assert upper_bound_crossed

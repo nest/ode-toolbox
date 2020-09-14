@@ -23,8 +23,6 @@ import json
 import os
 import unittest
 import sympy
-import numpy as np
-#np.seterr(under="warn")
 
 from .context import odetoolbox
 from odetoolbox.shapes import Shape
@@ -56,16 +54,16 @@ class TestLorenzAttractor(unittest.TestCase):
         indict = open_json("lorenz_attractor.json")
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=not PYGSL_AVAILABLE)
         print("Got solver_dict from ode-toolbox: ")
-        print(json.dumps(solver_dict,  indent=2))
+        print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"].startswith("numeric")
         assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["x"], global_dict=Shape._sympy_globals).simplify() \
-         == sympy.parsing.sympy_parser.parse_expr("sigma*(-x + y)", global_dict=Shape._sympy_globals).simplify()
+               == sympy.parsing.sympy_parser.parse_expr("sigma*(-x + y)", global_dict=Shape._sympy_globals).simplify()
         assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["y"], global_dict=Shape._sympy_globals).simplify() \
-         == sympy.parsing.sympy_parser.parse_expr("rho*x - x*z - y", global_dict=Shape._sympy_globals).simplify()
+               == sympy.parsing.sympy_parser.parse_expr("rho*x - x*z - y", global_dict=Shape._sympy_globals).simplify()
         assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["z"], global_dict=Shape._sympy_globals).simplify() \
-         == sympy.parsing.sympy_parser.parse_expr("-beta*z + x*y", global_dict=Shape._sympy_globals).simplify()
+               == sympy.parsing.sympy_parser.parse_expr("-beta*z + x*y", global_dict=Shape._sympy_globals).simplify()
 
 
 if __name__ == '__main__':

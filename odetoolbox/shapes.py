@@ -58,29 +58,29 @@ class Shape():
     EXPRESSION_SIMPLIFICATION_THRESHOLD = 1000
 
     # a minimal subset of sympy classes and functions to avoid "from sympy import *"
-    _sympy_globals = {"Symbol" : sympy.Symbol,
-                      "Integer" : sympy.Integer,
-                      "Float" : sympy.Float,
-                      "Function" : sympy.Function,
-                      "Pow" : sympy.Pow,
-                      "power" : sympy.power,
-                      "exp" : sympy.exp,
-                      "log" : sympy.log,
-                      "sin" : sympy.sin,
-                      "cos" : sympy.cos,
-                      "tan" : sympy.tan,
-                      "asin" : sympy.asin,
-                      "sinh" : sympy.sinh,
-                      "asinh" : sympy.asinh,
-                      "acos" : sympy.acos,
-                      "cosh" : sympy.cosh,
-                      "acosh" : sympy.acosh,
-                      "tanh" : sympy.tanh,
-                      "atanh" : sympy.atanh,
-                      "e" : sympy.exp(1),
-                      "E" : sympy.exp(1),
-                      "t" : sympy.Symbol("t"),
-                      "DiracDelta" : sympy.DiracDelta}
+    _sympy_globals = {"Symbol": sympy.Symbol,
+                      "Integer": sympy.Integer,
+                      "Float": sympy.Float,
+                      "Function": sympy.Function,
+                      "Pow": sympy.Pow,
+                      "power": sympy.power,
+                      "exp": sympy.exp,
+                      "log": sympy.log,
+                      "sin": sympy.sin,
+                      "cos": sympy.cos,
+                      "tan": sympy.tan,
+                      "asin": sympy.asin,
+                      "sinh": sympy.sinh,
+                      "asinh": sympy.asinh,
+                      "acos": sympy.acos,
+                      "cosh": sympy.cosh,
+                      "acosh": sympy.acosh,
+                      "tanh": sympy.tanh,
+                      "atanh": sympy.atanh,
+                      "e": sympy.exp(1),
+                      "E": sympy.exp(1),
+                      "t": sympy.Symbol("t"),
+                      "DiracDelta": sympy.DiracDelta}
 
 
     def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), lower_bound=None, upper_bound=None, derivative_symbol="__d", debug=False):
@@ -276,7 +276,7 @@ class Shape():
             raise MalformedInputException("Expecting exactly one \"=\" symbol in defining expression: \"" + str(indict["expression"]) + "\"")
 
         lhs, rhs = indict["expression"].split("=")
-        lhs_ = re.findall("\S+", lhs)
+        lhs_ = re.findall(r"\S+", lhs)
         if not len(lhs_) == 1:
             raise MalformedInputException("Error while parsing expression \"" + indict["expression"] + "\"")
         lhs = lhs_[0]
@@ -290,12 +290,12 @@ class Shape():
 
         initial_values = {}
         if not "initial_value" in indict.keys() \
-         and not "initial_values" in indict.keys() \
-         and order > 0:
+           and not "initial_values" in indict.keys() \
+           and order > 0:
             raise MalformedInputException("No initial values specified for order " + str(order) + " equation with variable symbol \"" + symbol + "\"")
 
         if "initial_value" in indict.keys() \
-         and "initial_values" in indict.keys():
+           and "initial_values" in indict.keys():
             raise MalformedInputException("`initial_value` and `initial_values` cannot be specified simultaneously for equation with variable symbol \"" + symbol + "\"")
 
         if "initial_value" in indict.keys():
@@ -419,7 +419,7 @@ class Shape():
         if all_variable_symbols is None:
             all_variable_symbols = []
 
-        all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
+        all_variable_symbols_dict = {str(el): el for el in all_variable_symbols}
 
         symbol = sympy.Symbol(symbol)
         definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)
@@ -534,7 +534,7 @@ class Shape():
         #    calculate the initial values of the found ODE
         #
 
-        initial_values = { str(symbol) + derivative_order * '\'' : x.subs(time_symbol, 0) for derivative_order, x in enumerate(derivatives[:-1]) }
+        initial_values = {str(symbol) + derivative_order * '\'': x.subs(time_symbol, 0) for derivative_order, x in enumerate(derivatives[:-1])}
 
         return cls(symbol, order, initial_values, derivative_factors)
 
@@ -568,19 +568,19 @@ class Shape():
             all_variable_symbols = []
 
         order = len(initial_values)
-        all_variable_symbols_dict = { str(el) : el for el in all_variable_symbols }
+        all_variable_symbols_dict = {str(el): el for el in all_variable_symbols}
         symbol = sympy.Symbol(symbol)
         definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", differential_order_symbol), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
-        initial_values = { k : sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items() }
+        initial_values = {k: sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items()}
 
-        local_symbols = [ sympy.Symbol(str(symbol) + differential_order_symbol * i) for i in range(order) ]
+        local_symbols = [sympy.Symbol(str(symbol) + differential_order_symbol * i) for i in range(order)]
         if not symbol in all_variable_symbols:
             all_variable_symbols.extend(local_symbols)
-        all_variable_symbols = [ sympy.Symbol(str(sym_name).replace("'", differential_order_symbol)) for sym_name in all_variable_symbols ]
+        all_variable_symbols = [sympy.Symbol(str(sym_name).replace("'", differential_order_symbol)) for sym_name in all_variable_symbols]
         derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, all_variable_symbols)
-        local_symbols_idx = [ all_variable_symbols.index(sym) for sym in local_symbols ]
-        local_derivative_factors = [ derivative_factors[i] for i in local_symbols_idx ]
-        nonlocal_derivative_terms = [ derivative_factors[i] * all_variable_symbols[i] for i in range(len(all_variable_symbols)) if i not in local_symbols_idx ]
+        local_symbols_idx = [all_variable_symbols.index(sym) for sym in local_symbols]
+        local_derivative_factors = [derivative_factors[i] for i in local_symbols_idx]
+        nonlocal_derivative_terms = [derivative_factors[i] * all_variable_symbols[i] for i in range(len(all_variable_symbols)) if i not in local_symbols_idx]
         if nonlocal_derivative_terms:
             diff_rhs_derivatives = diff_rhs_derivatives + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 

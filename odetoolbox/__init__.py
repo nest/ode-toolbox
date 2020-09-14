@@ -30,7 +30,6 @@ import logging
 import sympy
 sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
 
-
 try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
@@ -45,7 +44,7 @@ if PYGSL_AVAILABLE:
 try:
     import graphviz
     PLOT_DEPENDENCY_GRAPH = True
-except:
+except ImportError:
     PLOT_DEPENDENCY_GRAPH = False
 
 if PLOT_DEPENDENCY_GRAPH:
@@ -53,13 +52,13 @@ if PLOT_DEPENDENCY_GRAPH:
 
 
 default_config = {
-    "input_time_symbol" : "t",
-    "output_timestep_symbol" : "__h",
-    "differential_order_symbol" : "__d",
-    "sim_time" : 100E-3,
-    "max_step_size" : 999.,
-    "integration_accuracy_abs" : 1E-6,
-    "integration_accuracy_rel" : 1E-6
+    "input_time_symbol": "t",
+    "output_timestep_symbol": "__h",
+    "differential_order_symbol": "__d",
+    "sim_time": 100E-3,
+    "max_step_size": 999.,
+    "integration_accuracy_abs": 1E-6,
+    "integration_accuracy_rel": 1E-6
 }
 
 
@@ -118,6 +117,13 @@ def _from_json_to_shapes(indict, options_dict):
 
 
 def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=False, debug=False):
+    """
+    Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
+
+    For internal use only!
+    """
+
+    # import sys;sys.setrecursionlimit(max(sys.getrecursionlimit(), 10000))
 
     global default_config
 
@@ -146,7 +152,7 @@ def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
     if disable_analytic_solver:
         analytic_syms = []
     else:
-        analytic_syms = [ node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin ]
+        analytic_syms = [node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin]
 
     if analytic_syms:
         logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
@@ -201,7 +207,7 @@ def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
     for solver_json in solvers_json:
         solver_json["initial_values"] = {}
         for shape in shapes:
-            all_shape_symbols = [ str(sympy.Symbol(str(shape.symbol) + options_dict["differential_order_symbol"] * i)) for i in range(shape.order) ]
+            all_shape_symbols = [str(sympy.Symbol(str(shape.symbol) + options_dict["differential_order_symbol"] * i)) for i in range(shape.order)]
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
                     solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace(options_dict["differential_order_symbol"], "'")))
@@ -265,7 +271,7 @@ def _init_logging(debug: bool):
         logging.basicConfig(level=logging.INFO, format=fmt)
 
 
-def analysis(indict, disable_stiffness_check : bool=False, disable_analytic_solver : bool=False, debug : bool=False):
+def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, debug: bool=False):
     r"""
     The main entry point of the ODE-toolbox API.
 
