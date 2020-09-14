@@ -121,11 +121,17 @@ class TestAnalyticIntegrator(unittest.TestCase):
                 _ax.grid(True)
 
             ax[-1].set_xlabel("Time [ms]")
-
+            fn = os.path.join("", "test_analytic_integrator.png")
+            print("Saving to " + fn)
+            plt.savefig(fn, dpi=600)
+            plt.close(fig)
+        
+            """
             fn = "/tmp/test_analytic_integrator.png"
             print("Saving to " + fn)
             plt.savefig(fn, dpi=600)
             plt.close(fig)
+            """
 
         np.testing.assert_allclose(state[True]["timevec"], timevec)
         np.testing.assert_allclose(state[True]["timevec"], state[False]["timevec"])
