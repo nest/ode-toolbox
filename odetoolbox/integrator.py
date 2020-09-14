@@ -30,24 +30,17 @@ class Integrator():
     r"""
     Integrate a dynamical system by means of the propagators returned by ODE-toolbox (base class).
     """
-
-    def set_spike_times(self, spike_times: Dict[str,float]): #spike_times is a dictionary
+    def set_spike_times(self, spike_times: Dict[str, float]):  # spike_times is a dictionary
         r"""
         Internally converts to a global, sorted list of spike times.
 
         :param spike_times: For each variable, used as a key, the list of spike times associated with it.
         """
-        
         if spike_times is None:
             self.spike_times = {}
-        
         else:
             self.spike_times = spike_times.copy()
-            
-            
-        
         assert all([type(sym) is str for sym in self.spike_times.keys()]), "Spike time keys need to be of type str"
-
         self.all_spike_times = []
         self.all_spike_times_sym = []
         for sym, sym_spike_times in self.spike_times.items():
@@ -65,7 +58,6 @@ class Integrator():
         self.all_spike_times = [self.all_spike_times[i] for i in idx]
         self.all_spike_times_sym = [self.all_spike_times_sym[i] for i in idx]
 
-
     def get_spike_times(self):
         r"""
         Get spike times.
@@ -73,7 +65,6 @@ class Integrator():
         :return spike_times: For each variable, used as a key, the list of spike times associated with it.
         """
         return self.spike_times
-
 
     def get_sorted_spike_times(self):
         r"""
