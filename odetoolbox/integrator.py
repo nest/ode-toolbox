@@ -58,6 +58,7 @@ class Integrator():
         self.all_spike_times = [self.all_spike_times[i] for i in idx]
         self.all_spike_times_sym = [self.all_spike_times_sym[i] for i in idx]
 
+
     def get_spike_times(self):
         r"""
         Get spike times.
@@ -65,6 +66,7 @@ class Integrator():
         :return spike_times: For each variable, used as a key, the list of spike times associated with it.
         """
         return self.spike_times
+
 
     def get_sorted_spike_times(self):
         r"""
