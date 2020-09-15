@@ -1,0 +1,18 @@
+{
+  "__info" : "This is the FitzHugh-Nagumo model [http://www.scholarpedia.org/article/FitzHugh-Nagumo_model, https://en.wikipedia.org/wiki/FitzHugh%E2%80%93Nagumo_model]",
+
+  "parameters": {
+    "I_ext": "1"
+  },
+
+  "dynamics": [
+    {
+      "expression": "V' = V - (V**3/3) - W + I_ext",
+      "initial_value": "-25"
+    },
+    {
+      "expression": "W' = .08*(V + .7 - (.8 * W))",
+      "initial_value": ".15"
+    }
+  ]
+}
