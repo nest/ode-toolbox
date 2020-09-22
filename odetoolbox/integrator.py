@@ -30,7 +30,7 @@ class Integrator():
     r"""
     Integrate a dynamical system by means of the propagators returned by ODE-toolbox (base class).
     """
-    def set_spike_times(self, spike_times: Dict[str, float]):  # spike_times is a dictionary
+    def set_spike_times(self, spike_times: Dict[str, float]):
         r"""
         Internally converts to a global, sorted list of spike times.
 
