@@ -32,7 +32,7 @@ from .spike_generator import SpikeGenerator
 
 try:
     import matplotlib as mpl
-    mpl.use('Agg', warn=False)
+    mpl.use('Agg')
     import matplotlib.pyplot as plt
     STIFFNESS_DEBUG_PLOT = True
 except ImportError:
