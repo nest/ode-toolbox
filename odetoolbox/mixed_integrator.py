@@ -40,7 +40,7 @@ from .sympy_printer import _is_sympy_type
 
 try:
     import matplotlib as mpl
-    mpl.use('Agg', warn=False)
+    mpl.use('Agg')
     import matplotlib.pyplot as plt
     INTEGRATOR_DEBUG_PLOT = True
     INTEGRATOR_DEBUG_PLOT_DIR = "/tmp"
