@@ -32,13 +32,13 @@ class TestHomogeneous(unittest.TestCase):
     def test_homogeneous(self):
         shape_inh = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         shape_exc = Shape.from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
-        shape_V_m = Shape.from_ode("V_m", "-V_m/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m" : "0."})
+        shape_V_m = Shape.from_ode("V_m", "-V_m/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."})
 
         self.assertTrue(shape_inh.is_homogeneous())
         self.assertTrue(shape_exc.is_homogeneous())
         self.assertFalse(shape_V_m.is_homogeneous(shapes=[shape_inh, shape_exc]))
 
-        shape_V_m = Shape.from_ode("V_m", "-V_m/Tau + (I_in + I_ex) / C_m", initial_values={"V_m" : "0."})
+        shape_V_m = Shape.from_ode("V_m", "-V_m/Tau + (I_in + I_ex) / C_m", initial_values={"V_m": "0."})
         self.assertTrue(shape_V_m.is_homogeneous(shapes=[shape_inh, shape_exc]))
         self.assertFalse(shape_V_m.is_homogeneous(shapes=[]))
 
