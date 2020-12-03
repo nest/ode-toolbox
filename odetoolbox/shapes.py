@@ -169,8 +169,7 @@ class Shape():
             return True
 
         all_symbols = self.get_all_variable_symbols(shapes, derivative_symbol=differential_order_symbol)
-
-        for term in sympy.Add.make_args(self.diff_rhs_derivatives):
+        for term in sympy.Add.make_args(self.diff_rhs_derivatives.expand()):
             term_is_const = True
             for sym in all_symbols:
                 expr = sympy.diff(term, sym)
