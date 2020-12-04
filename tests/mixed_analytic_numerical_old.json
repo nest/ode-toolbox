@@ -1,0 +1,23 @@
+{
+  "__info" : "Testing of mixed analytic and numerical integration. The equation for `x` is autonomous, and `y` and `z` are functions of `x`.",
+
+  "dynamics": [
+    {
+      "expression": "x' = sigma * x",
+      "initial_value" : "1"
+    },
+    {
+      "expression": "y' = rho * y + z",
+      "initial_value" : "1"
+    },
+    {
+      "expression": "z' = x * y - beta * z",
+      "initial_value" : "1"
+    }
+  ],
+  "parameters" : {
+    "sigma" : "-10",
+    "beta" : "8/3",
+    "rho" : "-28"
+  }
+}

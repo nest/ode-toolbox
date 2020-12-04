@@ -22,13 +22,15 @@
 import json
 import os
 import unittest
+import odetoolbox
+import sympy
+import sympy.parsing.sympy_parser
 
 try:
-    from .context import odetoolbox
-    from odetoolbox.stiffness import check_ode_system_for_stiffness
-    HAVE_STIFFNESS = True
+    import pygsl
+    PYGSL_AVAILABLE = True
 except ImportError:
-    HAVE_STIFFNESS = False
+    PYGSL_AVAILABLE = False
 
 
 def open_json(filename):
@@ -38,30 +40,40 @@ def open_json(filename):
     return indict
 
 
-@unittest.skipIf(not HAVE_STIFFNESS,
+@unittest.skipIf(not PYGSL_AVAILABLE,
                  "Stiffness tests not supported on this system")
 class TestStiffnessChecker(unittest.TestCase):
 
-    def test_iaf_cond_alpha_odes(self):
-        indict = open_json("iaf_cond_alpha_odes.json")
-        result = check_ode_system_for_stiffness(indict)
-        self.assertEquals("explicit", result)
+    def test_canonical_stiff_system(self):
+        indict = open_json("stiff_system.json")
 
-    def test_iaf_cond_alpha_odes_stiff(self):
-        indict = open_json("iaf_cond_alpha_odes_stiff.json")
-        result = check_ode_system_for_stiffness(indict)
-        self.assertEquals("implicit", result)
+        indict["parameters"]["a"] = "-100"
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
+        assert len(result) == 1 \
+               and result[0]["solver"].endswith("implicit")
 
-    def test_iaf_cond_alpha_odes_threshold(self):
-        indict = open_json("iaf_cond_alpha_odes_threshold.json")
-        result = check_ode_system_for_stiffness(indict)
-        self.assertEquals("explicit", result)
-
-    def test_fitzhugh_nagumo(self):
-        indict = open_json("fitzhugh_nagumo.json")
-        result = check_ode_system_for_stiffness(indict)
-        self.assertEquals("implicit", result)
+        indict["parameters"]["a"] = "-1"
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
+        assert len(result) == 1 \
+               and result[0]["solver"].endswith("explicit")
 
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_morris_lecar_stiff(self):
+        indict = open_json("morris_lecar.json")
+
+        indict["options"]["integration_accuracy_abs"] = 1E-9
+        indict["options"]["integration_accuracy_rel"] = 1E-9
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
+        assert len(result) == 1 \
+               and result[0]["solver"].endswith("implicit")
+
+        indict["options"]["integration_accuracy_abs"] = 1E-3
+        indict["options"]["integration_accuracy_rel"] = 1E-3
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
+        assert len(result) == 1 \
+               and result[0]["solver"].endswith("explicit")
+
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])

@@ -1,5 +1,5 @@
 #
-# numeric.py
+# sympy_printer.py
 #
 # This file is part of the NEST ODE toolbox.
 #
@@ -19,18 +19,27 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def compute_numeric_solution(shapes):
+import sympy
+from sympy.printing import StrPrinter
 
-    data = {
-        "solver": "numeric",
-        "shape_initial_values": [],
-        "shape_ode_definitions": [],
-        "shape_state_variables": [],
-    }
 
-    for shape in shapes:
-        data["shape_initial_values"].extend([str(x) for x in shape.initial_values])
-        data["shape_ode_definitions"].append(str(shape.ode_definition))
-        data["shape_state_variables"].extend([str(x) for x in shape.state_variables])
-        
-    return data
+def _is_sympy_type(var):
+    # for sympy version <= 1.4.*
+    try:
+        return isinstance(var, tuple(sympy.core.all_classes))
+    except:  # noqa
+        pass
+
+    # for sympy version >= 1.5
+    try:
+        return isinstance(var, sympy.Basic)
+    except:  # noqa
+        pass
+
+    raise Exception("Unsupported sympy version used")
+
+
+class SympyPrinter(StrPrinter):
+
+    def _print_Exp1(self, expr):
+        return 'e'

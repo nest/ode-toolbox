@@ -1,0 +1,15 @@
+{
+  "dynamics": [
+    {
+      "expression": "I = (e/Tau) * t * exp(-t/Tau)"
+    }
+  ],
+
+  "stimuli": [
+    {
+      "type": "list",
+      "list": "5E-3 10E-3 20E-3 15E-3 50E-3",
+      "variables": ["I'"]
+    }
+  ]
+}

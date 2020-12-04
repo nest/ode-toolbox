@@ -1,0 +1,28 @@
+{
+  "__info" : "This file corresponds to `test_integration.py` and shows three equivalent ways to define an alpha shape function: as a direct function of time (`I_shape_in`), as a second-order differential equation (`I_shape_ex`), and as a coupled system of first-order differential equations (`I_shape_gap1`, `I_shape_gap2`).",
+
+  "dynamics": [
+    {
+      "expression": "I_shape_in = (e/Tau_syn_in) * t * exp(-t/Tau_syn_in)"
+    },
+    {
+      "expression": "I_shape_ex'' = -1 / Tau_syn_ex**2 * I_shape_ex - 2/Tau_syn_ex * I_shape_ex'",
+      "initial_values": {
+        "I_shape_ex" : "0",
+        "I_shape_ex'" : "e / Tau_syn_ex"
+      }
+    },
+    {
+        "expression": "I_shape_gap1' = I_shape_gap2",
+        "initial_value": "0"
+    },
+    {
+        "expression": "I_shape_gap2' = -I_shape_gap1 / Tau_syn_gap**2 - 2*I_shape_gap2 / Tau_syn_gap",
+        "initial_value": "e / Tau_syn_gap"
+    },
+    {
+      "expression": "V_abs' = -V_abs/Tau + (I_shape_in + I_shape_ex + I_shape_gap1) / C_m",
+      "initial_value": "0."
+    }
+  ]
+}

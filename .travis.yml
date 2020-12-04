@@ -2,21 +2,56 @@ language: python
 
 sudo: required
 
+git:
+  depth: 1
+
+env:
+  - export WITH_GSL=0
+  - export WITH_GSL=1
+
 python:
-  - "2.7"
   - "3.5"
   - "3.6"
 
+stages:
+  - pycodestyle
+  - tests
+
+jobs:
+  include:
+    - stage: pycodestyle
+      script: python3 -m pycodestyle /home/travis/build/nest/ode-toolbox -v --ignore=E241,E501,E303,E714,E713,E714,E252 --exclude=/home/travis/build/nest/ode-toolbox/doc,/home/travis/build/nest/ode-toolbox/.eggs,/home/travis/build/nest/ode-toolbox/build,/home/travis/build/nest/ode-toolbox/.git,/home/travis/build/nest/ode-toolbox/odetoolbox.egg-info,/home/travis/build/nest/ode-toolbox/dist
+
 before_install:
-  - wget http://ftp.wrz.de/pub/gnu/gsl/gsl-2.5.tar.gz
-  - tar -xvzf gsl-2.5.tar.gz
-  - cd gsl-2.5
-  - ./configure && make && sudo make install
-  - cd ..
+  - if [ $WITH_GSL == 1 ]; then
+    wget http://ftp.wrz.de/pub/gnu/gsl/gsl-2.5.tar.gz ;
+    tar -xvzf gsl-2.5.tar.gz ;
+    cd gsl-2.5 ;
+    ./configure && make && sudo make install ;
+    cd .. ;
+    fi
+  - export LD_LIBRARY_PATH=/usr/local/lib
 
 install:
+  - if [ $WITH_GSL == 1 ]; then
+    pip install pygsl ;
+    fi
   - pip install -r requirements.txt
+  - pip install cython
+  - pip install codecov pytest-cov pycodestyle
+  - export PYTHON_VERSION=`python -c "import sys; print('.'.join(map(str, [sys.version_info.major, sys.version_info.minor])))"`
+  - echo "Python version detected:"
+  - echo $PYTHON_VERSION
+  - if [ $PYTHON_VERSION == "3.5" ]; then
+    pip uninstall --yes sympy ;
+    pip install sympy==1.4 ;
+    fi
+  - echo "Using sympy version:"
+  - python -c "import sympy; print(sympy.__version__)"
+  - python setup.py install
 
 script:
-  - python setup.py install
-  - python setup.py test
+  - travis_wait 60 python -m pytest -s -o log_cli=true -o log_cli_level="DEBUG" --cov=./ tests
+
+after_success:
+  - codecov

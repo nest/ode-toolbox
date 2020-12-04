@@ -19,28 +19,27 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import unittest
+import pytest
 
 from .context import odetoolbox
-from odetoolbox import shapes
+from odetoolbox.shapes import Shape
 
 
-class TestShapeFunction(unittest.TestCase):
-
-    def test_shape_to_odes(self):
-        shape_inh = shapes.shape_from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
-        shape_exc = shapes.shape_from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
-        self.assertIsNotNone(shape_inh.ode_definition)
-        self.assertIsNotNone(shape_exc.ode_definition)
+def test_ode_shape():
+    shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha": "0", "alpha'": "e/tau"})
+    assert not shape_inh.derivative_factors is None
 
 
-class TestShapeODE(unittest.TestCase):
+def test_ode_shape_fails_too_high_order_deriv():
+    with pytest.raises(Exception):
+        Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha": "0", "alpha''": "e/tau"})
 
-    def test_ode_shape(self):
 
-        shape_inh = shapes.shape_from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", ["0", "e/tau"])
-        self.assertIsNotNone(shape_inh.derivative_factors)
+def test_ode_shape_fails_missing_deriv():
+    with pytest.raises(Exception):
+        shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"alpha'": "e/tau"})
 
-        
-if __name__ == '__main__':
-    unittest.main()
+
+def test_ode_shape_fails_unknown_symbol():
+    with pytest.raises(Exception):
+        shape_inh = Shape.from_ode("alpha", "-1/tau**2 * alpha -2/tau * alpha'", {"xyz": "0", "alpha": "e/tau"})

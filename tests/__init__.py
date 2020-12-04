@@ -1,5 +1,5 @@
 #
-# __init__.py.py
+# __init__.py
 #
 # This file is part of the NEST ODE toolbox.
 #
