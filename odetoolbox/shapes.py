@@ -63,7 +63,7 @@ class Shape():
                       "Float": sympy.Float,
                       "Function": sympy.Function,
                       "Pow": sympy.Pow,
-                      "power": sympy.power,
+                      "power": sympy.Pow,
                       "exp": sympy.exp,
                       "log": sympy.log,
                       "sin": sympy.sin,
