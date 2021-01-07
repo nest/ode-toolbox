@@ -557,7 +557,7 @@ Citing ODE-toolbox
 
 If you use ODE-toolbox in your work, please cite it depending on the version you are using. (It is recommended to use the latest release version whenever possible.)
 
-For the latest version (2.1):
+For the versions 2.1 and 2.2:
 
 .. [1] Charl Linssen, Shraddha Jain, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.4245012 <https://doi.org/10.5281/zenodo.4245012>`__.
 
