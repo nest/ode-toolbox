@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
+from typing import Union
 
 from .sympy_printer import SympyPrinter
 from .system_of_shapes import SystemOfShapes
@@ -116,7 +117,7 @@ def _from_json_to_shapes(indict, options_dict):
     return shapes
 
 
-def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=False, debug=False):
+def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=False, log_level: Union[str, int]=logging.WARNING):
     """
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -127,7 +128,7 @@ def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
 
     global default_config
 
-    _init_logging(debug)
+    _init_logging(log_level)
 
     logging.info("ode-toolbox: analysing input:")
     logging.info(json.dumps(indict, indent=4, sort_keys=True))
@@ -258,28 +259,30 @@ def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
     return solvers_json, shape_sys, shapes
 
 
-def _init_logging(debug: bool):
+def _init_logging(log_level: Union[str, int]=logging.WARNING):
     """
     Initialise message logging.
 
-    :param debug: Set to :python:`True` to increase the verbosity.
+    :param log_level: Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
     """
     fmt = '%(levelname)s:%(message)s'
-    if debug:
-        logging.basicConfig(level=logging.DEBUG, format=fmt)
-    else:
-        logging.basicConfig(level=logging.INFO, format=fmt)
+    logging.basicConfig(format=fmt)
+    logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, debug: bool=False):
+def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, log_level: Union[str, int]=logging.WARNING):
     r"""
     The main entry point of the ODE-toolbox API.
 
     :param indict: Input dictionary for the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#input
     :param disable_stiffness_check: Whether to perform stiffness checking.
     :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
+    :param log_level: Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
 
     :return: The result of the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#output
     """
-    d, _, _ = _analysis(indict, disable_stiffness_check=disable_stiffness_check, disable_analytic_solver=disable_analytic_solver, debug=debug)
+    d, _, _ = _analysis(indict,
+                        disable_stiffness_check=disable_stiffness_check,
+                        disable_analytic_solver=disable_analytic_solver,
+                        log_level=log_level)
     return d

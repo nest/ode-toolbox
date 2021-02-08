@@ -30,6 +30,7 @@ import sys
 
 import odetoolbox
 from odetoolbox.shapes import MalformedInputException
+from odetoolbox import _init_logging
 
 
 if __name__ == "__main__":
@@ -39,10 +40,10 @@ if __name__ == "__main__":
     argparser.add_argument("infile", metavar='PATH', type=str, help="JSON input file path")
     argparser.add_argument("--disable-stiffness-check", action="store_true", help="If provided, disable stiffness check")
     argparser.add_argument("--disable-analytic-solver", action="store_true", help="If provided, disable generation of propagators")
-    argparser.add_argument("--debug", action="store_true", help="If provided, increase the verbosity.")
+    argparser.add_argument("--log-level", action="store", default="WARN", help="Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example \"INFO\" (more messages) or \"WARN\" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels")
     parsed_args = argparser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
+    _init_logging(log_level=parsed_args.log_level)
     logging.info("Reading input file...")
 
     if not os.path.isfile(parsed_args.infile):
@@ -60,7 +61,7 @@ if __name__ == "__main__":
         result = odetoolbox.analysis(indict,
                                      disable_stiffness_check=parsed_args.disable_stiffness_check,
                                      disable_analytic_solver=parsed_args.disable_analytic_solver,
-                                     debug=parsed_args.debug)
+                                     log_level=parsed_args.log_level)
     except MalformedInputException as e:
         logging.error("The input JSON file could not be parsed; error: " + e.message)
         sys.exit(1)
