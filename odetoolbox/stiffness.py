@@ -51,7 +51,7 @@ except ImportError as ie:
     PYGSL_AVAILABLE = False
 
 
-class StiffnessTester(object):
+class StiffnessTester:
 
     def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, stimuli=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=100., alias_spikes=False):
         r"""
