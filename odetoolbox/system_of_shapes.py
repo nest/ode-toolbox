@@ -206,11 +206,11 @@ class SystemOfShapes(object):
         return solver_dict
 
 
-    def generate_numeric_solver(self):
+    def generate_numeric_solver(self, state_variables=None):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
         """
-        update_expr = self.reconstitute_expr()
+        update_expr = self.reconstitute_expr(state_variables=state_variables)
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
 
@@ -221,9 +221,11 @@ class SystemOfShapes(object):
         return solver_dict
 
 
-    def reconstitute_expr(self):
+    def reconstitute_expr(self, state_variables=None):
         r"""
         Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + c).
+
+        Before returning, the expression is simplified using XXX [a custom series of steps...]
         """
         update_expr = {}
 
@@ -237,6 +239,11 @@ class SystemOfShapes(object):
                 logging.warning("Shape \"" + str(x) + "\" initialised with an expression that exceeds sympy simplification threshold")
             else:
                 update_expr[str(x)] = sympy.simplify(update_expr[str(x)])
+
+        for name, expr in update_expr.items():
+            update_expr[name] = sympy.logcombine(sympy.powsimp(sympy.expand(expr)))
+            collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
+            update_expr[name] = sympy.collect(update_expr[name], collect_syms)
 
         return update_expr
 

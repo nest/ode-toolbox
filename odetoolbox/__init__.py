@@ -171,7 +171,7 @@ def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
         numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
         logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
         sub_sys = shape_sys.get_sub_system(numeric_syms)
-        solver_json = sub_sys.generate_numeric_solver()
+        solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_)
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
         if not disable_stiffness_check:
             if not PYGSL_AVAILABLE:
