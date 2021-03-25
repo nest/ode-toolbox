@@ -26,7 +26,7 @@ import re
 import sympy
 import sympy.parsing.sympy_parser
 
-from .sympy_printer import _is_sympy_type
+from .sympy_printer import _is_sympy_type, _is_zero
 
 
 class MalformedInputException(Exception):
@@ -164,7 +164,7 @@ class Shape():
         :rtype: bool
         """
 
-        if self.diff_rhs_derivatives.is_zero:
+        if _is_zero(self.diff_rhs_derivatives):
             # trivial case: right-hand side is zero
             return True
 
@@ -173,7 +173,7 @@ class Shape():
             term_is_const = True
             for sym in all_symbols:
                 expr = sympy.diff(term, sym)
-                if not sympy.sympify(expr).is_zero:
+                if not _is_zero(sympy.sympify(expr)):
                     # this term is of the form "sym * expr", hence it cannot be a constant term
                     term_is_const = False
 
@@ -244,15 +244,15 @@ class Shape():
         for sym in all_symbols:
             for df in self.derivative_factors:
                 expr = sympy.diff(df, sym)
-                if not sympy.sympify(expr).is_zero:
+                if not _is_zero(sympy.sympify(expr)):
                     # the expression "sym * self.symbol" appears on right-hand side of this shape's definition
                     return False
 
             expr = sympy.diff(self.diff_rhs_derivatives, sym)
-            if not sympy.sympify(expr).is_zero:
+            if not _is_zero(sympy.sympify(expr)):
                 # the variable symbol `sym` appears on right-hand side of this expression. Check to see if it appears as a linear term by checking whether taking its derivative again, with respect to any known variable, yields 0
                 for sym_ in all_symbols:
-                    if not sympy.sympify(sympy.diff(expr, sym_)).is_zero:
+                    if not _is_zero(sympy.sympify(sympy.diff(expr, sym_))):
                         return False
 
         return True
@@ -435,7 +435,7 @@ class Shape():
 
         t_val = None
         for t_ in range(0, max_t):
-            if not definition.subs(time_symbol, t_).is_zero:
+            if not _is_zero(definition.subs(time_symbol, t_)):
                 t_val = t_
                 break
 
@@ -461,7 +461,7 @@ class Shape():
 
         derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(time_symbol, t_val)]
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
-        found_ode = sympy.simplify(diff_rhs_lhs).is_zero
+        found_ode = _is_zero(sympy.simplify(diff_rhs_lhs))
 
 
         #
@@ -490,7 +490,7 @@ class Shape():
                     for j in range(order):
                         X[i, j] = derivatives[j].subs(time_symbol, substitute)
 
-                if not sympy.simplify(sympy.det(X)).is_zero:
+                if not _is_zero(sympy.simplify(sympy.det(X))):
                     invertible = True
                     break
 
@@ -519,7 +519,7 @@ class Shape():
                 diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
             diff_rhs_lhs += derivatives[order]
 
-            if len(str(diff_rhs_lhs)) < Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD and sympy.simplify(diff_rhs_lhs).is_zero:
+            if len(str(diff_rhs_lhs)) < Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD and _is_zero(sympy.simplify(diff_rhs_lhs)):
                 found_ode = True
                 break
 
