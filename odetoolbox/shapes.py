@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
+from typing import Tuple
 
 import functools
 import logging
@@ -259,6 +260,24 @@ class Shape():
 
 
     @classmethod
+    def _parse_defining_expression(cls, s: str) -> Tuple[str, int, str]:
+        lhs, rhs = s.split("=")
+        lhs_ = re.findall(r"\S+", lhs)
+        if not len(lhs_) == 1:
+            raise MalformedInputException("Error while parsing expression \"" + s + "\"")
+        lhs = lhs_[0]
+        rhs = rhs.strip()
+        
+        symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", s)
+        if symbol_match is None:
+            raise MalformedInputException("Error while parsing symbol name in \"" + lhs + "\"")
+        symbol = symbol_match.group()
+
+        order = len(re.findall("'", lhs))
+        return symbol, order, rhs
+
+
+    @classmethod
     def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol="__d", _debug=False):
         r"""
         Create a :python:`Shape` instance from an input dictionary.
@@ -274,18 +293,7 @@ class Shape():
         if not indict["expression"].count("=") == 1:
             raise MalformedInputException("Expecting exactly one \"=\" symbol in defining expression: \"" + str(indict["expression"]) + "\"")
 
-        lhs, rhs = indict["expression"].split("=")
-        lhs_ = re.findall(r"\S+", lhs)
-        if not len(lhs_) == 1:
-            raise MalformedInputException("Error while parsing expression \"" + indict["expression"] + "\"")
-        lhs = lhs_[0]
-        rhs = rhs.strip()
-
-        symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", lhs)
-        if symbol_match is None:
-            raise MalformedInputException("Error while parsing symbol name in \"" + lhs + "\"")
-        symbol = symbol_match.group()
-        order = len(re.findall("'", lhs))
+        symbol, order, rhs = Shape._parse_defining_expression(indict["expression"])
 
         initial_values = {}
         if not "initial_value" in indict.keys() \

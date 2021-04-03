@@ -227,6 +227,9 @@ class SystemOfShapes(object):
 
         Before returning, the expression is simplified using XXX [a custom series of steps...]
         """
+        if state_variables is None:
+            state_variables = []
+
         update_expr = {}
 
         for row, x in enumerate(self.x_):
@@ -235,11 +238,13 @@ class SystemOfShapes(object):
                 update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.c_[row]) + ")"
             update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
+            # skip simplification for long expressions
             if len(str(update_expr[str(x)])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
                 logging.warning("Shape \"" + str(x) + "\" initialised with an expression that exceeds sympy simplification threshold")
             else:
                 update_expr[str(x)] = sympy.simplify(update_expr[str(x)])
 
+        # custom simplification steps (simplify() is not all that great)
         for name, expr in update_expr.items():
             update_expr[name] = sympy.logcombine(sympy.powsimp(sympy.expand(expr)))
             collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
