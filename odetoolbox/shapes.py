@@ -267,7 +267,7 @@ class Shape():
             raise MalformedInputException("Error while parsing expression \"" + s + "\"")
         lhs = lhs_[0]
         rhs = rhs.strip()
-        
+
         symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", s)
         if symbol_match is None:
             raise MalformedInputException("Error while parsing symbol name in \"" + lhs + "\"")

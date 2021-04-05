@@ -117,8 +117,24 @@ def _from_json_to_shapes(indict, options_dict):
     return shapes
 
 
+def _find_variable_definition(indict, name: str, order: int) -> Optional[str]:
+    r"""Find the definition (as a string in the input dictionary) of variable named ``name`` with order ``order``, and return it as a string. Return None if a definition by that name and order could not be found."""
+    for dyn in indict["dynamics"]:
+        if "expression" in dyn.keys():
+            exprs = [dyn["expression"]]
+        elif "expressions" in dyn.keys():
+            exprs = dyn["expressions"]
+
+        for expr in exprs:
+            name_, order_, rhs = Shape._parse_defining_expression(expr)
+            if name_ == name and order_ == order:
+                return rhs
+
+    return None
+
+
 def _get_all_first_order_variables(indict) -> Iterable[str]:
-    """Return a list of variable names, containing those variables that were defined as a first-order ordinary differential equation in the input."""
+    r"""Return a list of variable names, containing those variables that were defined as a first-order ordinary differential equation in the input."""
     variable_names = []
 
     for dyn in indict["dynamics"]:
@@ -136,7 +152,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
 
 
 def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, no_mangling: bool=False, log_level: Union[str, int]=logging.WARNING):
-    """
+    r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
     For internal use only!
@@ -261,21 +277,6 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
     #
     #   convert expressions from sympy to string
     #
-    
-    def find_variable_definition(indict, name: str, order: int) -> Optional[str]:
-        """Find the definition (as a string in the input dictionary) of variable named ``name`` with order ``order``, and return it as a string. Return None if a definition by that name and order could not be found."""
-        for dyn in indict["dynamics"]:
-            if "expression" in dyn.keys():
-                exprs = [dyn["expression"]]
-            elif "expressions" in dyn.keys():
-                exprs = dyn["expressions"]
-
-            for expr in exprs:
-                name_, order_, rhs = Shape._parse_defining_expression(expr)
-                if name_ == name and order_ == order:
-                    return rhs
-
-        return None
 
     if no_mangling:
         if type(no_mangling) is bool:
@@ -295,7 +296,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
             for sym, expr in solver_json["update_expressions"].items():
                 if no_mangling and sym in no_mangling:
                     logging.info("Unmangling variable \"" + sym + "\"")
-                    solver_json["update_expressions"][sym] = find_variable_definition(indict, sym, order=1).replace("'", options_dict["differential_order_symbol"])
+                    solver_json["update_expressions"][sym] = _find_variable_definition(indict, sym, order=1).replace("'", options_dict["differential_order_symbol"])
                 else:
                     solver_json["update_expressions"][sym] = str(expr)
 
