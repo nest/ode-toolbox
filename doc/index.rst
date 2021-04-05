@@ -131,9 +131,9 @@ The following flags exist:
    * - ``disable_stiffness_check``
      - False
      - Set to True to disable stiffness check.
-   * - ``debug``
-     - False
-     - Set to True to increase the verbosity.
+   * - ``log_level``
+     - :python:`logging.WARN`
+     - Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
 
 Input
 -----
