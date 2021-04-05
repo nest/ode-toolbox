@@ -151,7 +151,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
-def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, no_mangling: bool=False, log_level: Union[str, int]=logging.WARNING):
+def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, no_mangling: bool=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -205,7 +205,8 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
         numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
         logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
         sub_sys = shape_sys.get_sub_system(numeric_syms)
-        solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_)
+        solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_,
+                                                      simplify_expr=simplify_expr)
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
         if not disable_stiffness_check:
             if not PYGSL_AVAILABLE:

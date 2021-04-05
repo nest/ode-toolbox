@@ -196,11 +196,11 @@ class SystemOfShapes:
         return solver_dict
 
 
-    def generate_numeric_solver(self, state_variables=None):
+    def generate_numeric_solver(self, state_variables=None, simplify_expr="sympy.simplify(expr)"):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
         """
-        update_expr = self.reconstitute_expr(state_variables=state_variables)
+        update_expr = self.reconstitute_expr(state_variables=state_variables, simplify_expr=simplify_expr)
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
 
@@ -211,11 +211,11 @@ class SystemOfShapes:
         return solver_dict
 
 
-    def reconstitute_expr(self, state_variables=None):
+    def reconstitute_expr(self, state_variables=None, simplify_expr="sympy.simplify(expr)"):
         r"""
         Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + c).
 
-        Before returning, the expression is simplified using XXX [a custom series of steps...]
+        Before returning, the expression is simplified using a custom series of steps, passed via the ``simplify_expr`` argument (see the ODE-toolbox documentation for more details).
         """
         if state_variables is None:
             state_variables = []
@@ -235,8 +235,9 @@ class SystemOfShapes:
                 update_expr[str(x)] = sympy.simplify(update_expr[str(x)])
 
         # custom simplification steps (simplify() is not all that great)
+        _simplify_expr = compile(simplify_expr, filename="<string>", mode="eval")
         for name, expr in update_expr.items():
-            update_expr[name] = sympy.logcombine(sympy.powsimp(sympy.expand(expr)))
+            update_expr[name] = eval(_simplify_expr)
             collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
             update_expr[name] = sympy.collect(update_expr[name], collect_syms)
 
