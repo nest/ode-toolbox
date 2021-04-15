@@ -486,7 +486,7 @@ Several example input files can be found under ``tests/*.json``. Some highlights
 -  `Lorenz attractor <https://github.com/nest/ode-toolbox/blob/master/tests/lorenz_attractor.json>`__
 -  `Morris-Lecar neuron model <https://github.com/nest/ode-toolbox/blob/master/tests/morris_lecar.json>`__
 -  `Integrate-and-fire neuron with alpha-kernel postsynaptic currents <https://github.com/nest/ode-toolbox/blob/master/tests/mixed_analytic_numerical_with_stiffness.json>`__, including Poisson spike generator for stiffness test
--  `Integrate-and-fire neuron with alpha-kernel postsynaptic conductances <https://github.com/nest/ode-toolbox/blob/master/tests/iaf_cond_alpha_odes_stiff.json>`__
+-  `Integrate-and-fire neuron with alpha-kernel postsynaptic conductances <https://github.com/nest/ode-toolbox/blob/master/tests/iaf_cond_alpha.json>`__
 -  `Canonical, two-dimensional stiff system <https://github.com/nest/ode-toolbox/blob/master/tests/stiff_system.json>`__ Example 11.57 from Dahmen, W., and Reusken, A. (2005). Numerik fuer Naturwissenschaftler. Berlin: Springer
 
 
