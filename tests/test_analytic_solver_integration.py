@@ -205,8 +205,9 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         #   timeseries using ode-toolbox generated propagators
         #
 
+        print("Starting ODE-toolbox analysis...")
         indict = open_json("test_integration.json")
-        solver_dict = odetoolbox.analysis(indict)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, log_level="DEBUG")
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1

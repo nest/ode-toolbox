@@ -295,8 +295,11 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
     #
 
     if type(preserve_expressions) is bool:
-        # grab all first-order variables
-        preserve_expressions = _get_all_first_order_variables(indict)
+        if preserve_expressions:
+            # grab all first-order variables
+            preserve_expressions = _get_all_first_order_variables(indict)
+        else:
+            preserve_expressions = []
     elif isinstance(preserve_expressions, Iterable):
         # check that all variables for which preserve_expression was requested were defined as first-order ODE
         first_order_vars = _get_all_first_order_variables(indict)
