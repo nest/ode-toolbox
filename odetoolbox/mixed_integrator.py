@@ -476,7 +476,6 @@ class MixedIntegrator(Integrator):
         try:
             # return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]	# non-wrapped version
             _ret = [self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_]
-
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")
