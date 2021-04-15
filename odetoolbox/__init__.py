@@ -166,7 +166,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
-def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: bool=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
+def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -294,18 +294,17 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
     #   convert expressions from sympy to string
     #
 
-    if preserve_expressions:
-        if type(preserve_expressions) is bool:
-            # grab all first-order variables
-            preserve_expressions = _get_all_first_order_variables(indict)
-        elif isinstance(preserve_expressions, Iterable):
-            # check that all variables for which preserve_expression was requested were defined as first-order ODE
-            first_order_vars = _get_all_first_order_variables(indict)
-            for preserve_expressions_var in preserve_expressions:
-                if not preserve_expressions_var in first_order_vars:
-                    raise MalformedInputException("Requested to preserve expression of variable \"" + preserve_expressions_var + "\", but it was not defined as a first-order ODE")
-        else:
-            raise MalformedInputException("``preserve_expressions`` parameter should be either a boolean or a list of strings corresponding to variable names")
+    if type(preserve_expressions) is bool:
+        # grab all first-order variables
+        preserve_expressions = _get_all_first_order_variables(indict)
+    elif isinstance(preserve_expressions, Iterable):
+        # check that all variables for which preserve_expression was requested were defined as first-order ODE
+        first_order_vars = _get_all_first_order_variables(indict)
+        for preserve_expressions_var in preserve_expressions:
+            if not preserve_expressions_var in first_order_vars:
+                raise MalformedInputException("Requested to preserve expression of variable \"" + preserve_expressions_var + "\", but it was not defined as a first-order ODE")
+    else:
+        raise MalformedInputException("``preserve_expressions`` parameter should be either a boolean or a list of strings corresponding to variable names")
 
     for solver_json in solvers_json:
         if "update_expressions" in solver_json.keys():
@@ -337,14 +336,14 @@ def _init_logging(log_level: Union[str, int]=logging.WARNING):
     logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: bool=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
+def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
     r"""
     The main entry point of the ODE-toolbox API.
 
     :param indict: Input dictionary for the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#input
     :param disable_stiffness_check: Whether to perform stiffness checking.
     :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
-    :param preserve_expressions: Set to True to disable internal rewriting of expressions, and return same output as input expression where possible.
+    :param preserve_expressions: Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
     :param log_level: Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
 
     :return: The result of the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#output
