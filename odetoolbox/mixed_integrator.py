@@ -121,13 +121,19 @@ class MixedIntegrator(Integrator):
 
         for sym, expr in self._update_expr.items():
             try:
-                self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
+                self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals),
+                                                                                   args=self.all_variable_symbols,
+                                                                                   backend="cython",
+                                                                                   helpers=Shape._sympy_autowrap_helpers)
             except CodeGenArgumentListError:
                 raise ParametersIncompleteException("Integration not possible because numerical values were not specified for all parameters.")
         self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=np.object)
         for i in range(self.symbolic_jacobian_.shape[0]):
             for j in range(self.symbolic_jacobian_.shape[1]):
-                self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals), args=self.all_variable_symbols, backend="cython")
+                self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals),
+                                                                                         args=self.all_variable_symbols,
+                                                                                         backend="cython",
+                                                                                         helpers=Shape._sympy_autowrap_helpers)
 
 
         #
@@ -148,7 +154,6 @@ class MixedIntegrator(Integrator):
 
         :return: Average and minimal step size, and elapsed wall clock time.
         """
-
         if initial_values is None:
             initial_values = {}
 
@@ -317,6 +322,7 @@ class MixedIntegrator(Integrator):
                         t_next_spike = all_spike_times[idx_next_spike]
                     else:
                         t_next_spike = np.inf
+
                     while t_next_spike <= t:
                         syms_next_spike = all_spike_times_sym[idx_next_spike]
                         for sym in syms_next_spike:
@@ -470,6 +476,7 @@ class MixedIntegrator(Integrator):
         try:
             # return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]	# non-wrapped version
             _ret = [self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_]
+
         except Exception as e:
             print("E==>", type(e).__name__ + ": " + str(e))
             print("     Local parameters at time of failure:")

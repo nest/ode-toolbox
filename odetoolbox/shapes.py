@@ -78,11 +78,18 @@ class Shape():
                       "acosh": sympy.acosh,
                       "tanh": sympy.tanh,
                       "atanh": sympy.atanh,
+                      "min": sympy.Min,
+                      "max": sympy.Max,
+                      "Heaviside": sympy.Heaviside,
                       "e": sympy.exp(1),
                       "E": sympy.exp(1),
                       "t": sympy.Symbol("t"),
                       "DiracDelta": sympy.DiracDelta}
 
+    # cython backend (used by sympy autowrap()) cannot handle these functions; need to provide alternative implementation
+    _sympy_autowrap_helpers = [("Min", (abs(sympy.symbols("x") + sympy.symbols("y")) - abs(sympy.symbols("x") - sympy.symbols("y"))) / 2, [sympy.symbols("x"), sympy.symbols("y")]),
+                               ("Max", (abs(sympy.symbols("x") + sympy.symbols("y")) + abs(sympy.symbols("x") - sympy.symbols("y"))) / 2, [sympy.symbols("x"), sympy.symbols("y")]),
+                               ("Heaviside", (sympy.symbols("x") + abs(sympy.symbols("x"))) / (2 * abs(sympy.symbols("x")) + 1E-300), [sympy.symbols("x")])]
 
     def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), lower_bound=None, upper_bound=None, derivative_symbol="__d", debug=False):
         r"""

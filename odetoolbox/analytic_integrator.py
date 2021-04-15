@@ -109,7 +109,10 @@ class AnalyticIntegrator(Integrator):
 
         self.update_expressions_wrapped = {}
         for k, v in self.update_expressions.items():
-            self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v, args=[sympy.Symbol("__h")] + self.all_variable_symbols, backend="cython")
+            self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v,
+                                                                                   args=[sympy.Symbol("__h")] + self.all_variable_symbols,
+                                                                                   backend="cython",
+                                                                                   helpers=Shape._sympy_autowrap_helpers)
 
 
     def get_all_variable_symbols(self):

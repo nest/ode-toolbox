@@ -43,6 +43,21 @@ if PYGSL_AVAILABLE:
     from .stiffness import StiffnessTester
 
 try:
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import matplotlib.pyplot as plt
+
+    def update_matplotlib_log_level():
+        log_level = "WARNING"
+        logging.getLogger("matplotlib.colorbar").setLevel(log_level)
+        logging.getLogger("matplotlib.font_manager").setLevel(log_level)
+        logging.getLogger("matplotlib.ticker").setLevel(log_level)
+
+    update_matplotlib_log_level()
+except ImportError:
+    INTEGRATOR_DEBUG_PLOT = False
+
+try:
     import graphviz
     PLOT_DEPENDENCY_GRAPH = True
 except ImportError:
@@ -151,7 +166,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
-def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, no_mangling: bool=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
+def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: bool=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -279,24 +294,24 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
     #   convert expressions from sympy to string
     #
 
-    if no_mangling:
-        if type(no_mangling) is bool:
+    if preserve_expressions:
+        if type(preserve_expressions) is bool:
             # grab all first-order variables
-            no_mangling = _get_all_first_order_variables(indict)
-        elif isinstance(no_mangling, Iterable):
-            # check that all variables for which no mangling was requested were defined as first-order ODE
+            preserve_expressions = _get_all_first_order_variables(indict)
+        elif isinstance(preserve_expressions, Iterable):
+            # check that all variables for which preserve_expression was requested were defined as first-order ODE
             first_order_vars = _get_all_first_order_variables(indict)
-            for no_mangling_var in no_mangling:
-                if not no_mangling_var in first_order_vars:
-                    raise MalformedInputException("Requested to disable expression mangling for variable \"" + no_mangling_var + "\", but it was not defined as a first-order ODE")
+            for preserve_expressions_var in preserve_expressions:
+                if not preserve_expressions_var in first_order_vars:
+                    raise MalformedInputException("Requested to preserve expression of variable \"" + preserve_expressions_var + "\", but it was not defined as a first-order ODE")
         else:
-            raise MalformedInputException("``no_mangling`` parameter should be either a boolean or a list of strings corresponding to variable names")
+            raise MalformedInputException("``preserve_expressions`` parameter should be either a boolean or a list of strings corresponding to variable names")
 
     for solver_json in solvers_json:
         if "update_expressions" in solver_json.keys():
             for sym, expr in solver_json["update_expressions"].items():
-                if no_mangling and sym in no_mangling:
-                    logging.info("Unmangling variable \"" + sym + "\"")
+                if preserve_expressions and sym in preserve_expressions:
+                    logging.info("Preserving expression for variable \"" + sym + "\"")
                     solver_json["update_expressions"][sym] = _find_variable_definition(indict, sym, order=1).replace("'", options_dict["differential_order_symbol"])
                 else:
                     solver_json["update_expressions"][sym] = str(expr)
@@ -322,14 +337,14 @@ def _init_logging(log_level: Union[str, int]=logging.WARNING):
     logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, no_mangling: bool=False, log_level: Union[str, int]=logging.WARNING):
+def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: bool=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
     r"""
     The main entry point of the ODE-toolbox API.
 
     :param indict: Input dictionary for the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#input
     :param disable_stiffness_check: Whether to perform stiffness checking.
     :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
-    :param no_mangling: Set to True to disable internal rewriting of expressions, and return same output as input expression where possible.
+    :param preserve_expressions: Set to True to disable internal rewriting of expressions, and return same output as input expression where possible.
     :param log_level: Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
 
     :return: The result of the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#output
@@ -337,6 +352,6 @@ def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solve
     d, _, _ = _analysis(indict,
                         disable_stiffness_check=disable_stiffness_check,
                         disable_analytic_solver=disable_analytic_solver,
-                        no_mangling=no_mangling,
+                        preserve_expressions=preserve_expressions,
                         log_level=log_level)
     return d

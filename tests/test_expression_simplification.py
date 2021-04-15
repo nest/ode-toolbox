@@ -1,0 +1,53 @@
+#
+# test_expression_simplification.py
+#
+# This file is part of the NEST ODE toolbox.
+#
+# Copyright (C) 2017 The NEST Initiative
+#
+# The NEST ODE toolbox is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 2 of
+# the License, or (at your option) any later version.
+#
+# The NEST ODE toolbox is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import numpy as np
+import pytest
+from tests.test_mixed_integrator_numeric import _run_simulation
+
+
+try:
+    import pygsl.odeiv as odeiv
+    PYGSL_AVAILABLE = True
+except ImportError as ie:
+    PYGSL_AVAILABLE = False
+
+
+@pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Need GSL integrator to perform test")
+def test_expression_simplification():
+    """
+    Test expression simplification features: run ODE-toolbox for various combinations of ``--preserve_expression`` and ``--simplify_expr``, and check that numerical simulation results are the same, even though the returned update expressions could be different.
+
+    Note that this test uses all-numeric (no analytic part) integration.
+    """
+    opts = [(True, "sympy.simplify(expr)"),
+            (False, "sympy.simplify(expr)"),
+            (True, "sympy.logcombine(sympy.powsimp(sympy.expand(expr)))")]
+    ts = {}
+    for preserve_expressions, simplify_expr in opts:
+        print("Running test with preserve_expressions = " + str(preserve_expressions) + ", simplify_expr = " + str(simplify_expr))
+        _, _, _, _, t_log, _, y_log, _, analysis_json = _run_simulation("eiaf_cond_alpha.json", alias_spikes=False, integrator=odeiv.step_rk4, preserve_expressions=preserve_expressions, simplify_expr=simplify_expr)
+        ts[(preserve_expressions, simplify_expr)] = y_log
+        print("\t-> expr = " + analysis_json[0]["update_expressions"]["V_m"])
+
+    x_ref = list(ts.values())[0]
+    for x in ts.values():
+        np.testing.assert_allclose(x, x_ref)

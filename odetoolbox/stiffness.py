@@ -39,8 +39,6 @@ except ImportError:
     STIFFNESS_DEBUG_PLOT = False
 
 import sympy
-import sympy.utilities.autowrap
-import time
 
 try:
     import pygsl.odeiv as odeiv
