@@ -157,6 +157,6 @@ def test_mixed_integrator_numeric(**kwargs):
                              title_snip=" alias spikes: " + str(alias_spikes) + ", " + str(integrator))
 
         if alias_spikes:
-            assert upper_bound_crossed
-        else:
             assert not upper_bound_crossed
+        else:
+            assert upper_bound_crossed

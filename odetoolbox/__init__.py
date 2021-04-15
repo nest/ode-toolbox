@@ -166,7 +166,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
-def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
+def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -221,7 +221,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
         logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
         sub_sys = shape_sys.get_sub_system(numeric_syms)
         solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_,
-                                                      simplify_expr=simplify_expr)
+                                                      simplify_expression=simplify_expression)
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
         if not disable_stiffness_check:
             if not PYGSL_AVAILABLE:
@@ -339,7 +339,7 @@ def _init_logging(log_level: Union[str, int]=logging.WARNING):
     logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expr: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
+def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
     r"""
     The main entry point of the ODE-toolbox API.
 
@@ -355,5 +355,6 @@ def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solve
                         disable_stiffness_check=disable_stiffness_check,
                         disable_analytic_solver=disable_analytic_solver,
                         preserve_expressions=preserve_expressions,
+                        simplify_expression=simplify_expression,
                         log_level=log_level)
     return d

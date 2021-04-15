@@ -34,7 +34,7 @@ except ImportError as ie:
 @pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Need GSL integrator to perform test")
 def test_expression_simplification():
     """
-    Test expression simplification features: run ODE-toolbox for various combinations of ``--preserve_expression`` and ``--simplify_expr``, and check that numerical simulation results are the same, even though the returned update expressions could be different.
+    Test expression simplification features: run ODE-toolbox for various combinations of ``preserve_expression`` and ``simplify_expression``, and check that numerical simulation results are the same, even though the returned update expressions could be different.
 
     Note that this test uses all-numeric (no analytic part) integration.
     """
@@ -42,10 +42,10 @@ def test_expression_simplification():
             (False, "sympy.simplify(expr)"),
             (True, "sympy.logcombine(sympy.powsimp(sympy.expand(expr)))")]
     ts = {}
-    for preserve_expressions, simplify_expr in opts:
-        print("Running test with preserve_expressions = " + str(preserve_expressions) + ", simplify_expr = " + str(simplify_expr))
-        _, _, _, _, t_log, _, y_log, _, analysis_json = _run_simulation("eiaf_cond_alpha.json", alias_spikes=False, integrator=odeiv.step_rk4, preserve_expressions=preserve_expressions, simplify_expr=simplify_expr)
-        ts[(preserve_expressions, simplify_expr)] = y_log
+    for preserve_expressions, simplify_expression in opts:
+        print("Running test with preserve_expressions = " + str(preserve_expressions) + ", simplify_expression = " + str(simplify_expression))
+        _, _, _, _, t_log, _, y_log, _, analysis_json = _run_simulation("eiaf_cond_alpha.json", alias_spikes=False, integrator=odeiv.step_rk4, preserve_expressions=preserve_expressions, simplify_expression=simplify_expression)
+        ts[(preserve_expressions, simplify_expression)] = y_log
         print("\t-> expr = " + analysis_json[0]["update_expressions"]["V_m"])
 
     x_ref = list(ts.values())[0]

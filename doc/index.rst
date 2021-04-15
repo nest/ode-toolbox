@@ -134,7 +134,7 @@ The following flags exist:
    * - ``preserve_expressions``
      - False
      - Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
-   * - ``simplify_expr``
+   * - ``simplify_expression``
      - ``"sympy.simplify(expr)"``
      - For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are ``eval()``ed in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"``.
    * - ``log_level``
