@@ -31,9 +31,6 @@ jobs:
           tar -xzf gsl-2.5.tar.gz
           cd gsl-2.5
           ./configure && make && sudo make install
-          cd ..
-          cd ode-toolbox
-          export LD_LIBRARY_PATH=/usr/local/lib
 
       - name: Install Python dependencies
         run: |
