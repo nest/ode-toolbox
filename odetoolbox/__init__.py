@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
-from typing import Iterable, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from .sympy_printer import SympyPrinter
 from .system_of_shapes import SystemOfShapes
@@ -107,7 +107,7 @@ def _read_global_config(indict, default_config):
     return options_dict
 
 
-def _from_json_to_shapes(indict, options_dict):
+def _from_json_to_shapes(indict, options_dict) -> List[Shape]:
     r"""
     Process the input, construct Shape instances.
 
@@ -166,7 +166,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
-def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
+def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -184,8 +184,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
 
     if "dynamics" not in indict:
         logging.info("Warning: empty input (no dynamical equations found); returning empty output")
-        solvers_json = {}
-        return solvers_json
+        return [], SystemOfShapes.from_shapes([]), []
 
     options_dict = _read_global_config(indict, default_config)
     shapes = _from_json_to_shapes(indict, options_dict)
@@ -228,7 +227,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
                 raise Exception("Stiffness test requested, but PyGSL not available")
 
             logging.info("Performing stiffness test...")
-            kwargs = {}
+            kwargs = {}   # type: Dict[str, Any]
             if "options" in indict.keys() and "random_seed" in indict["options"].keys():
                 random_seed = int(indict["options"]["random_seed"])
                 assert random_seed >= 0, "Random seed needs to be a non-negative integer"
@@ -314,7 +313,9 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
             for sym, expr in solver_json["update_expressions"].items():
                 if preserve_expressions and sym in preserve_expressions:
                     logging.info("Preserving expression for variable \"" + sym + "\"")
-                    solver_json["update_expressions"][sym] = _find_variable_definition(indict, sym, order=1).replace("'", options_dict["differential_order_symbol"])
+                    var_def_str = _find_variable_definition(indict, sym, order=1)
+                    assert var_def_str is not None
+                    solver_json["update_expressions"][sym] = var_def_str.replace("'", options_dict["differential_order_symbol"])
                 else:
                     solver_json["update_expressions"][sym] = str(expr)
 
@@ -339,7 +340,7 @@ def _init_logging(log_level: Union[str, int]=logging.WARNING):
     logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING):
+def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING) -> List[Dict]:
     r"""
     The main entry point of the ODE-toolbox API.
 

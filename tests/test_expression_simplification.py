@@ -27,7 +27,7 @@ from tests.test_mixed_integrator_numeric import _run_simulation
 try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
-except ImportError as ie:
+except ImportError:
     PYGSL_AVAILABLE = False
 
 

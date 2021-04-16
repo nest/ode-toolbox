@@ -19,13 +19,10 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from inspect import getmembers
 import logging
-import math
 import numpy as np
 import numpy.random
 import os
-import random
 import sympy
 import sympy.utilities.autowrap
 from sympy.utilities.autowrap import CodeGenArgumentListError
@@ -34,7 +31,6 @@ import time
 from .analytic_integrator import AnalyticIntegrator
 from .integrator import Integrator
 from .shapes import Shape
-from .spike_generator import SpikeGenerator
 from .sympy_printer import _is_sympy_type
 
 
@@ -258,7 +254,7 @@ class MixedIntegrator(Integrator):
                             self.analytic_integrator.disable_cache_update()
 
                         t, h_suggested, y = evolve.apply(t, t_target_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
-                    except FloatingPointError as e:
+                    except FloatingPointError:
                         msg = "Failure of numerical integrator (method: %s) at t=%.2f with requested timestep = %.2f (y = %s)" % (gsl_stepper.name(), t, h_requested, y)
                         raise FloatingPointError(msg)
 

@@ -23,7 +23,6 @@
 import json
 import os
 import pytest
-import unittest
 import sympy
 import numpy as np
 
@@ -35,22 +34,14 @@ try:
 except ImportError:
     INTEGRATION_TEST_DEBUG_PLOTS = False
 
-import odetoolbox
-from odetoolbox.mixed_integrator import MixedIntegrator
-
-from math import e
-from sympy import exp, sympify
-import sympy.parsing.sympy_parser
-
-import scipy
-import scipy.special
-import scipy.linalg
-
 try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
-except ImportError as ie:
+except ImportError:
     PYGSL_AVAILABLE = False
+
+import odetoolbox
+from odetoolbox.mixed_integrator import MixedIntegrator
 
 
 def _open_json(fname):
@@ -90,19 +81,9 @@ def _run_simulation(fn, alias_spikes, integrator, params=None, **kwargs):
     h = 5E-3   # very big to see spike aliasing effects better [s]
     T = 50E-3  # [s]
 
-    # neuron parameters
-    tau = 20E-3    # [s]
-    tau_syn = 5E-3    # [s]
-    c_m = 1E-6    # [F]
-
     initial_values = {"g_ex__d": 0., "g_in__d": 0.}    # optionally override initial values
-    spike_times = {"g_ex__d": np.array([10E-3]), "g_in__d": np.array([6E-3])}
-
-    # simulation parameters
-    N = int(np.ceil(T / h) + 1)
-    timevec = np.linspace(0., T, N)
-
     initial_values = {sympy.Symbol(k): v for k, v in initial_values.items()}
+    spike_times = {"g_ex__d": np.array([10E-3]), "g_in__d": np.array([6E-3])}
 
     indict = _open_json(fn)
     analysis_json, shape_sys, shapes = odetoolbox._analysis(indict, disable_stiffness_check=True, disable_analytic_solver=True, log_level="DEBUG", **kwargs)

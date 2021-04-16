@@ -20,25 +20,15 @@
 #
 
 import logging
-import math
 import numpy as np
 import numpy.random
-import random
+import sympy
 
 from .mixed_integrator import MixedIntegrator
 from .mixed_integrator import ParametersIncompleteException
 from .shapes import Shape
 from .spike_generator import SpikeGenerator
 
-try:
-    import matplotlib as mpl
-    mpl.use('Agg')
-    import matplotlib.pyplot as plt
-    STIFFNESS_DEBUG_PLOT = True
-except ImportError:
-    STIFFNESS_DEBUG_PLOT = False
-
-import sympy
 
 try:
     import pygsl.odeiv as odeiv

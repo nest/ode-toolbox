@@ -23,17 +23,10 @@ import json
 import os
 import unittest
 import sympy
+import sympy.parsing.sympy_parser
 
 from .context import odetoolbox
 from odetoolbox.shapes import Shape
-import sympy.parsing.sympy_parser
-
-from math import e
-from sympy import exp, sympify
-
-import scipy
-import scipy.special
-import scipy.linalg
 
 try:
     import pygsl

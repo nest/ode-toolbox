@@ -38,13 +38,6 @@ import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
 from odetoolbox.spike_generator import SpikeGenerator
 
-from math import e
-from sympy import exp, sympify
-
-import scipy
-import scipy.special
-import scipy.linalg
-
 
 def open_json(fname):
     absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
@@ -59,8 +52,6 @@ class TestAnalyticIntegrator(unittest.TestCase):
     """
 
     def test_analytic_integrator_iaf_psc_alpha(self):
-        debug = True
-
         h = 1E-3    # [s]
         T = 100E-3    # [s]
 

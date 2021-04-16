@@ -23,11 +23,6 @@ import json
 import os
 import unittest
 import pytest
-import sympy
-import sympy.parsing.sympy_parser
-
-
-from .context import odetoolbox
 
 try:
     import pygsl
@@ -35,13 +30,14 @@ try:
 except ImportError:
     PYGSL_AVAILABLE = False
 
+from .context import odetoolbox
+
 
 def open_json(fname):
     absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
     with open(absfname) as infile:
         indict = json.load(infile)
     return indict
-
 
 
 class TestAnalysisMixedAnalyticNumerical(unittest.TestCase):

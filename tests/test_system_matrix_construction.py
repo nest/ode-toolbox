@@ -23,20 +23,9 @@ import json
 import os
 import unittest
 import sympy
-import sympy.parsing.sympy_parser
 
-import numpy as np
-
-from .context import odetoolbox
 from odetoolbox import _from_json_to_shapes, default_config
 from odetoolbox.system_of_shapes import SystemOfShapes
-
-from math import e
-from sympy import exp, sympify
-
-import scipy
-import scipy.special
-import scipy.linalg
 
 
 def open_json(fname):

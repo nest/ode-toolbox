@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
-from typing import Tuple
+from typing import List, Tuple
 
 import functools
 import logging
@@ -202,12 +202,11 @@ class Shape():
         return self.initial_values[sym]
 
 
-    def get_state_variables(self, derivative_symbol="'"):
+    def get_state_variables(self, derivative_symbol="'") -> List[sympy.Symbol]:
         r"""
         Get all variable symbols for this shape, ordered according to derivative order: :python:`[sym, dsym/dt, d^2sym/dt^2, ...]`
 
         :return: all_symbols
-        :rtype: list of sympy.Symbol
         """
         all_symbols = []
 
