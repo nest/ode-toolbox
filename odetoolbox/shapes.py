@@ -267,6 +267,17 @@ class Shape():
 
     @classmethod
     def _parse_defining_expression(cls, s: str) -> Tuple[str, int, str]:
+        r"""Parse a defining expression, for example, if the ODE-toolbox JSON input file contains the snippet:
+
+        ::
+           {
+               "expression": "h' = -g / tau**2 - 2 * h / tau"
+           }
+
+        then the corresponding defining expression is ``"h' = -g / tau**2 - 2 * h / tau"``.
+
+        This function parses that string and returns the variable name (``h``), the derivative order (1) and the right-hand side expression (``-g / tau**2 - 2 * h / tau"``).
+        """
         lhs, rhs = s.split("=")
         lhs_ = re.findall(r"\S+", lhs)
         if not len(lhs_) == 1:
