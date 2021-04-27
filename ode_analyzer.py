@@ -22,6 +22,8 @@
 
 from __future__ import print_function
 
+from typing import Iterable
+
 import argparse
 import json
 import logging
@@ -40,8 +42,13 @@ if __name__ == "__main__":
     argparser.add_argument("infile", metavar='PATH', type=str, help="JSON input file path")
     argparser.add_argument("--disable-stiffness-check", action="store_true", help="If provided, disable stiffness check")
     argparser.add_argument("--disable-analytic-solver", action="store_true", help="If provided, disable generation of propagators")
+    argparser.add_argument("--preserve-expressions", action="store", nargs="*", default=False, help="Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Can only apply to variables specified as first-order differential equations.")
+    argparser.add_argument("--simplify-expression", action="store", default="sympy.simplify(expr)", help="For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are ``eval()``ed in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``\"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))\"``.")
     argparser.add_argument("--log-level", action="store", default="WARN", help="Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example \"INFO\" (more messages) or \"WARN\" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels")
     parsed_args = argparser.parse_args()
+
+    if isinstance(parsed_args.preserve_expressions, Iterable) and len(parsed_args.preserve_expressions) == 0:
+        parsed_args.preserve_expressions = True
 
     _init_logging(log_level=parsed_args.log_level)
     logging.info("Reading input file...")
@@ -61,6 +68,8 @@ if __name__ == "__main__":
         result = odetoolbox.analysis(indict,
                                      disable_stiffness_check=parsed_args.disable_stiffness_check,
                                      disable_analytic_solver=parsed_args.disable_analytic_solver,
+                                     preserve_expressions=parsed_args.preserve_expressions,
+                                     simplify_expression=parsed_args.simplify_expression,
                                      log_level=parsed_args.log_level)
     except MalformedInputException as e:
         logging.error("The input JSON file could not be parsed; error: " + e.message)

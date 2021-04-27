@@ -18,11 +18,11 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
-from typing import Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from .sympy_printer import SympyPrinter
 from .system_of_shapes import SystemOfShapes
-from .shapes import Shape
+from .shapes import MalformedInputException, Shape
 
 import copy
 import json
@@ -41,6 +41,21 @@ except ImportError as ie:
 
 if PYGSL_AVAILABLE:
     from .stiffness import StiffnessTester
+
+try:
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import matplotlib.pyplot as plt
+
+    def update_matplotlib_log_level():
+        log_level = "WARNING"
+        logging.getLogger("matplotlib.colorbar").setLevel(log_level)
+        logging.getLogger("matplotlib.font_manager").setLevel(log_level)
+        logging.getLogger("matplotlib.ticker").setLevel(log_level)
+
+    update_matplotlib_log_level()
+except ImportError:
+    INTEGRATOR_DEBUG_PLOT = False
 
 try:
     import graphviz
@@ -92,7 +107,7 @@ def _read_global_config(indict, default_config):
     return options_dict
 
 
-def _from_json_to_shapes(indict, options_dict):
+def _from_json_to_shapes(indict, options_dict) -> List[Shape]:
     r"""
     Process the input, construct Shape instances.
 
@@ -117,8 +132,42 @@ def _from_json_to_shapes(indict, options_dict):
     return shapes
 
 
-def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=False, log_level: Union[str, int]=logging.WARNING):
-    """
+def _find_variable_definition(indict, name: str, order: int) -> Optional[str]:
+    r"""Find the definition (as a string in the input dictionary) of variable named ``name`` with order ``order``, and return it as a string. Return None if a definition by that name and order could not be found."""
+    for dyn in indict["dynamics"]:
+        if "expression" in dyn.keys():
+            exprs = [dyn["expression"]]
+        elif "expressions" in dyn.keys():
+            exprs = dyn["expressions"]
+
+        for expr in exprs:
+            name_, order_, rhs = Shape._parse_defining_expression(expr)
+            if name_ == name and order_ == order:
+                return rhs
+
+    return None
+
+
+def _get_all_first_order_variables(indict) -> Iterable[str]:
+    r"""Return a list of variable names, containing those variables that were defined as a first-order ordinary differential equation in the input."""
+    variable_names = []
+
+    for dyn in indict["dynamics"]:
+        if "expression" in dyn.keys():
+            exprs = [dyn["expression"]]
+        elif "expressions" in dyn.keys():
+            exprs = dyn["expressions"]
+
+        for expr in exprs:
+            name, order, rhs = Shape._parse_defining_expression(expr)
+            if order == 1:
+                variable_names.append(name)
+
+    return variable_names
+
+
+def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
+    r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
     For internal use only!
@@ -135,8 +184,7 @@ def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
 
     if "dynamics" not in indict:
         logging.info("Warning: empty input (no dynamical equations found); returning empty output")
-        solvers_json = {}
-        return solvers_json
+        return [], SystemOfShapes.from_shapes([]), []
 
     options_dict = _read_global_config(indict, default_config)
     shapes = _from_json_to_shapes(indict, options_dict)
@@ -171,14 +219,15 @@ def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
         numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
         logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
         sub_sys = shape_sys.get_sub_system(numeric_syms)
-        solver_json = sub_sys.generate_numeric_solver()
+        solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_,
+                                                      simplify_expression=simplify_expression)
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
         if not disable_stiffness_check:
             if not PYGSL_AVAILABLE:
                 raise Exception("Stiffness test requested, but PyGSL not available")
 
             logging.info("Performing stiffness test...")
-            kwargs = {}
+            kwargs = {}   # type: Dict[str, Any]
             if "options" in indict.keys() and "random_seed" in indict["options"].keys():
                 random_seed = int(indict["options"]["random_seed"])
                 assert random_seed >= 0, "Random seed needs to be a non-negative integer"
@@ -244,10 +293,31 @@ def _analysis(indict, disable_stiffness_check=False, disable_analytic_solver=Fal
     #   convert expressions from sympy to string
     #
 
+    if type(preserve_expressions) is bool:
+        if preserve_expressions:
+            # grab all first-order variables
+            preserve_expressions = _get_all_first_order_variables(indict)
+        else:
+            preserve_expressions = []
+    elif isinstance(preserve_expressions, Iterable):
+        # check that all variables for which preserve_expression was requested were defined as first-order ODE
+        first_order_vars = _get_all_first_order_variables(indict)
+        for preserve_expressions_var in preserve_expressions:
+            if not preserve_expressions_var in first_order_vars:
+                raise MalformedInputException("Requested to preserve expression of variable \"" + preserve_expressions_var + "\", but it was not defined as a first-order ODE")
+    else:
+        raise MalformedInputException("``preserve_expressions`` parameter should be either a boolean or a list of strings corresponding to variable names")
+
     for solver_json in solvers_json:
         if "update_expressions" in solver_json.keys():
             for sym, expr in solver_json["update_expressions"].items():
-                solver_json["update_expressions"][sym] = str(expr)
+                if preserve_expressions and sym in preserve_expressions:
+                    logging.info("Preserving expression for variable \"" + sym + "\"")
+                    var_def_str = _find_variable_definition(indict, sym, order=1)
+                    assert var_def_str is not None
+                    solver_json["update_expressions"][sym] = var_def_str.replace("'", options_dict["differential_order_symbol"])
+                else:
+                    solver_json["update_expressions"][sym] = str(expr)
 
         if "propagators" in solver_json.keys():
             for sym, expr in solver_json["propagators"].items():
@@ -270,13 +340,15 @@ def _init_logging(log_level: Union[str, int]=logging.WARNING):
     logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, log_level: Union[str, int]=logging.WARNING):
+def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING) -> List[Dict]:
     r"""
     The main entry point of the ODE-toolbox API.
 
-    :param indict: Input dictionary for the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#input
+    :param indict: Input dictionary for the analysis. For details, see https://ode-toolbox.readthedocs.io/en/master/#input
     :param disable_stiffness_check: Whether to perform stiffness checking.
     :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
+    :param preserve_expressions: Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
+    :param simplify_expression: For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are ``eval()``ed in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"``.
     :param log_level: Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
 
     :return: The result of the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#output
@@ -284,5 +356,7 @@ def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solve
     d, _, _ = _analysis(indict,
                         disable_stiffness_check=disable_stiffness_check,
                         disable_analytic_solver=disable_analytic_solver,
+                        preserve_expressions=preserve_expressions,
+                        simplify_expression=simplify_expression,
                         log_level=log_level)
     return d

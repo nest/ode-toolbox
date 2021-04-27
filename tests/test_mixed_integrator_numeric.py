@@ -23,7 +23,6 @@
 import json
 import os
 import pytest
-import unittest
 import sympy
 import numpy as np
 
@@ -35,119 +34,110 @@ try:
 except ImportError:
     INTEGRATION_TEST_DEBUG_PLOTS = False
 
-import odetoolbox
-from odetoolbox.mixed_integrator import MixedIntegrator
-
-from math import e
-from sympy import exp, sympify
-import sympy.parsing.sympy_parser
-
-import scipy
-import scipy.special
-import scipy.linalg
-
 try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
-except ImportError as ie:
+except ImportError:
     PYGSL_AVAILABLE = False
 
+import odetoolbox
+from odetoolbox.mixed_integrator import MixedIntegrator
 
-def open_json(fname):
+
+def _open_json(fname):
     absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
     with open(absfname) as infile:
         indict = json.load(infile)
     return indict
 
 
-class TestMixedIntegrationNumeric(unittest.TestCase):
+def _timeseries_plot(t_log, h_log, y_log, sym_list, basedir="/tmp", fn_snip="", title_snip=""):
+    fig, ax = plt.subplots(len(y_log[0]), sharex=True)
+    for i, sym in enumerate(sym_list):
+        ax[i].plot(1E3 * np.array(t_log), np.array(y_log)[:, i], label=str(sym))
+
+    for _ax in ax:
+        _ax.legend()
+        _ax.grid(True)
+
+    ax[-1].set_xlabel("Time [ms]")
+    fig.suptitle("Timeseries for mixed integrator numeric test" + title_snip)
+
+    fn = os.path.join(basedir, "test_mixed_integrator_numeric_" + fn_snip + ".png")
+    print("Saving to " + fn)
+    plt.savefig(fn, dpi=600)
+    plt.close(fig)
+
+
+def _run_simulation(fn, alias_spikes, integrator, params=None, **kwargs):
+    """
+    Parameters
+    ----------
+    params : Optional[Dict]
+        Parameter values to pass to the integrator (overrides parameter values in the input json file).
+    kwargs : Dict
+        Extra parameters passed to ``odetoolbox.analysis()``.
+    """
+    h = 5E-3   # very big to see spike aliasing effects better [s]
+    T = 50E-3  # [s]
+
+    initial_values = {"g_ex__d": 0., "g_in__d": 0.}    # optionally override initial values
+    initial_values = {sympy.Symbol(k): v for k, v in initial_values.items()}
+    spike_times = {"g_ex__d": np.array([10E-3]), "g_in__d": np.array([6E-3])}
+
+    indict = _open_json(fn)
+    analysis_json, shape_sys, shapes = odetoolbox._analysis(indict, disable_stiffness_check=True, disable_analytic_solver=True, log_level="DEBUG", **kwargs)
+
+    assert len(analysis_json) == 1
+    assert analysis_json[0]["solver"].startswith("numeric")
+
+    _params = indict["parameters"]
+    if params is not None:
+        _params.update(params)
+
+    mixed_integrator = MixedIntegrator(integrator,
+                                       shape_sys,
+                                       shapes,
+                                       analytic_solver_dict=None,
+                                       parameters=_params,
+                                       spike_times=spike_times,
+                                       random_seed=123,
+                                       max_step_size=h,
+                                       integration_accuracy_abs=1E-6,
+                                       integration_accuracy_rel=1E-6,
+                                       sim_time=T,
+                                       alias_spikes=alias_spikes)
+    h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = \
+        mixed_integrator.integrate_ode(initial_values=initial_values,
+                                       h_min_lower_bound=1E-12,
+                                       raise_errors=True,
+                                       debug=True)		# debug needs to be True here to obtain the right return values
+    return h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list, analysis_json
+
+
+@pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Need GSL integrator to perform test")
+def test_mixed_integrator_numeric(**kwargs):
     """
     Numerical validation of MixedIntegrator. Note that this test uses all-numeric (no analytic part) integration to test for time grid aliasing effects of spike times.
 
     Simulate a conductance-based integrate-and-fire neuron which is receiving spikes. Check for a match of the final system state with a numerical reference value that was validated by hand.
     """
 
-    @pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Need GSL integrator to perform test")
-    def test_mixed_integrator_numeric(self):
-        debug = True
+    integrator = odeiv.step_rk4
 
-        h = 1E-3    # [s]
-        T = 5.    # [s]
+    for alias_spikes in [True, False]:
+        h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list, analysis_json = _run_simulation("iaf_cond_alpha.json", alias_spikes, integrator)
 
-        # neuron parameters
-        tau = 20E-3    # [s]
-        tau_syn = 5E-3    # [s]
-        c_m = 1E-6    # [F]
+        if INTEGRATION_TEST_DEBUG_PLOTS:
+            _timeseries_plot(t_log,
+                             h_log,
+                             y_log,
+                             sym_list=sym_list,
+                             basedir="/tmp",
+                             fn_snip="_[alias=" + str(alias_spikes) + "]_" + str(integrator),
+                             title_snip=" alias spikes: " + str(alias_spikes) + ", " + str(integrator))
 
-        initial_values = {"V_m": -82.123E-3, "g_in": 8.9E-9, "g_in__d": .43, "g_ex": 2.4E-9, "g_ex__d": .06}
-        spike_times = {"g_ex__d": np.array([1E-3, 2E-3, 3E-3]), "g_in__d": np.array([.5E-3, 1.5E-3, 2.5E-3])}
-
-        ###
-
-        N = int(np.ceil(T / h) + 1)
-        timevec = np.linspace(0., T, N)
-
-        initial_values = {sympy.Symbol(k): v for k, v in initial_values.items()}
-
-        indict = open_json("iaf_cond_alpha_mixed_test.json")
-        analysis_json, shape_sys, shapes = odetoolbox._analysis(indict, disable_stiffness_check=True, disable_analytic_solver=True)
-        print("Got analysis result from ode-toolbox: ")
-        print(json.dumps(analysis_json, indent=2))
-        assert len(analysis_json) == 1
-        assert analysis_json[0]["solver"].startswith("numeric")
-
-        for alias_spikes in [False, True]:
-            for integrator in [odeiv.step_rk4, odeiv.step_bsimp]:
-                mixed_integrator = MixedIntegrator(integrator,
-                                                   shape_sys,
-                                                   shapes,
-                                                   analytic_solver_dict=None,
-                                                   parameters=indict["parameters"],
-                                                   spike_times=spike_times,
-                                                   random_seed=123,
-                                                   max_step_size=h,
-                                                   integration_accuracy_abs=1E-5,
-                                                   integration_accuracy_rel=1E-5,
-                                                   sim_time=T,
-                                                   alias_spikes=alias_spikes)
-                h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = \
-                    mixed_integrator.integrate_ode(initial_values=initial_values,
-                                                   h_min_lower_bound=1E-12,
-                                                   raise_errors=True,
-                                                   debug=True)		# debug needs to be True here to obtain the right return values
-
-                if INTEGRATION_TEST_DEBUG_PLOTS:
-                    self._timeseries_plot(t_log,
-                                          h_log,
-                                          y_log,
-                                          sym_list=sym_list,
-                                          basedir="/tmp",
-                                          fn_snip="_[alias=" + str(alias_spikes) + "]_" + str(integrator),
-                                          title_snip=" alias spikes: " + str(alias_spikes) + ", " + str(integrator))
-
-                if alias_spikes:
-                    assert upper_bound_crossed
-                else:
-                    assert not upper_bound_crossed
-
-
-    def _timeseries_plot(self, t_log, h_log, y_log, sym_list, basedir="/tmp", fn_snip="", title_snip=""):
-        fig, ax = plt.subplots(len(y_log[0]), sharex=True)
-        for i, sym in enumerate(sym_list):
-            ax[i].plot(1E3 * np.array(t_log), np.array(y_log)[:, i], label=str(sym))
-
-        for _ax in ax:
-            _ax.legend()
-            _ax.grid(True)
-
-        ax[-1].set_xlabel("Time [ms]")
-        fig.suptitle("Timeseries for mixed integrator numeric test" + title_snip)
-
-        fn = os.path.join(basedir, "test_mixed_integrator_numeric_" + fn_snip + ".png")
-        print("Saving to " + fn)
-        plt.savefig(fn, dpi=600)
-        plt.close(fig)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        if alias_spikes:
+            assert not upper_bound_crossed
+        else:
+            assert upper_bound_crossed

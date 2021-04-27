@@ -19,13 +19,10 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from inspect import getmembers
 import logging
-import math
 import numpy as np
 import numpy.random
 import os
-import random
 import sympy
 import sympy.utilities.autowrap
 from sympy.utilities.autowrap import CodeGenArgumentListError
@@ -34,7 +31,6 @@ import time
 from .analytic_integrator import AnalyticIntegrator
 from .integrator import Integrator
 from .shapes import Shape
-from .spike_generator import SpikeGenerator
 from .sympy_printer import _is_sympy_type
 
 
@@ -121,13 +117,19 @@ class MixedIntegrator(Integrator):
 
         for sym, expr in self._update_expr.items():
             try:
-                self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
+                self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals),
+                                                                                   args=self.all_variable_symbols,
+                                                                                   backend="cython",
+                                                                                   helpers=Shape._sympy_autowrap_helpers)
             except CodeGenArgumentListError:
                 raise ParametersIncompleteException("Integration not possible because numerical values were not specified for all parameters.")
         self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=np.object)
         for i in range(self.symbolic_jacobian_.shape[0]):
             for j in range(self.symbolic_jacobian_.shape[1]):
-                self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals), args=self.all_variable_symbols, backend="cython")
+                self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals),
+                                                                                         args=self.all_variable_symbols,
+                                                                                         backend="cython",
+                                                                                         helpers=Shape._sympy_autowrap_helpers)
 
 
         #
@@ -148,7 +150,6 @@ class MixedIntegrator(Integrator):
 
         :return: Average and minimal step size, and elapsed wall clock time.
         """
-
         if initial_values is None:
             initial_values = {}
 
@@ -253,7 +254,7 @@ class MixedIntegrator(Integrator):
                             self.analytic_integrator.disable_cache_update()
 
                         t, h_suggested, y = evolve.apply(t, t_target_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
-                    except FloatingPointError as e:
+                    except FloatingPointError:
                         msg = "Failure of numerical integrator (method: %s) at t=%.2f with requested timestep = %.2f (y = %s)" % (gsl_stepper.name(), t, h_requested, y)
                         raise FloatingPointError(msg)
 
@@ -317,6 +318,7 @@ class MixedIntegrator(Integrator):
                         t_next_spike = all_spike_times[idx_next_spike]
                     else:
                         t_next_spike = np.inf
+
                     while t_next_spike <= t:
                         syms_next_spike = all_spike_times_sym[idx_next_spike]
                         for sym in syms_next_spike:

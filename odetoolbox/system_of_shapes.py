@@ -19,12 +19,11 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
-import json
 import logging
 import numpy as np
 import sympy
 import sympy.matrices
+import sys
 
 from .shapes import Shape
 from .sympy_printer import _is_zero
@@ -196,11 +195,11 @@ class SystemOfShapes:
         return solver_dict
 
 
-    def generate_numeric_solver(self):
+    def generate_numeric_solver(self, state_variables=None, simplify_expression="sympy.simplify(expr)"):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
         """
-        update_expr = self.reconstitute_expr()
+        update_expr = self.reconstitute_expr(state_variables=state_variables, simplify_expression=simplify_expression)
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
 
@@ -211,10 +210,15 @@ class SystemOfShapes:
         return solver_dict
 
 
-    def reconstitute_expr(self):
+    def reconstitute_expr(self, state_variables=None, simplify_expression="sympy.simplify(expr)"):
         r"""
         Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + c).
+
+        Before returning, the expression is simplified using a custom series of steps, passed via the ``simplify_expression`` argument (see the ODE-toolbox documentation for more details).
         """
+        if state_variables is None:
+            state_variables = []
+
         update_expr = {}
 
         for row, x in enumerate(self.x_):
@@ -223,10 +227,24 @@ class SystemOfShapes:
                 update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.c_[row]) + ")"
             update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
+            # skip simplification for long expressions
             if len(str(update_expr[str(x)])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
                 logging.warning("Shape \"" + str(x) + "\" initialised with an expression that exceeds sympy simplification threshold")
             else:
                 update_expr[str(x)] = sympy.simplify(update_expr[str(x)])
+
+        # custom simplification steps (simplify() is not all that great)
+        try:
+            _simplify_expr = compile(simplify_expression, filename="<string>", mode="eval")
+            for name, expr in update_expr.items():
+                update_expr[name] = eval(_simplify_expr)
+                collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
+                update_expr[name] = sympy.collect(update_expr[name], collect_syms)
+        except Exception as e:
+            print("Exception occurred while applying expression simplification function: " + type(e).__name__)
+            print(str(e))
+            print("Check that the parameter ``simplify_expression`` is properly formatted.")
+            sys.exit(1)
 
         return update_expr
 

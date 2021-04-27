@@ -37,20 +37,13 @@ except ImportError:
 from .context import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
 
-from math import e
-from sympy import exp, sympify
 import sympy.parsing.sympy_parser
+from math import e
 
 import scipy
 import scipy.special
 import scipy.linalg
 from scipy.integrate import solve_ivp
-
-try:
-    import pygsl.odeiv as odeiv
-except ImportError as ie:
-    print("Warning: PyGSL is not available. Test will be skipped.")
-    print("Warning: " + str(ie))
 
 
 def open_json(fname):
@@ -114,8 +107,6 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
     """
 
     def test_analytic_solver_integration_psc_alpha(self):
-        debug = True
-
         h = 1E-3    # [s]
         T = 20E-3    # [s]
 
@@ -205,8 +196,9 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         #   timeseries using ode-toolbox generated propagators
         #
 
+        print("Starting ODE-toolbox analysis...")
         indict = open_json("test_integration.json")
-        solver_dict = odetoolbox.analysis(indict)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, log_level="DEBUG")
         print("Got solver_dict from ode-toolbox: ")
         print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1
