@@ -135,3 +135,9 @@ code.descclassname {
 .bigcenterlink code {
    padding: 1em;
 }
+
+tr.row-odd {
+   background-color: #FFFFFF !important;
+}
+
+
