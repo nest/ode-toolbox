@@ -28,7 +28,7 @@ import numpy as np
 
 try:
     import matplotlib as mpl
-    mpl.use('Agg')
+    mpl.use("Agg")
     import matplotlib.pyplot as plt
     INTEGRATION_TEST_DEBUG_PLOTS = True
 except ImportError:
@@ -95,6 +95,10 @@ def _run_simulation(fn, alias_spikes, integrator, params=None, **kwargs):
     if params is not None:
         _params.update(params)
 
+    debug_plot_dir = None
+    if INTEGRATION_TEST_DEBUG_PLOTS:   # only enable plotting if matplotlib was successfully imported
+        debug_plot_dir = "/tmp"
+
     mixed_integrator = MixedIntegrator(integrator,
                                        shape_sys,
                                        shapes,
@@ -106,7 +110,8 @@ def _run_simulation(fn, alias_spikes, integrator, params=None, **kwargs):
                                        integration_accuracy_abs=1E-6,
                                        integration_accuracy_rel=1E-6,
                                        sim_time=T,
-                                       alias_spikes=alias_spikes)
+                                       alias_spikes=alias_spikes,
+                                       debug_plot_dir=debug_plot_dir)
     h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list = \
         mixed_integrator.integrate_ode(initial_values=initial_values,
                                        h_min_lower_bound=1E-12,
