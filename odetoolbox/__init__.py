@@ -43,21 +43,6 @@ if PYGSL_AVAILABLE:
     from .stiffness import StiffnessTester
 
 try:
-    import matplotlib as mpl
-    mpl.use('Agg')
-    import matplotlib.pyplot as plt
-
-    def update_matplotlib_log_level():
-        log_level = "WARNING"
-        logging.getLogger("matplotlib.colorbar").setLevel(log_level)
-        logging.getLogger("matplotlib.font_manager").setLevel(log_level)
-        logging.getLogger("matplotlib.ticker").setLevel(log_level)
-
-    update_matplotlib_log_level()
-except ImportError:
-    INTEGRATOR_DEBUG_PLOT = False
-
-try:
     import graphviz
     PLOT_DEPENDENCY_GRAPH = True
 except ImportError:
