@@ -56,3 +56,12 @@ class SympyPrinter(StrPrinter):
 
     def _print_Exp1(self, expr):
         return 'e'
+
+    def _print_Function(self, expr):
+        """
+        Overrides base class method to print min() and max() functions in lowercase.
+        """
+        if expr.func.__name__ in ["Min", "Max"]:
+            return expr.func.__name__.lower() + "(%s)" % self.stringify(expr.args, ", ")
+
+        return expr.func.__name__ + "(%s)" % self.stringify(expr.args, ", ")

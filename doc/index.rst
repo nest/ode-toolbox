@@ -41,7 +41,7 @@ ODE-toolbox is written in Python and leverages SymPy for the symbolic manipulati
 Installation
 ------------
 
-.. Attention:: The latest SymPy release at time of writing, 1.6.1, introduces a fourfold regression in runtime performance on the ODE-toolbox unit tests, compared to SymPy 1.4. Unless this conflicts with other version requirements, we would recommend to use SymPy 1.4 for now (for example, by editing ``requirements.txt`` to read ``sympy==1.4``).
+.. Attention:: The latest SymPy release at time of writing, 1.8, introduces a fourfold regression in runtime performance on the ODE-toolbox unit tests, compared to SymPy 1.4. Unless this conflicts with other version requirements, we would recommend to use SymPy 1.4 for now (for example, by editing ``requirements.txt`` to read ``sympy==1.4``).
 
 
 Prerequisites
@@ -131,6 +131,12 @@ The following flags exist:
    * - ``disable_stiffness_check``
      - False
      - Set to True to disable stiffness check.
+   * - ``preserve_expressions``
+     - False
+     - Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
+   * - ``simplify_expression``
+     - ``"sympy.simplify(expr)"``
+     - For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are evaluated with ``eval()`` in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"``.
    * - ``log_level``
      - :python:`logging.WARN`
      - Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
@@ -480,7 +486,7 @@ Several example input files can be found under ``tests/*.json``. Some highlights
 -  `Lorenz attractor <https://github.com/nest/ode-toolbox/blob/master/tests/lorenz_attractor.json>`__
 -  `Morris-Lecar neuron model <https://github.com/nest/ode-toolbox/blob/master/tests/morris_lecar.json>`__
 -  `Integrate-and-fire neuron with alpha-kernel postsynaptic currents <https://github.com/nest/ode-toolbox/blob/master/tests/mixed_analytic_numerical_with_stiffness.json>`__, including Poisson spike generator for stiffness test
--  `Integrate-and-fire neuron with alpha-kernel postsynaptic conductances <https://github.com/nest/ode-toolbox/blob/master/tests/iaf_cond_alpha_odes_stiff.json>`__
+-  `Integrate-and-fire neuron with alpha-kernel postsynaptic conductances <https://github.com/nest/ode-toolbox/blob/master/tests/iaf_cond_alpha.json>`__
 -  `Canonical, two-dimensional stiff system <https://github.com/nest/ode-toolbox/blob/master/tests/stiff_system.json>`__ Example 11.57 from Dahmen, W., and Reusken, A. (2005). Numerik fuer Naturwissenschaftler. Berlin: Springer
 
 
@@ -557,7 +563,7 @@ Citing ODE-toolbox
 
 If you use ODE-toolbox in your work, please cite it depending on the version you are using. (It is recommended to use the latest release version whenever possible.)
 
-For the versions 2.1 and 2.2:
+For the versions 2.1, 2.2 and 2.3:
 
 .. [1] Charl Linssen, Shraddha Jain, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.4245012 <https://doi.org/10.5281/zenodo.4245012>`__.
 

@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
+from typing import List, Tuple
 
 import functools
 import logging
@@ -77,11 +78,18 @@ class Shape():
                       "acosh": sympy.acosh,
                       "tanh": sympy.tanh,
                       "atanh": sympy.atanh,
+                      "min": sympy.Min,
+                      "max": sympy.Max,
+                      "Heaviside": sympy.Heaviside,
                       "e": sympy.exp(1),
                       "E": sympy.exp(1),
                       "t": sympy.Symbol("t"),
                       "DiracDelta": sympy.DiracDelta}
 
+    # cython backend (used by sympy autowrap()) cannot handle these functions; need to provide alternative implementation
+    _sympy_autowrap_helpers = [("Min", (abs(sympy.symbols("x") + sympy.symbols("y")) - abs(sympy.symbols("x") - sympy.symbols("y"))) / 2, [sympy.symbols("x"), sympy.symbols("y")]),
+                               ("Max", (abs(sympy.symbols("x") + sympy.symbols("y")) + abs(sympy.symbols("x") - sympy.symbols("y"))) / 2, [sympy.symbols("x"), sympy.symbols("y")]),
+                               ("Heaviside", (sympy.symbols("x") + abs(sympy.symbols("x"))) / (2 * abs(sympy.symbols("x")) + 1E-300), [sympy.symbols("x")])]
 
     def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), lower_bound=None, upper_bound=None, derivative_symbol="__d", debug=False):
         r"""
@@ -194,12 +202,11 @@ class Shape():
         return self.initial_values[sym]
 
 
-    def get_state_variables(self, derivative_symbol="'"):
+    def get_state_variables(self, derivative_symbol="'") -> List[sympy.Symbol]:
         r"""
         Get all variable symbols for this shape, ordered according to derivative order: :python:`[sym, dsym/dt, d^2sym/dt^2, ...]`
 
         :return: all_symbols
-        :rtype: list of sympy.Symbol
         """
         all_symbols = []
 
@@ -259,6 +266,35 @@ class Shape():
 
 
     @classmethod
+    def _parse_defining_expression(cls, s: str) -> Tuple[str, int, str]:
+        r"""Parse a defining expression, for example, if the ODE-toolbox JSON input file contains the snippet:
+
+        ::
+           {
+               "expression": "h' = -g / tau**2 - 2 * h / tau"
+           }
+
+        then the corresponding defining expression is ``"h' = -g / tau**2 - 2 * h / tau"``.
+
+        This function parses that string and returns the variable name (``h``), the derivative order (1) and the right-hand side expression (``-g / tau**2 - 2 * h / tau"``).
+        """
+        lhs, rhs = s.split("=")
+        lhs_ = re.findall(r"\S+", lhs)
+        if not len(lhs_) == 1:
+            raise MalformedInputException("Error while parsing expression \"" + s + "\"")
+        lhs = lhs_[0]
+        rhs = rhs.strip()
+
+        symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", s)
+        if symbol_match is None:
+            raise MalformedInputException("Error while parsing symbol name in \"" + lhs + "\"")
+        symbol = symbol_match.group()
+
+        order = len(re.findall("'", lhs))
+        return symbol, order, rhs
+
+
+    @classmethod
     def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol="__d", _debug=False):
         r"""
         Create a :python:`Shape` instance from an input dictionary.
@@ -274,18 +310,7 @@ class Shape():
         if not indict["expression"].count("=") == 1:
             raise MalformedInputException("Expecting exactly one \"=\" symbol in defining expression: \"" + str(indict["expression"]) + "\"")
 
-        lhs, rhs = indict["expression"].split("=")
-        lhs_ = re.findall(r"\S+", lhs)
-        if not len(lhs_) == 1:
-            raise MalformedInputException("Error while parsing expression \"" + indict["expression"] + "\"")
-        lhs = lhs_[0]
-        rhs = rhs.strip()
-
-        symbol_match = re.search("[a-zA-Z_][a-zA-Z0-9_]*", lhs)
-        if symbol_match is None:
-            raise MalformedInputException("Error while parsing symbol name in \"" + lhs + "\"")
-        symbol = symbol_match.group()
-        order = len(re.findall("'", lhs))
+        symbol, order, rhs = Shape._parse_defining_expression(indict["expression"])
 
         initial_values = {}
         if not "initial_value" in indict.keys() \

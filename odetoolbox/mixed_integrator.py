@@ -19,13 +19,12 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from inspect import getmembers
+from typing import Optional
+
 import logging
-import math
 import numpy as np
 import numpy.random
 import os
-import random
 import sympy
 import sympy.utilities.autowrap
 from sympy.utilities.autowrap import CodeGenArgumentListError
@@ -33,20 +32,9 @@ import time
 
 from .analytic_integrator import AnalyticIntegrator
 from .integrator import Integrator
+from .plot_helper import import_matplotlib
 from .shapes import Shape
-from .spike_generator import SpikeGenerator
 from .sympy_printer import _is_sympy_type
-
-
-try:
-    import matplotlib as mpl
-    mpl.use('Agg')
-    import matplotlib.pyplot as plt
-    INTEGRATOR_DEBUG_PLOT = True
-    INTEGRATOR_DEBUG_PLOT_DIR = "/tmp"
-except ImportError:
-    INTEGRATOR_DEBUG_PLOT = False
-
 
 try:
     import pygsl.odeiv as odeiv
@@ -69,7 +57,7 @@ class MixedIntegrator(Integrator):
     Mixed numeric+analytic integrator. Supply with a result from ODE-toolbox analysis; calculates numeric approximation of the solution.
     """
 
-    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False):
+    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False, debug_plot_dir: Optional[str] = None):
         r"""
         :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. :python:`odeiv.step_rk4`
         :param system_of_shapes: Dynamical system to solve.
@@ -83,11 +71,13 @@ class MixedIntegrator(Integrator):
         :param integration_accuracy_rel: Relative integration accuracy.
         :param sim_time: How long to simulate for.
         :param alias_spikes: Whether to alias spike times to the numerical integration grid. :python:`False` means that precise integration will be used for spike times whenever possible. :python:`True` means that after taking a timestep :math:`dt` and arriving at :math:`t`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
+        :param debug_plot_dir: If given, enable debug plotting to this directory. If enabled, matplotlib is imported and used for plotting.
         """
         super(MixedIntegrator, self).__init__()
 
         assert PYGSL_AVAILABLE
 
+        self._debug_plot_dir = debug_plot_dir
         self.numeric_integrator = numeric_integrator
         self.alias_spikes = alias_spikes
         self.max_step_size = max_step_size
@@ -121,13 +111,19 @@ class MixedIntegrator(Integrator):
 
         for sym, expr in self._update_expr.items():
             try:
-                self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals), args=self.all_variable_symbols, backend="cython")
+                self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals),
+                                                                                   args=self.all_variable_symbols,
+                                                                                   backend="cython",
+                                                                                   helpers=Shape._sympy_autowrap_helpers)
             except CodeGenArgumentListError:
                 raise ParametersIncompleteException("Integration not possible because numerical values were not specified for all parameters.")
         self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=np.object)
         for i in range(self.symbolic_jacobian_.shape[0]):
             for j in range(self.symbolic_jacobian_.shape[1]):
-                self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals), args=self.all_variable_symbols, backend="cython")
+                self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals),
+                                                                                         args=self.all_variable_symbols,
+                                                                                         backend="cython",
+                                                                                         helpers=Shape._sympy_autowrap_helpers)
 
 
         #
@@ -148,7 +144,6 @@ class MixedIntegrator(Integrator):
 
         :return: Average and minimal step size, and elapsed wall clock time.
         """
-
         if initial_values is None:
             initial_values = {}
 
@@ -253,7 +248,7 @@ class MixedIntegrator(Integrator):
                             self.analytic_integrator.disable_cache_update()
 
                         t, h_suggested, y = evolve.apply(t, t_target_requested, h_requested, y)      # evolve.apply parameters: start time, end time, initial step size, start vector
-                    except FloatingPointError as e:
+                    except FloatingPointError:
                         msg = "Failure of numerical integrator (method: %s) at t=%.2f with requested timestep = %.2f (y = %s)" % (gsl_stepper.name(), t, h_requested, y)
                         raise FloatingPointError(msg)
 
@@ -317,6 +312,7 @@ class MixedIntegrator(Integrator):
                         t_next_spike = all_spike_times[idx_next_spike]
                     else:
                         t_next_spike = np.inf
+
                     while t_next_spike <= t:
                         syms_next_spike = all_spike_times_sym[idx_next_spike]
                         for sym in syms_next_spike:
@@ -345,8 +341,8 @@ class MixedIntegrator(Integrator):
             h_log = np.array(h_log)
             y_log = np.array(y_log)
 
-            if INTEGRATOR_DEBUG_PLOT:
-                self.integrator_debug_plot(t_log, h_log, y_log, dir=INTEGRATOR_DEBUG_PLOT_DIR)
+            if self._debug_plot_dir:
+                self.integrator_debug_plot(t_log, h_log, y_log, dir=self._debug_plot_dir)
 
         logging.info("For integrator = " + str(self.numeric_integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 
@@ -359,6 +355,9 @@ class MixedIntegrator(Integrator):
 
 
     def integrator_debug_plot(self, t_log, h_log, y_log, dir):
+        mpl, plt = import_matplotlib()
+        assert mpl, "Debug plot was requested for MixedIntegrator, but an exception occurred while importing matplotlib. See the ``debug_plot_dir`` parameter."
+
         if not self.analytic_integrator is None:
             analytic_syms = self.analytic_integrator.get_value(0.).keys()
             analytic_dim = len(analytic_syms)

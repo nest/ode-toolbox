@@ -19,11 +19,8 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
-import os
 import unittest
 
-from .context import odetoolbox
 from odetoolbox.shapes import Shape
 
 
