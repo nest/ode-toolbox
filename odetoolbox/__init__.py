@@ -63,18 +63,16 @@ default_config = {
 }
 
 
-def _dependency_analysis(shape_sys, shapes, differential_order_symbol):
+def _dependency_analysis(shape_sys, shapes, differential_order_symbol, parameters=None):
     r"""
     Perform dependency analysis and plot dependency graph.
     """
     logging.info("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
-    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges, differential_order_symbol=differential_order_symbol)
-    if PLOT_DEPENDENCY_GRAPH:
-        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph_lin_cc.dot")
+    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges, differential_order_symbol=differential_order_symbol, parameters=parameters)
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
     if PLOT_DEPENDENCY_GRAPH:
-        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph_analytically_solvable.dot")
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph.dot")
     return dependency_edges, node_is_lin
 
 
@@ -92,7 +90,7 @@ def _read_global_config(indict, default_config):
     return options_dict
 
 
-def _from_json_to_shapes(indict, options_dict) -> List[Shape]:
+def _from_json_to_shapes(indict, options_dict, parameters=None) -> List[Shape]:
     r"""
     Process the input, construct Shape instances.
 
@@ -105,13 +103,13 @@ def _from_json_to_shapes(indict, options_dict) -> List[Shape]:
     # first run for grabbing all the variable names. Coefficients might be incorrect.
     all_variable_symbols = []
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, time_symbol=options_dict["input_time_symbol"], differential_order_symbol=options_dict["differential_order_symbol"])
+        shape = Shape.from_json(shape_json, time_symbol=options_dict["input_time_symbol"], differential_order_symbol=options_dict["differential_order_symbol"], parameters=parameters)
         all_variable_symbols.extend(shape.get_state_variables())
     logging.debug("From first run: all_variable_symbols = " + str(all_variable_symbols))
 
     # second run with the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=options_dict["input_time_symbol"], _debug=True)
+        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=options_dict["input_time_symbol"], parameters=parameters, _debug=True)
         shapes.append(shape)
 
     return shapes
@@ -172,9 +170,21 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
         return [], SystemOfShapes.from_shapes([]), []
 
     options_dict = _read_global_config(indict, default_config)
-    shapes = _from_json_to_shapes(indict, options_dict)
-    shape_sys = SystemOfShapes.from_shapes(shapes)
-    dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=options_dict["differential_order_symbol"])
+
+    # copy parameters from the input and make sure keys are of type sympy.Symbol
+    parameters = None
+    if "parameters" in indict.keys():
+        parameters = {}
+        for k, v in indict["parameters"].items():
+            if type(k) is str:
+                parameters[sympy.Symbol(k)] = v
+            else:
+                assert type(k) is sympy.Symbol
+                parameters[k] = v
+
+    shapes = _from_json_to_shapes(indict, options_dict, parameters=parameters)
+    shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
+    dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=options_dict["differential_order_symbol"], parameters=parameters)
 
 
     #

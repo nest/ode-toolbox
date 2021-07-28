@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
-from typing import List, Tuple
+from typing import List, Mapping, Tuple
 
 import functools
 import logging
@@ -37,7 +37,15 @@ class MalformedInputException(Exception):
     pass
 
 
-class Shape():
+def is_constant_term(term, parameters: Mapping[sympy.Symbol, str]=None):
+    assert all([type(k) is sympy.Symbol for k in parameters.keys()])
+    if parameters is None:
+        parameters = {}
+    return type(term) in [sympy.Float, sympy.Integer, sympy.numbers.Zero, sympy.numbers.One] \
+        or all([sym in parameters.keys() for sym in term.free_symbols])
+
+
+class Shape:
     r"""
     This class provides a canonical representation of a shape function independently of the way in which the user specified the shape. It assumes a differential equation of the general form (where bracketed superscript :math:`{}^{(n)}` indicates the :math:`n`-th derivative with respect to time):
 
@@ -51,9 +59,9 @@ class Shape():
 
     ::
 
-       x''' = c0*x + c1*x' + c2*x'' + x*y + x**2
+       x''' = c0 + c1*x + c2*x' + c3*x'' + x*y + x**2
 
-    the :python:`symbol` of the ODE would be :python:`x` (i.e. without any qualifiers), :python:`order` would be 3, :python:`derivative_factors` would contain the linear part in the form of the list :python:`[c0, c1, c2]`, and the nonlinear part :python:`x*y + x**2` is stored in :python:`diff_rhs_derivatives`.
+    the :python:`symbol` of the ODE would be :python:`x` (i.e. without any qualifiers), :python:`order` would be 3, :python:`derivative_factors` would contain the linear part in the form of the list :python:`[c1, c2, c3]`, the inhomogeneous term would be :python:`c0` and the nonlinear part :python:`x*y + x**2` is stored in :python:`nonlin_term`.
     """
 
     EXPRESSION_SIMPLIFICATION_THRESHOLD = 1000
@@ -91,7 +99,7 @@ class Shape():
                                ("Max", (abs(sympy.symbols("x") + sympy.symbols("y")) + abs(sympy.symbols("x") - sympy.symbols("y"))) / 2, [sympy.symbols("x"), sympy.symbols("y")]),
                                ("Heaviside", (sympy.symbols("x") + abs(sympy.symbols("x"))) / (2 * abs(sympy.symbols("x")) + 1E-300), [sympy.symbols("x")])]
 
-    def __init__(self, symbol, order, initial_values, derivative_factors, diff_rhs_derivatives=sympy.Float(0.), lower_bound=None, upper_bound=None, derivative_symbol="__d", debug=False):
+    def __init__(self, symbol, order, initial_values, derivative_factors, inhom_term=sympy.Float(0.), nonlin_term=sympy.Float(0.), lower_bound=None, upper_bound=None, derivative_symbol="__d", debug=False):
         r"""
         Perform type and consistency checks and assign arguments to member variables.
 
@@ -99,7 +107,7 @@ class Shape():
         :param order: Order of the ODE representing the shape.
         :param initial_values: Initial values of the ODE representing the shape. The dict contains :python:`order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
         :param derivative_factors: The factors for the derivatives that occur in the ODE. This list has to contain :path:`order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. :python:`[c0, c1, c2]` for the given example.
-        :param diff_rhs_derivatives: Nonlinear part of the ODE representing the shape, i.e. :python:`x*y + x**2` for the given example.
+        :param nonlin_term: Nonlinear part of the ODE representing the shape, i.e. :python:`x*y + x**2` for the given example.
         """
         if not type(symbol) is sympy.Symbol:
             raise MalformedInputException("symbol is not a SymPy symbol: \"%r\"" % symbol)
@@ -144,11 +152,17 @@ class Shape():
 
         self.derivative_factors = derivative_factors
 
-        if len(str(diff_rhs_derivatives)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+        if len(str(inhom_term)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
             logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds SymPy simplification threshold")
-            self.diff_rhs_derivatives = diff_rhs_derivatives
+            self.inhom_term = inhom_term
         else:
-            self.diff_rhs_derivatives = sympy.simplify(diff_rhs_derivatives)
+            self.inhom_term = sympy.simplify(inhom_term)
+
+        if len(str(nonlin_term)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+            logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds SymPy simplification threshold")
+            self.nonlin_term = nonlin_term
+        else:
+            self.nonlin_term = sympy.simplify(nonlin_term)
 
         self.lower_bound = lower_bound
         if not self.lower_bound is None:
@@ -158,7 +172,7 @@ class Shape():
         if not self.upper_bound is None:
             self.upper_bound = sympy.simplify(self.upper_bound)
 
-        logging.debug("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", diff_rhs_derivatives = " + str(self.diff_rhs_derivatives))
+        logging.debug("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", inhom_term = " + str(self.inhom_term) + ", nonlin_term = " + str(self.nonlin_term))
 
 
     def __str__(self):
@@ -166,29 +180,11 @@ class Shape():
         return s
 
 
-    def is_homogeneous(self, shapes=None, differential_order_symbol="__d"):
+    def is_homogeneous(self) -> bool:
         r"""
         :return: :python:`False` if and only if the shape has a nonzero right-hand side.
-        :rtype: bool
         """
-
-        if _is_zero(self.diff_rhs_derivatives):
-            # trivial case: right-hand side is zero
-            return True
-
-        all_symbols = self.get_all_variable_symbols(shapes, derivative_symbol=differential_order_symbol)
-        for term in sympy.Add.make_args(self.diff_rhs_derivatives.expand()):
-            term_is_const = True
-            for sym in all_symbols:
-                expr = sympy.diff(term, sym)
-                if not _is_zero(sympy.sympify(expr)):
-                    # this term is of the form "sym * expr", hence it cannot be a constant term
-                    term_is_const = False
-
-            if term_is_const:
-                return False
-
-        return True
+        return _is_zero(self.inhom_term)
 
 
     def get_initial_value(self, sym: str):
@@ -204,9 +200,7 @@ class Shape():
 
     def get_state_variables(self, derivative_symbol="'") -> List[sympy.Symbol]:
         r"""
-        Get all variable symbols for this shape, ordered according to derivative order: :python:`[sym, dsym/dt, d^2sym/dt^2, ...]`
-
-        :return: all_symbols
+        Get all variable symbols for this shape, ordered according to derivative order, up to the shape's order :math:`N`: :python:`[sym, dsym/dt, d^2sym/dt^2, ..., d^(N-1)sym/dt^(N-1)]`
         """
         all_symbols = []
 
@@ -216,12 +210,11 @@ class Shape():
         return all_symbols
 
 
-    def get_all_variable_symbols(self, shapes=None, derivative_symbol="'"):
+    def get_all_variable_symbols(self, shapes=None, derivative_symbol="'") -> List[sympy.Symbol]:
         r"""
         Get all variable symbols for this shape and all other shapes in :python:`shapes`, without duplicates, in no particular order.
 
         :return: all_symbols
-        :rtype: list of sympy.Symbol
         """
         all_symbols = []
         all_shapes = []
@@ -240,29 +233,17 @@ class Shape():
         return all_symbols
 
 
-    def is_lin_const_coeff(self, shapes=None):
+    def is_lin_const_coeff(self) -> bool:
         r"""
-        :return: :python:`True` if and only if the shape is linear and constant coefficient in all known variable symbols in :python:`shapes`.
-        :rtype: bool
+        :return: :python:`True` if and only if the shape is linear and constant coefficient.
         """
+        return _is_zero(self.nonlin_term)
 
-        all_symbols = self.get_all_variable_symbols(shapes, derivative_symbol="__d")
 
-        for sym in all_symbols:
-            for df in self.derivative_factors:
-                expr = sympy.diff(df, sym)
-                if not _is_zero(sympy.sympify(expr)):
-                    # the expression "sym * self.symbol" appears on right-hand side of this shape's definition
-                    return False
-
-            expr = sympy.diff(self.diff_rhs_derivatives, sym)
-            if not _is_zero(sympy.sympify(expr)):
-                # the variable symbol `sym` appears on right-hand side of this expression. Check to see if it appears as a linear term by checking whether taking its derivative again, with respect to any known variable, yields 0
-                for sym_ in all_symbols:
-                    if not _is_zero(sympy.sympify(sympy.diff(expr, sym_))):
-                        return False
-
-        return True
+    def is_lin_const_coeff_in(self, symbols, parameters=None):
+        expr = self.reconstitute_expr()
+        derivative_factors, inhom_term, nonlin_term = Shape.split_lin_inhom_nonlin(expr, symbols, parameters=parameters)
+        return _is_zero(nonlin_term)
 
 
     @classmethod
@@ -295,13 +276,14 @@ class Shape():
 
 
     @classmethod
-    def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol="__d", _debug=False):
+    def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol="__d", parameters=None, _debug=False):
         r"""
         Create a :python:`Shape` instance from an input dictionary.
 
         :param indict: Input dictionary, i.e. one element of the :python:`"dynamics"` list supplied in the ODE-toolbox input dictionary.
         :param all_variable_symbols: All known variable symbols. :python:`None` or list of string.
         :param time_symbol: sympy Symbol representing the independent time variable.
+        :param parameters: An optional dictionary of parameters to their defining expressions.
         :param differential_order_symbol: String used for identifying differential order. XXX: only :python:`"__d"` is supported for now.
         """
         if not "expression" in indict:
@@ -361,16 +343,16 @@ class Shape():
         if order == 0:
             return Shape.from_function(symbol, rhs, differential_order_symbol=differential_order_symbol)
         else:
-            return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound, differential_order_symbol=differential_order_symbol)
+            return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound, differential_order_symbol=differential_order_symbol, parameters=parameters)
 
 
-    def reconstitute_expr(self, derivative_symbol="__d"):
+    def reconstitute_expr(self, derivative_symbol: str = "__d"):
         r"""
-        Recreate SymPy expression from internal representation (linear coefficients and nonlinear part).
+        Recreate right-hand side expression from internal representation (linear coefficients, inhomogeneous, and nonlinear parts).
 
         :param differential_order_symbol: String used for identifying differential order. XXX: only :python:`"__d"` is supported for now.
         """
-        expr = self.diff_rhs_derivatives
+        expr = self.inhom_term + self.nonlin_term
         derivative_symbols = self.get_state_variables(derivative_symbol=derivative_symbol)
         for derivative_factor, derivative_symbol in zip(self.derivative_factors, derivative_symbols):
             expr += derivative_factor * derivative_symbol
@@ -379,52 +361,61 @@ class Shape():
 
 
     @staticmethod
-    def split_lin_nonlin(expr, x):
+    def split_lin_inhom_nonlin(expr, x, parameters=None):
         r"""
-        Split an expression into the form :python:`a_0 * x[0] + a_1 * x[1] + ... + c`. The coefficients :python:`a_0` ... :python:`a_n` are returned as :python:`lin_factors`. The nonlinear remainder is returned as :python:`nonlin_term`.
+        Split an expression into the linear, inhomogeneous and nonlinear parts.
+
+        The linear part is a sum of terms of the form "constant coefficient multiplied by symbol", for all symbols in `x`
+
+        XXX: update this text
+
+        The coefficients :python:`c0` ... :python:`cn` are returned as :python:`lin_factors`. If a constant term is present, it is returned in :python:`inhom_term` All parameters in :python:`parameters` are assumed to be constants. The nonlinear remainder is returned as :python:`nonlin_term`.
         """
 
         assert all([_is_sympy_type(sym) for sym in x])
 
-        lin_factors = []
-        logging.debug("Splitting expression " + str(expr) + " into symbols " + str(x))
+        if parameters is None:
+            parameters = {}
+
+        logging.debug("Splitting expression " + str(expr) + " (symbols " + str(x) + ")")
+
+        lin_factors = np.array(len(x) * [sympy.Float(0)])
+        inhom_term = sympy.Float(0)
+        nonlin_term = sympy.Float(0)
 
         expr = expr.expand()
-        for j, sym in enumerate(x):
-            # check if there is a linear part in `sym`
-            if expr.is_Add:
-                terms = expr.args
+        if expr.is_Add:
+            terms = expr.args
+        else:
+            terms = [expr]
+
+        for term in terms:
+            if is_constant_term(term, parameters=parameters):
+                inhom_term += term
             else:
-                terms = [expr]
-
-            # a term is linear in `sym` if `term/sym` contains only free symbols that are not in all_known_symbols, i.e. if the sets are disjoint
-            linear_terms = [term for term in terms if (term / sym).free_symbols.isdisjoint(x)]
-            if linear_terms:
-                linear_factors = [term / sym for term in linear_terms]
-                linear_factor = functools.reduce(lambda x, y: x + y, linear_factors)
-                linear_terms = [term for term in linear_terms]
-                linear_term = functools.reduce(lambda x, y: x + y, linear_terms)
-            else:
-                linear_factor = sympy.Float(0)
-                linear_term = sympy.Float(0)
-
-            lin_factors.append(linear_factor)
-            expr = expr - linear_term
-
-        lin_factors = np.array(lin_factors)
-        nonlin_term = expr
-        assert len(lin_factors) == len(x)
+                # check if the term is linear in any of the symbols in `x`
+                is_lin = False
+                for j, sym in enumerate(x):
+                    if is_constant_term(term / sym, parameters=parameters):
+                        lin_factors[j] += term / sym
+                        is_lin = True
+                        break
+                if not is_lin:
+                    nonlin_term += term
 
         logging.debug("\tlinear factors: " + str(lin_factors))
+        logging.debug("\tinhomogeneous term: " + str(inhom_term))
         logging.debug("\tnonlinear term: " + str(nonlin_term))
 
-        return lin_factors, nonlin_term
+        return lin_factors, inhom_term, nonlin_term
 
 
     @classmethod
     def from_function(cls, symbol: str, definition, max_t=100, max_order=4, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), differential_order_symbol=sympy.Symbol("__d"), debug=False):
         r"""
         Create a Shape object given a function of time.
+
+        Only functions of time that have a homogeneous ODE equivalent are supported (inhomogeneous ODE functions are not supported).
 
         For a complete description of the algorithm, see https://ode-toolbox.readthedocs.io/en/latest/index.html#converting-direct-functions-of-time
 
@@ -451,7 +442,7 @@ class Shape():
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, time_symbol)]
 
-        logging.info("\nProcessing shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
+        logging.info("\nProcessing function-of-time shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
 
 
         #
@@ -564,11 +555,11 @@ class Shape():
 
 
     @classmethod
-    def from_ode(cls, symbol: str, definition: str, initial_values: dict, all_variable_symbols=None, lower_bound=None, upper_bound=None, differential_order_symbol="__d", debug=False, **kwargs):
+    def from_ode(cls, symbol: str, definition: str, initial_values: dict, all_variable_symbols=None, lower_bound=None, upper_bound=None, differential_order_symbol="__d", parameters=None, debug=False, **kwargs):
         r"""
         Create a :python:`Shape` object given an ODE and initial values.
 
-        Note that shapes are only aware of their own state variables: if an equation for :math:`x` depends on another state variable :math:`y` of another shape, then :math:`y` will appear in the nonlinear part of :math:`x`.
+        Note that shapes are only aware of their own state variables: if an equation for :math:`x` depends on another state variable :math:`y` of another shape, then :math:`y` will be assumed to be a parameter and the term will appear in the inhomogeneous component of :math:`x`.
 
         :param symbol: The symbol (variable name) of the ODE.
         :param definition: The definition of the ODE.
@@ -586,7 +577,7 @@ class Shape():
         assert type(definition) is str
         assert type(initial_values) is dict
 
-        logging.info("\nProcessing shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
+        logging.info("\nProcessing differential-equation form shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
 
         if all_variable_symbols is None:
             all_variable_symbols = []
@@ -601,13 +592,14 @@ class Shape():
         if not symbol in all_variable_symbols:
             all_variable_symbols.extend(local_symbols)
         all_variable_symbols = [sympy.Symbol(str(sym_name).replace("'", differential_order_symbol)) for sym_name in all_variable_symbols]
-        derivative_factors, diff_rhs_derivatives = Shape.split_lin_nonlin(definition, all_variable_symbols)
+        derivative_factors, inhom_term, nonlin_term = Shape.split_lin_inhom_nonlin(definition, all_variable_symbols, parameters=parameters)
         local_symbols_idx = [all_variable_symbols.index(sym) for sym in local_symbols]
         local_derivative_factors = [derivative_factors[i] for i in local_symbols_idx]
         nonlocal_derivative_terms = [derivative_factors[i] * all_variable_symbols[i] for i in range(len(all_variable_symbols)) if i not in local_symbols_idx]
         if nonlocal_derivative_terms:
-            diff_rhs_derivatives = diff_rhs_derivatives + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
+            nonlin_term = nonlin_term + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 
-        shape = cls(symbol, order, initial_values, local_derivative_factors, diff_rhs_derivatives, lower_bound, upper_bound)
+        shape = cls(symbol, order, initial_values, local_derivative_factors, inhom_term, nonlin_term, lower_bound, upper_bound)
+        logging.info("\tReturning shape: " + str(shape))
 
         return shape
