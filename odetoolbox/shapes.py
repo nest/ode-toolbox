@@ -346,7 +346,7 @@ class Shape:
             return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound, differential_order_symbol=differential_order_symbol, parameters=parameters)
 
 
-    def reconstitute_expr(self, derivative_symbol: str = "__d"):
+    def reconstitute_expr(self, derivative_symbol: str = "__d") -> sympy.expr.Expr:
         r"""
         Recreate right-hand side expression from internal representation (linear coefficients, inhomogeneous, and nonlinear parts).
 

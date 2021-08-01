@@ -70,6 +70,8 @@ def _dependency_analysis(shape_sys, shapes, differential_order_symbol, parameter
     logging.info("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
     node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges, differential_order_symbol=differential_order_symbol, parameters=parameters)
+    if PLOT_DEPENDENCY_GRAPH:
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph_before.dot")
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
     if PLOT_DEPENDENCY_GRAPH:
         DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph.dot")
@@ -102,17 +104,33 @@ def _from_json_to_shapes(indict, options_dict, parameters=None) -> List[Shape]:
     shapes = []
     # first run for grabbing all the variable names. Coefficients might be incorrect.
     all_variable_symbols = []
+    all_parameter_symbols = set()
+    all_variable_symbols_ = set()
     for shape_json in indict["dynamics"]:
         shape = Shape.from_json(shape_json, time_symbol=options_dict["input_time_symbol"], differential_order_symbol=options_dict["differential_order_symbol"], parameters=parameters)
         all_variable_symbols.extend(shape.get_state_variables())
-    logging.debug("From first run: all_variable_symbols = " + str(all_variable_symbols))
+        all_variable_symbols_.update(shape.get_state_variables(derivative_symbol="__d"))
+        all_parameter_symbols.update(set(shape.reconstitute_expr().free_symbols))
+    all_parameter_symbols -= all_variable_symbols_
+    del all_variable_symbols_
+    logging.info("All known variables: " + str(all_variable_symbols) + ", all parameters used in ODEs: " + str(all_parameter_symbols))
+
+    for param in all_parameter_symbols:
+        if parameters is None:
+            parameters = dict()
+
+        assert isinstance(param, sympy.expr.Expr)
+        if not param in parameters.keys():
+            # this parameter was used in an ODE, but not explicitly numerically specified
+            logging.info("No numerical value specified for parameter \"" + str(param) + "\"")    # INFO level because this is OK!
+            parameters[param] = None
 
     # second run with the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
         shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=options_dict["input_time_symbol"], parameters=parameters, _debug=True)
         shapes.append(shape)
 
-    return shapes
+    return shapes, parameters
 
 
 def _find_variable_definition(indict, name: str, order: int) -> Optional[str]:
@@ -162,7 +180,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
 
     _init_logging(log_level)
 
-    logging.info("ode-toolbox: analysing input:")
+    logging.info("Analysing input:")
     logging.info(json.dumps(indict, indent=4, sort_keys=True))
 
     if "dynamics" not in indict:
@@ -182,7 +200,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
                 assert type(k) is sympy.Symbol
                 parameters[k] = v
 
-    shapes = _from_json_to_shapes(indict, options_dict, parameters=parameters)
+    shapes, parameters = _from_json_to_shapes(indict, options_dict, parameters=parameters)
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
     dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=options_dict["differential_order_symbol"], parameters=parameters)
 
