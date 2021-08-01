@@ -117,7 +117,7 @@ class MixedIntegrator(Integrator):
                                                                                    helpers=Shape._sympy_autowrap_helpers)
             except CodeGenArgumentListError:
                 raise ParametersIncompleteException("Integration not possible because numerical values were not specified for all parameters.")
-        self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=np.object)
+        self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=object)
         for i in range(self.symbolic_jacobian_.shape[0]):
             for j in range(self.symbolic_jacobian_.shape[1]):
                 self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals),
@@ -426,7 +426,7 @@ class MixedIntegrator(Integrator):
         :return: Jacobian matrix :math:`\mathbf{J}`.
         """
         dimension = len(y)
-        dfdy = np.zeros((dimension, dimension), np.float)
+        dfdy = np.zeros((dimension, dimension), float)
         dfdt = np.zeros((dimension,))
 
         self._locals.update({str(sym): y[i] for i, sym in enumerate(self._system_of_shapes.x_)})

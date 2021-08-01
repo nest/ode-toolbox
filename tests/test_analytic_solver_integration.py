@@ -138,8 +138,8 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
             return _delta_vec
 
-        numerical_timevec = np.zeros((1, 0), dtype=np.float)
-        numerical_sol = np.zeros((3, 0), dtype=np.float)
+        numerical_timevec = np.zeros((1, 0), dtype=float)
+        numerical_sol = np.zeros((3, 0), dtype=float)
 
         _init_value = [0., 0., v_abs_init]
 
