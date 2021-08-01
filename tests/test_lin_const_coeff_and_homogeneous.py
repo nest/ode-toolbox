@@ -95,7 +95,9 @@ class TestLinConstCoeffAndHomogeneousSystem(unittest.TestCase):
         shape_inh = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         shape_exc = Shape.from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")
         shape_V_m_lin = Shape.from_ode("V_m", "-V_m/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."}, parameters=self._parameters)
-        shape_V_m_nonlin = Shape.from_ode("V_m", "-V_m**2/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."})
+        shape_V_m_lin_no_param = Shape.from_ode("V_m", "-V_m/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."})
+        shape_V_m_nonlin = Shape.from_ode("V_m", "-V_m**2/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."}, parameters=self._parameters)
+        shape_V_m_nonlin_no_param = Shape.from_ode("V_m", "-V_m**2/Tau + (I_in + I_ex + I_e) / C_m", initial_values={"V_m": "0."})
 
         for shape in [shape_inh, shape_exc]:
             self.assertTrue(shape.is_lin_const_coeff())
@@ -107,7 +109,12 @@ class TestLinConstCoeffAndHomogeneousSystem(unittest.TestCase):
 
         for shape in shapes:
             self.assertTrue(shape_V_m_lin.is_lin_const_coeff_in(symbols=all_symbols, parameters=self._parameters))
+            self.assertTrue(shape_V_m_lin_no_param.is_lin_const_coeff_in(symbols=all_symbols, parameters=self._parameters))
+            self.assertFalse(shape_V_m_lin_no_param.is_lin_const_coeff_in(symbols=all_symbols))  # xfail when no parameters are specified
+
             self.assertFalse(shape_V_m_nonlin.is_lin_const_coeff_in(symbols=all_symbols, parameters=self._parameters))
+            self.assertFalse(shape_V_m_nonlin_no_param.is_lin_const_coeff_in(symbols=all_symbols, parameters=self._parameters))
+            self.assertFalse(shape_V_m_nonlin_no_param.is_lin_const_coeff_in(symbols=all_symbols))
 
 
 if __name__ == '__main__':
