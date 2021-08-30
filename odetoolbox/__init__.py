@@ -29,8 +29,6 @@ import json
 import logging
 
 import sympy
-sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
-
 from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
 
 
@@ -54,6 +52,7 @@ except ImportError:
 if PLOT_DEPENDENCY_GRAPH:
     from .dependency_graph_plotter import DependencyGraphPlotter
 
+sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
 
 default_config = {
     "input_time_symbol": "t",
