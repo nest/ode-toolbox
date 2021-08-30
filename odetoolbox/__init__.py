@@ -31,6 +31,9 @@ import logging
 import sympy
 sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
 
+from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
+
+
 try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
@@ -119,7 +122,7 @@ def _from_json_to_shapes(indict, options_dict, parameters=None) -> List[Shape]:
         if parameters is None:
             parameters = dict()
 
-        assert isinstance(param, sympy.expr.Expr)
+        assert isinstance(param, SympyExpr)
         if not param in parameters.keys():
             # this parameter was used in an ODE, but not explicitly numerically specified
             logging.info("No numerical value specified for parameter \"" + str(param) + "\"")    # INFO level because this is OK!

@@ -27,6 +27,10 @@ import re
 import sympy
 import sympy.parsing.sympy_parser
 
+from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
+from sympy.core.numbers import One as SympyOne
+from sympy.core.numbers import Zero as SympyZero
+
 from .sympy_printer import _is_sympy_type, _is_zero
 
 
@@ -41,7 +45,7 @@ def is_constant_term(term, parameters: Mapping[sympy.Symbol, str]=None):
     assert all([type(k) is sympy.Symbol for k in parameters.keys()])
     if parameters is None:
         parameters = {}
-    return type(term) in [sympy.Float, sympy.Integer, sympy.numbers.Zero, sympy.numbers.One] \
+    return type(term) in [sympy.Float, sympy.Integer, SympyZero, SympyOne] \
         or all([sym in parameters.keys() for sym in term.free_symbols])
 
 
@@ -346,7 +350,7 @@ class Shape:
             return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound, differential_order_symbol=differential_order_symbol, parameters=parameters)
 
 
-    def reconstitute_expr(self, derivative_symbol: str = "__d") -> sympy.expr.Expr:
+    def reconstitute_expr(self, derivative_symbol: str = "__d") -> SympyExpr:
         r"""
         Recreate right-hand side expression from internal representation (linear coefficients, inhomogeneous, and nonlinear parts).
 
