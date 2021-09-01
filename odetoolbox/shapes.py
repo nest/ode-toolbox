@@ -383,7 +383,7 @@ class Shape:
 
         logging.debug("Splitting expression " + str(expr) + " (symbols " + str(x) + ")")
 
-        lin_factors = np.array(len(x) * [sympy.Float(0)])
+        lin_factors = sympy.zeros(len(x), 1)
         inhom_term = sympy.Float(0)
         nonlin_term = sympy.Float(0)
 

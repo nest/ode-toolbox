@@ -237,7 +237,10 @@ class SystemOfShapes:
         for row, x in enumerate(self.x_):
             update_expr_terms = []
             for col, y in enumerate(self.x_):
-                update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
+                if str(self.A_[row, col]) in ["1", "1.", "1.0"]:
+                    update_expr_terms.append(str(y))
+                else:
+                    update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.b_[row]) + ") + (" + str(self.c_[row]) + ")"
             update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
 
@@ -297,7 +300,7 @@ class SystemOfShapes:
             #
 
             lin_factors, inhom_term, nonlin_term = Shape.split_lin_inhom_nonlin(shape_expr, x, parameters=parameters)
-            A[highest_diff_sym_idx, :] = lin_factors[np.newaxis, :]
+            A[highest_diff_sym_idx, :] = lin_factors.T
             b[highest_diff_sym_idx] = inhom_term
             c[highest_diff_sym_idx] = nonlin_term
 
