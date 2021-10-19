@@ -37,9 +37,10 @@ class SystemOfShapes:
     """
     def __init__(self, x, A: sympy.Matrix, b: sympy.Matrix, c: sympy.Matrix, shapes: List[Shape]):
         r"""
-        Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
+        Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}`.
 
         :param A: Matrix containing linear part.
+        :param b: Vector containing inhomogeneous part (constant term).
         :param c: Vector containing nonlinear part.
         """
         logging.debug("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", b = " + str(b) + ", c = " + str(c))
@@ -190,8 +191,9 @@ class SystemOfShapes:
                         # homogeneous ODE
                         update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
                     else:
-                        # inhomogeneous ODE
-                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(self.b_[col]) + "))" + " + (" + str(self.b_[col]) + ")")
+                        # inhomogeneous ODE -- only supports when particular solution equals a constant
+                        # TODO: future extensions: what if particular solution is a linear or quadratic function of time, a sine or cosine or exponential function of time, a sum or a product of the above?
+                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(-self.b_[col] / self.A_[col, 0]) + "))" + " + (" + str(-self.b_[col] / self.A_[col, 0]) + ")")
                     assert _is_zero(self.c_[row]), "nonlinear part should be zero for propagators"
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
