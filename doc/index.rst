@@ -585,7 +585,7 @@ Logo design by Konstantin Perun.
 
 This software was initially supported by the JARA-HPC Seed Fund *NESTML - A modeling language for spiking neuron and synapse models for NEST* and the Initiative and Networking Fund of the Helmholtz Association and the Helmholtz Portfolio Theme *Simulation and Modeling for the Human Brain*.
 
-This software was developed in part or in whole in the Human Brain Project, funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).
+This software was developed in part or in whole in the Human Brain Project, funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation under Specific Grant Agreements No. 720270, 785907 and 945539 (Human Brain Project SGA1, SGA2 and SGA3, respectively).
 
 .. |Build status| image:: https://travis-ci.org/nest/ode-toolbox.svg?branch=master
    :target: https://travis-ci.org/nest/ode-toolbox
