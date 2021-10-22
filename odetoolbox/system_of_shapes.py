@@ -193,7 +193,7 @@ class SystemOfShapes:
                     else:
                         # inhomogeneous ODE -- only supports when particular solution equals a constant
                         # TODO: future extensions: what if particular solution is a linear or quadratic function of time, a sine or cosine or exponential function of time, a sum or a product of the above?
-                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(-self.b_[col] / self.A_[col, 0]) + "))" + " + (" + str(-self.b_[col] / self.A_[col, 0]) + ")")
+                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(-self.b_[row] / self.A_[row, row]) + "))" + " + (" + str(-self.b_[row] / self.A_[row, row]) + ")")
                     assert _is_zero(self.c_[row]), "nonlinear part should be zero for propagators"
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
