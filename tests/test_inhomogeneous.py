@@ -119,3 +119,28 @@ class TestInhomogeneous:
 
         np.testing.assert_allclose(correct_x, actual_x)
         np.testing.assert_allclose(correct_y, actual_y)
+
+    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="Only first-order inhomogeneous ODEs are supported")
+    def test_inhomogeneous_solver_second_order_system(self):
+        tau = 10.  # [s]
+        parameters_dict = {sympy.Symbol("tau"): str(tau)}
+
+        x0 = 0.
+        x0d = 10.
+
+        shape1 = Shape.from_ode("x", "y", initial_values={"x": str(x0)}, parameters=parameters_dict)
+        shape2 = Shape.from_ode("y", "-1/tau**2 * x - 2/tau * y - 1", initial_values={"y": str(x0d)}, parameters=parameters_dict)
+        sys_of_shape = SystemOfShapes.from_shapes([shape1, shape2], parameters=parameters_dict)
+        solver_dict = sys_of_shape.generate_propagator_solver()
+
+    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="Only first-order inhomogeneous ODEs are supported")
+    def test_inhomogeneous_solver_second_order(self):
+        tau = 10.  # [s]
+        parameters_dict = {sympy.Symbol("tau"): str(tau)}
+
+        x0 = 0.
+        x0d = 10.
+
+        shape = Shape.from_ode("x", "-1/tau**2 * x - 2/tau * x' - 1", initial_values={"x": str(x0), "x'": str(x0d)}, parameters=parameters_dict)
+        sys_of_shape = SystemOfShapes.from_shapes([shape], parameters=parameters_dict)
+        solver_dict = sys_of_shape.generate_propagator_solver()

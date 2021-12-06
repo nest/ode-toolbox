@@ -83,7 +83,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
     .. math::
 
-        \mathbf{Z}' = \mathbf{S} \cdot \mathbf{Z}
+        \mathbf{z}' = \mathbf{S} \mathbf{z}
 
     with
 
@@ -103,7 +103,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
     .. math::
 
-        \mathbf{Z}(t + h) = \mathbf{P} \cdot \mathbf{Z}(t)
+        \mathbf{z}(t + h) = \mathbf{P} \cdot \mathbf{z}(t)
     """
 
     def test_analytic_solver_integration_psc_alpha(self):

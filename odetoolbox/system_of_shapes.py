@@ -19,7 +19,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from typing import List
+from typing import List, Optional
 
 import logging
 import numpy as np
@@ -56,6 +56,7 @@ class SystemOfShapes:
         for shape in self.shapes_:
             if str(shape.symbol) == str(sym).replace("__d", "").replace("'", ""):
                 return shape.get_initial_value(sym.replace("__d", "'"))
+
         assert False, "Unknown symbol: " + str(sym)
 
 
@@ -191,9 +192,14 @@ class SystemOfShapes:
                         # homogeneous ODE
                         update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
                     else:
-                        # inhomogeneous ODE -- only supports when particular solution equals a constant
-                        # TODO: future extensions: what if particular solution is a linear or quadratic function of time, a sine or cosine or exponential function of time, a sum or a product of the above?
-                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(-self.b_[row] / self.A_[row, row]) + "))" + " + (" + str(-self.b_[row] / self.A_[row, row]) + ")")
+                        # inhomogeneous ODE
+                        # check that off-diagonal elements are zero in the system matrix to check that this is at most a first-order system
+                        for _col in range(P_sym.shape[1]):
+                            if _col != row:
+                                assert _is_zero(self.A_[row, _col]), "Higher-order inhomogeneous ODEs are not supported"
+
+                        particular_solution = -self.b_[row] / self.A_[row, row]
+                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
                     assert _is_zero(self.c_[row]), "nonlinear part should be zero for propagators"
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
