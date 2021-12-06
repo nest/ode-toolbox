@@ -367,13 +367,17 @@ class Shape:
     @staticmethod
     def split_lin_inhom_nonlin(expr, x, parameters=None):
         r"""
-        Split an expression into the linear, inhomogeneous and nonlinear parts.
+        Split an expression into a linear, inhomogeneous and nonlinear part.
 
-        The linear part is a sum of terms of the form "constant coefficient multiplied by symbol", for all symbols in `x`
+        For example, in the expression
 
-        XXX: update this text
+        ::
 
-        The coefficients :python:`c0` ... :python:`cn` are returned as :python:`lin_factors`. If a constant term is present, it is returned in :python:`inhom_term` All parameters in :python:`parameters` are assumed to be constants. The nonlinear remainder is returned as :python:`nonlin_term`.
+           x''' = c0 + c1*x + c2*x' + c3*x'' + x*y + x**2
+
+        :python:`lin_factors` would contain the linear part in the form of the list :python:`[c1, c2, c3]`, the inhomogeneous term would be :python:`c0` and the nonlinear part :python:`x*y + x**2` is returned as :python:`nonlin_term`.
+
+        All parameters in :python:`parameters` are assumed to be constants.
         """
 
         assert all([_is_sympy_type(sym) for sym in x])
