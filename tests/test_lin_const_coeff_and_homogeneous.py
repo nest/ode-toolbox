@@ -102,8 +102,6 @@ class TestLinConstCoeffAndHomogeneousSystem(unittest.TestCase):
         for shape in [shape_inh, shape_exc]:
             self.assertTrue(shape.is_lin_const_coeff())
             self.assertTrue(shape.is_homogeneous())
-        self.assertTrue(shape.is_lin_const_coeff())
-        self.assertTrue(shape.is_homogeneous())
 
         shapes = [shape_inh, shape_exc, shape_V_m_lin]
 

@@ -42,6 +42,9 @@ class MalformedInputException(Exception):
 
 
 def is_constant_term(term, parameters: Mapping[sympy.Symbol, str]=None):
+    r"""
+    :return: :python:`True` if and only if this term contains only numerical values and parameters; :python:`False` otherwise.
+    """
     assert all([type(k) is sympy.Symbol for k in parameters.keys()])
     if parameters is None:
         parameters = {}
@@ -110,7 +113,8 @@ class Shape:
         :param symbol: Symbolic name of the shape without additional qualifiers like prime symbols or similar.
         :param order: Order of the ODE representing the shape.
         :param initial_values: Initial values of the ODE representing the shape. The dict contains :python:`order` many key-value pairs: one for each derivative that occurs in the ODE. The keys are strings created by concatenating the variable symbol with as many single quotation marks (') as the derivation order. The values are SymPy expressions.
-        :param derivative_factors: The factors for the derivatives that occur in the ODE. This list has to contain :path:`order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. :python:`[c0, c1, c2]` for the given example.
+        :param derivative_factors: The factors for the derivatives that occur in the ODE. This list has to contain :path:`order` many values, i.e. one for each derivative that occurs in the ODE. The values have to be in ascending order, i.e. :python:`[c1, c2, c3]` for the given example.
+        :param inhom_term: Inhomogeneous part of the ODE representing the shape, i.e. :python:`c0` for the given example.
         :param nonlin_term: Nonlinear part of the ODE representing the shape, i.e. :python:`x*y + x**2` for the given example.
         """
         if not type(symbol) is sympy.Symbol:
@@ -245,6 +249,9 @@ class Shape:
 
 
     def is_lin_const_coeff_in(self, symbols, parameters=None):
+        r"""
+        :return: :python:`True` if and only if the shape is linear and constant coefficient in those variables passed in ``symbols``.
+        """
         expr = self.reconstitute_expr()
         derivative_factors, inhom_term, nonlin_term = Shape.split_lin_inhom_nonlin(expr, symbols, parameters=parameters)
         return _is_zero(nonlin_term)

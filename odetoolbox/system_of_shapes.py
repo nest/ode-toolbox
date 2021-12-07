@@ -203,6 +203,9 @@ class SystemOfShapes:
                     assert _is_zero(self.c_[row]), "nonlinear part should be zero for propagators"
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
+            if not _is_zero(self.b_[row]):
+                # only simplify in case an inhomogeneous term is present
+                update_expr[str(self.x_[row])] = sympy.simplify(update_expr[str(self.x_[row])])
 
         all_state_symbols = [str(sym) for sym in self.x_]
 
