@@ -34,7 +34,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          python -m pip install --upgrade pip pytest pycodestyle codecov pytest-cov
+          python -m pip install --upgrade pip pytest pycodestyle codecov pytest-cov wheel
           python -m pip install -r requirements.txt
           if [ "${{ matrix.with_gsl }}" == "1" ]; then python -m pip install pygsl ; fi
           export PYTHON_VERSION=`python -c "import sys; print('.'.join(map(str, [sys.version_info.major, sys.version_info.minor])))"`
