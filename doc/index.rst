@@ -376,7 +376,7 @@ ODE-toolbox will return a list of solvers. **Each solver has the following keys:
 Analytic solver generation
 --------------------------
 
-If an ODE is homogeneous, constant-coefficient and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analytically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
+If an ODE is constant-coefficient and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analytically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
 
 For example, consider an integrate-and-fire neuron with two alpha-shaped kernels (``I_shape_in`` and ``I_shape_gap``), and one nonlinear kernel (``I_shape_ex``). Each of these kernels can be expressed as a system of ODEs containing two variables. ``I_shape_in`` is specified as a second-order equation, whereas ``I_shape_gap`` is explicitly given as a system of two coupled first-order equations, i.e. as two separate ``dynamics`` entries with names ``I_shape_gap1`` and ``I_shape_gap2``.
 
@@ -441,7 +441,7 @@ Internal representation
 
 For users who want to modify/extend ODE-toolbox.
 
-Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a :py:class:`odetoolbox.system_of_shapes.SystemOfShapes` instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics and vector :math:`\mathbf{c}` containing the nonlinear terms.
+Initially, individual expressions are read from JSON into Shape instances. Subsequently, all shapes are combined into a :py:class:`odetoolbox.system_of_shapes.SystemOfShapes` instance, which summarises all provided dynamical equations in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}`, with matrix :math:`\mathbf{A}` containing the linear part of the system dynamics, vector :math:`\mathbf{b}` containing only real numbers and constant parameters, and vector :math:`\mathbf{c}` containing nonlinear terms.
 
 
 Converting direct functions of time

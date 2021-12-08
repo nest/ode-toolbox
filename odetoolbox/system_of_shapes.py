@@ -19,6 +19,8 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from typing import List, Optional
+
 import logging
 import numpy as np
 import sympy
@@ -31,19 +33,21 @@ from .sympy_printer import _is_zero
 
 class SystemOfShapes:
     r"""
-    Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
+    Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} \mathbf{c}`.
     """
-    def __init__(self, x, A: sympy.Matrix, c, shapes):
+    def __init__(self, x, A: sympy.Matrix, b: sympy.Matrix, c: sympy.Matrix, shapes: List[Shape]):
         r"""
-        Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{c}`.
+        Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}`.
 
         :param A: Matrix containing linear part.
+        :param b: Vector containing inhomogeneous part (constant term).
         :param c: Vector containing nonlinear part.
         """
-        logging.debug("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", c = " + str(c))
-        assert x.shape[0] == A.shape[0] == A.shape[1] == c.shape[0]
+        logging.debug("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", b = " + str(b) + ", c = " + str(c))
+        assert x.shape[0] == A.shape[0] == A.shape[1] == b.shape[0] == c.shape[0]
         self.x_ = x
         self.A_ = A
+        self.b_ = b
         self.c_ = c
         self.shapes_ = shapes
 
@@ -52,6 +56,7 @@ class SystemOfShapes:
         for shape in self.shapes_:
             if str(shape.symbol) == str(sym).replace("__d", "").replace("'", ""):
                 return shape.get_initial_value(sym.replace("__d", "'"))
+
         assert False, "Unknown symbol: " + str(sym)
 
 
@@ -69,13 +74,16 @@ class SystemOfShapes:
         return E
 
 
-    def get_lin_cc_symbols(self, E, differential_order_symbol="__d"):
+    def get_lin_cc_symbols(self, E, differential_order_symbol="__d", parameters=None):
         r"""
         Retrieve the variable symbols of those shapes that are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with ``"__d"`` suffixes up to the order of the shape.
         """
+        # get all symbols for all shapes as a list
+        symbols = list(self.x_)
+
         node_is_lin = {}
         for shape in self.shapes_:
-            if shape.is_lin_const_coeff(self.shapes_) and shape.is_homogeneous(self.shapes_):
+            if shape.is_lin_const_coeff_in(symbols, parameters=parameters):
                 _node_is_lin = True
             else:
                 _node_is_lin = False
@@ -135,6 +143,7 @@ class SystemOfShapes:
 
         x_sub = self.x_[idx, :]
         A_sub = self.A_[idx, :][:, idx]
+        b_sub = self.b_[idx, :]
 
         c_old = self.c_.copy()
         for _idx in idx:
@@ -148,7 +157,7 @@ class SystemOfShapes:
 
         shapes_sub = [shape for shape in self.shapes_ if shape.symbol in symbols]
 
-        return SystemOfShapes(x_sub, A_sub, c_sub, shapes_sub)
+        return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
     def generate_propagator_solver(self, output_timestep_symbol="__h"):
@@ -179,9 +188,24 @@ class SystemOfShapes:
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
-                    update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
-            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) + " + " + str(self.c_[row])
-            update_expr[str(self.x_[row])] = sympy.simplify(sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals))
+                    if _is_zero(self.b_[row]):
+                        # homogeneous ODE
+                        update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
+                    else:
+                        # inhomogeneous ODE
+                        # check that off-diagonal elements are zero in the system matrix to check that this is at most a first-order system
+                        for _col in range(P_sym.shape[1]):
+                            if _col != row:
+                                assert _is_zero(self.A_[row, _col]), "Higher-order inhomogeneous ODEs are not supported"
+
+                        particular_solution = -self.b_[row] / self.A_[row, row]
+                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
+                    assert _is_zero(self.c_[row]), "nonlinear part should be zero for propagators"
+            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
+            update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
+            if not _is_zero(self.b_[row]):
+                # only simplify in case an inhomogeneous term is present
+                update_expr[str(self.x_[row])] = sympy.simplify(update_expr[str(self.x_[row])])
 
         all_state_symbols = [str(sym) for sym in self.x_]
 
@@ -212,7 +236,7 @@ class SystemOfShapes:
 
     def reconstitute_expr(self, state_variables=None, simplify_expression="sympy.simplify(expr)"):
         r"""
-        Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form Ax + c).
+        Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}`).
 
         Before returning, the expression is simplified using a custom series of steps, passed via the ``simplify_expression`` argument (see the ODE-toolbox documentation for more details).
         """
@@ -224,19 +248,21 @@ class SystemOfShapes:
         for row, x in enumerate(self.x_):
             update_expr_terms = []
             for col, y in enumerate(self.x_):
-                update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
-            update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.c_[row]) + ")"
+                if str(self.A_[row, col]) in ["1", "1.", "1.0"]:
+                    update_expr_terms.append(str(y))
+                else:
+                    update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
+            update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.b_[row]) + ") + (" + str(self.c_[row]) + ")"
             update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
-            # skip simplification for long expressions
-            if len(str(update_expr[str(x)])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
-                logging.warning("Shape \"" + str(x) + "\" initialised with an expression that exceeds sympy simplification threshold")
-            else:
-                update_expr[str(x)] = sympy.simplify(update_expr[str(x)])
 
         # custom simplification steps (simplify() is not all that great)
         try:
             _simplify_expr = compile(simplify_expression, filename="<string>", mode="eval")
             for name, expr in update_expr.items():
+                # skip simplification for long expressions
+                if len(str(expr)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+                    logging.warning("Shape \"" + str(name) + "\" initialised with an expression that exceeds sympy simplification threshold")
+                    continue
                 update_expr[name] = eval(_simplify_expr)
                 collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
                 update_expr[name] = sympy.collect(update_expr[name], collect_syms)
@@ -250,13 +276,13 @@ class SystemOfShapes:
 
 
     @classmethod
-    def from_shapes(cls, shapes):
+    def from_shapes(cls, shapes: List[Shape], parameters=None):
         r"""
-        Construct the global system matrix :math:`\mathbf{A}` and nonlinear parts vector :math:`\mathbf{c}` on the basis of all shapes in ``shapes``, and such that
+        Construct the global system matrix :math:`\mathbf{A}` and inhomogeneous part (constant term) :math:`\mathbf{b}` and nonlinear part :math:`\mathbf{c}` on the basis of all shapes in ``shapes``, and such that
 
         .. math::
 
-           \mathbf{x}' = \mathbf{Ax} + \mathbf{c}
+           \mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}
 
         """
         if len(shapes) == 0:
@@ -266,6 +292,7 @@ class SystemOfShapes:
 
         x = sympy.zeros(N, 1)
         A = sympy.zeros(N, N)
+        b = sympy.zeros(N, 1)
         c = sympy.zeros(N, 1)
 
         i = 0
@@ -279,13 +306,13 @@ class SystemOfShapes:
             highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
             shape_expr = shape.reconstitute_expr()
 
-
             #
             #   grab the defining expression and separate into linear and nonlinear part
             #
 
-            lin_factors, nonlin_term = Shape.split_lin_nonlin(shape_expr, x)
-            A[highest_diff_sym_idx, :] = lin_factors[np.newaxis, :]
+            lin_factors, inhom_term, nonlin_term = Shape.split_lin_inhom_nonlin(shape_expr, x, parameters=parameters)
+            A[highest_diff_sym_idx, :] = lin_factors.T
+            b[highest_diff_sym_idx] = inhom_term
             c[highest_diff_sym_idx] = nonlin_term
 
 
@@ -298,4 +325,4 @@ class SystemOfShapes:
 
             i += shape.order
 
-        return SystemOfShapes(x, A, c, shapes)
+        return SystemOfShapes(x, A, b, c, shapes)

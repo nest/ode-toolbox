@@ -83,7 +83,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
     .. math::
 
-        \mathbf{Z}' = \mathbf{S} \cdot \mathbf{Z}
+        \mathbf{z}' = \mathbf{S} \mathbf{z}
 
     with
 
@@ -103,7 +103,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
     .. math::
 
-        \mathbf{Z}(t + h) = \mathbf{P} \cdot \mathbf{Z}(t)
+        \mathbf{z}(t + h) = \mathbf{P} \cdot \mathbf{z}(t)
     """
 
     def test_analytic_solver_integration_psc_alpha(self):
@@ -138,8 +138,8 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
             return _delta_vec
 
-        numerical_timevec = np.zeros((1, 0), dtype=np.float)
-        numerical_sol = np.zeros((3, 0), dtype=np.float)
+        numerical_timevec = np.zeros((1, 0), dtype=float)
+        numerical_sol = np.zeros((3, 0), dtype=float)
 
         _init_value = [0., 0., v_abs_init]
 

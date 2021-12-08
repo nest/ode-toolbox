@@ -19,6 +19,8 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from typing import Dict, List, Optional
+
 import sympy
 import sympy.matrices
 
@@ -31,7 +33,7 @@ class AnalyticIntegrator(Integrator):
     Integrate a dynamical system by means of the propagators returned by ODE-toolbox.
     """
 
-    def __init__(self, solver_dict, spike_times, enable_caching=True):
+    def __init__(self, solver_dict, spike_times: Optional[Dict[str, List[float]]] = None, enable_caching: bool = True):
         r"""
         :param solve_dict: The results dictionary returned by a call to :python:`odetoolbox.analysis()`.
         :param spike_times: For each variable, used as a key, the list of times at which a spike occurs.

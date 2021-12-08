@@ -19,7 +19,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import sympy
@@ -33,7 +33,7 @@ class Integrator:
 
     all_variable_symbols = []   # type: List[sympy.Symbol]
 
-    def set_spike_times(self, spike_times: Dict[str, List[float]]):
+    def set_spike_times(self, spike_times: Optional[Dict[str, List[float]]]):
         r"""
         Internally converts to a global, sorted list of spike times.
 
