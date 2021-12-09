@@ -230,8 +230,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
 
     # remove inhomogeneous and order > 1 shapes from ``analytic_syms``
     for i in range(shape_sys.A_.shape[0]):
-        if not _is_zero(shape_sys.b_[i]) \
-         and shape_sys.shape_order_from_system_matrix(i) > 1:
+        if not _is_zero(shape_sys.b_[i]) and shape_sys.shape_order_from_system_matrix(i) > 1:
             analytic_syms = [sym for sym in analytic_syms if not sym in shape_sys.get_connected_symbols(i)]
 
     if analytic_syms:
