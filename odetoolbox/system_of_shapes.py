@@ -23,6 +23,8 @@ from typing import List, Optional
 
 import logging
 import numpy as np
+import scipy
+import scipy.sparse
 import sympy
 import sympy.matrices
 import sys
@@ -31,14 +33,29 @@ from .shapes import Shape
 from .sympy_printer import _is_zero
 
 
+def off_diagonal_is_zero(row: int, A) -> bool:
+    for col in range(A.shape[1]):
+        if col != row and not _is_zero(A[row, col]):
+            return False
+    return True
+
+
+class PropagatorGenerationException(Exception):
+    """
+    Thrown in case an error occurs while generating propagators.
+    """
+    pass
+
+
 class SystemOfShapes:
     r"""
     Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} \mathbf{c}`.
     """
-    def __init__(self, x, A: sympy.Matrix, b: sympy.Matrix, c: sympy.Matrix, shapes: List[Shape]):
+    def __init__(self, x: sympy.Matrix, A: sympy.Matrix, b: sympy.Matrix, c: sympy.Matrix, shapes: List[Shape]):
         r"""
         Initialize a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}`.
 
+        :param x: Vector containing variable symbols.
         :param A: Matrix containing linear part.
         :param b: Vector containing inhomogeneous part (constant term).
         :param c: Vector containing nonlinear part.
@@ -51,6 +68,12 @@ class SystemOfShapes:
         self.c_ = c
         self.shapes_ = shapes
 
+
+    def get_shape_by_symbol(self, sym: str) -> Optional[Shape]:
+        for shape in self.shapes_:
+            if str(shape.symbol) == sym:
+                return shape
+        return None
 
     def get_initial_value(self, sym):
         for shape in self.shapes_:
@@ -171,8 +194,7 @@ class SystemOfShapes:
         P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
 
         if sympy.I in sympy.preorder_traversal(P):
-            raise Exception("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
-
+            raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -182,6 +204,12 @@ class SystemOfShapes:
         P_expr = {}     # the expression corresponding to each propagator symbol
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
         for row in range(P_sym.shape[0]):
+            if not _is_zero(self.c_[row]):
+                raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": nonlinear part should be zero for propagators")
+
+            if not _is_zero(self.b_[row]) and self.shape_order_from_system_matrix(row) > 1:
+                raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": higher-order inhomogeneous ODEs are not supported")
+
             update_expr_terms = []
             for col in range(P_sym.shape[1]):
                 if not _is_zero(P[row, col]):
@@ -193,14 +221,9 @@ class SystemOfShapes:
                         update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
                     else:
                         # inhomogeneous ODE
-                        # check that off-diagonal elements are zero in the system matrix to check that this is at most a first-order system
-                        for _col in range(P_sym.shape[1]):
-                            if _col != row:
-                                assert _is_zero(self.A_[row, _col]), "Higher-order inhomogeneous ODEs are not supported"
-
                         particular_solution = -self.b_[row] / self.A_[row, row]
                         update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
-                    assert _is_zero(self.c_[row]), "nonlinear part should be zero for propagators"
+
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
@@ -273,6 +296,41 @@ class SystemOfShapes:
             sys.exit(1)
 
         return update_expr
+
+
+    def shape_order_from_system_matrix(self, idx: int) -> int:
+        r"""Determine shape differential order from system matrix of symbol ``self.x_[idx]``"""
+        N = self.A_.shape[0]
+        A = np.zeros((N, N), dtype=int)
+        for i in range(A.shape[0]):
+            for j in range(A.shape[1]):
+                A[i, j] = not _is_zero(self.A_[i, j])
+
+        scc = scipy.sparse.csgraph.connected_components(A, connection="strong")[1]
+        shape_order = sum(scc == scc[idx])
+        return shape_order
+
+
+    def get_connected_symbols(self, idx: int) -> List[sympy.Symbol]:
+        r"""Extract all symbols belonging to a shape with symbol ``self.x_[idx]`` from the system matrix.
+
+        For example, if symbol ``i`` is ``x``, and symbol ``j`` is ``y``, and the system is:
+
+        .. math::
+
+           \frac{dx}{dt} &= y\\
+           \frac{dy}{dt} &= y' = -1/tau**2 * x - 2/tau * y
+        Then ``get_connected_symbols()`` for symbol ``x`` would return ``[x, y]``, and ``get_connected_symbols()`` for ``y`` would return the same.
+        """
+        N = self.A_.shape[0]
+        A = np.zeros((N, N), dtype=int)
+        for i in range(A.shape[0]):
+            for j in range(A.shape[1]):
+                A[i, j] = not _is_zero(self.A_[i, j])
+
+        scc = scipy.sparse.csgraph.connected_components(A, connection="strong")[1]
+        idx = np.where(scc == scc[idx])[0]
+        return [self.x_[i] for i in idx]
 
 
     @classmethod
