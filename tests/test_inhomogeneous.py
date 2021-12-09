@@ -176,6 +176,7 @@ class TestInhomogeneous:
         shape_I_syn2 = Shape.from_ode("y", "-1/tau**2 * x - 2/tau * y", initial_values={"y": str(x0d)}, parameters=parameters_dict)
         sys_of_shape = SystemOfShapes.from_shapes([shape_V_m, shape_I_syn1, shape_I_syn2], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
+        assert set(solver_dict["state_variables"]) == set(['V_m', 'x', 'y'])
 
     def test_inhomogeneous_solver_second_order_combined_system_api(self):
         r"""test propagators generation for combined homogeneous/inhomogeneous ODEs when called via analysis()"""
