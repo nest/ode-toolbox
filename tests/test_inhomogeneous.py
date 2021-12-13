@@ -23,9 +23,11 @@ import numpy as np
 import sympy
 import pytest
 
+import odetoolbox
+
 from odetoolbox.analytic_integrator import AnalyticIntegrator
 from odetoolbox.shapes import Shape
-from odetoolbox.system_of_shapes import SystemOfShapes
+from odetoolbox.system_of_shapes import SystemOfShapes, PropagatorGenerationException
 
 
 class TestInhomogeneous:
@@ -120,8 +122,22 @@ class TestInhomogeneous:
         np.testing.assert_allclose(correct_x, actual_x)
         np.testing.assert_allclose(correct_y, actual_y)
 
-    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="Only first-order inhomogeneous ODEs are supported")
+    @pytest.mark.xfail(strict=True, raises=PropagatorGenerationException, reason="Only first-order inhomogeneous ODEs are supported")
+    def test_inhomogeneous_solver_second_order(self):
+        r"""test failure to generate propagators for inhomogeneous 2nd order ODE"""
+        tau = 10.  # [s]
+        parameters_dict = {sympy.Symbol("tau"): str(tau)}
+
+        x0 = 0.
+        x0d = 10.
+
+        shape = Shape.from_ode("x", "-1/tau**2 * x - 2/tau * x' - 1", initial_values={"x": str(x0), "x'": str(x0d)}, parameters=parameters_dict)
+        sys_of_shape = SystemOfShapes.from_shapes([shape], parameters=parameters_dict)
+        solver_dict = sys_of_shape.generate_propagator_solver()
+
+    @pytest.mark.xfail(strict=True, raises=PropagatorGenerationException, reason="Only first-order inhomogeneous ODEs are supported")
     def test_inhomogeneous_solver_second_order_system(self):
+        r"""test failure to generate propagators for inhomogeneous 2nd order ODE"""
         tau = 10.  # [s]
         parameters_dict = {sympy.Symbol("tau"): str(tau)}
 
@@ -133,14 +149,46 @@ class TestInhomogeneous:
         sys_of_shape = SystemOfShapes.from_shapes([shape1, shape2], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
 
-    @pytest.mark.xfail(strict=True, raises=AssertionError, reason="Only first-order inhomogeneous ODEs are supported")
-    def test_inhomogeneous_solver_second_order(self):
+    def test_inhomogeneous_solver_second_order_system_api(self):
+        r"""test failure to generate propagators when called via analysis()"""
+        indict = {"dynamics": [{"expression": "x' = y",
+                                "initial_value": "0."},
+                               {"expression": "y' = -1/tau**2 * x - 2/tau * y - 1",
+                                "initial_value": "0."}],
+                  "parameters": {"tau": "10."}}
+
+        result = odetoolbox.analysis(indict, disable_stiffness_check=True)
+        assert len(result) == 1 \
+               and result[0]["solver"].startswith("numeric")
+
+    def test_inhomogeneous_solver_second_order_combined_system(self):
+        r"""test propagators generation for combined homogeneous/inhomogeneous ODEs"""
         tau = 10.  # [s]
-        parameters_dict = {sympy.Symbol("tau"): str(tau)}
+        E_L = -70.  # [mV]
+        parameters_dict = {sympy.Symbol("tau"): str(tau),
+                           sympy.Symbol("E_L"): str(E_L)}
 
         x0 = 0.
         x0d = 10.
 
-        shape = Shape.from_ode("x", "-1/tau**2 * x - 2/tau * x' - 1", initial_values={"x": str(x0), "x'": str(x0d)}, parameters=parameters_dict)
-        sys_of_shape = SystemOfShapes.from_shapes([shape], parameters=parameters_dict)
+        shape_V_m = Shape.from_ode("V_m", "x / tau + (E_L - V_m)", initial_values={"V_m": "0."}, parameters=parameters_dict)
+        shape_I_syn1 = Shape.from_ode("x", "y", initial_values={"x": str(x0)}, parameters=parameters_dict)
+        shape_I_syn2 = Shape.from_ode("y", "-1/tau**2 * x - 2/tau * y", initial_values={"y": str(x0d)}, parameters=parameters_dict)
+        sys_of_shape = SystemOfShapes.from_shapes([shape_V_m, shape_I_syn1, shape_I_syn2], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
+        assert set(solver_dict["state_variables"]) == set(['V_m', 'x', 'y'])
+
+    def test_inhomogeneous_solver_second_order_combined_system_api(self):
+        r"""test propagators generation for combined homogeneous/inhomogeneous ODEs when called via analysis()"""
+        indict = {"dynamics": [{"expression": "x' = y",
+                                "initial_value": "0."},
+                               {"expression": "y' = -1/tau**2 * x - 2/tau * y",
+                                "initial_value": "0."},
+                               {"expression": "V_m' = x / tau + (E_L - V_m)",
+                                "initial_value": "0"}],
+                  "parameters": {"tau": "10.",
+                                 "E_L": "-70."}}
+
+        result = odetoolbox.analysis(indict)
+        assert len(result) == 1 \
+               and result[0]["solver"] == "analytical"

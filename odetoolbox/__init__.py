@@ -20,7 +20,7 @@
 #
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
-from .sympy_printer import SympyPrinter
+from .sympy_printer import SympyPrinter, _is_zero
 from .system_of_shapes import SystemOfShapes
 from .shapes import MalformedInputException, Shape
 
@@ -202,7 +202,17 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
                 assert type(k) is sympy.Symbol
                 parameters[k] = v
 
+    #
+    #   create Shapes and SystemOfShapes
+    #
+
     shapes, parameters = _from_json_to_shapes(indict, options_dict, parameters=parameters)
+
+    for shape in shapes:
+        if not shape.is_homogeneous() and shape.order > 1:
+            logging.error("For symbol " + str(shape.symbol) + ": higher-order inhomogeneous ODEs are not supported")
+            sys.exit(1)
+
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
     dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=options_dict["differential_order_symbol"], parameters=parameters)
 
@@ -217,6 +227,11 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
         analytic_syms = []
     else:
         analytic_syms = [node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin]
+
+    # remove inhomogeneous and order > 1 shapes from ``analytic_syms``
+    for i in range(shape_sys.A_.shape[0]):
+        if not _is_zero(shape_sys.b_[i]) and shape_sys.shape_order_from_system_matrix(i) > 1:
+            analytic_syms = [sym for sym in analytic_syms if not sym in shape_sys.get_connected_symbols(i)]
 
     if analytic_syms:
         logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
