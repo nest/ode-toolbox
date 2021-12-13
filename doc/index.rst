@@ -447,7 +447,7 @@ Initially, individual expressions are read from JSON into Shape instances. Subse
 Converting direct functions of time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}`, with :math:`a_i\in\mathbb{R}\,\forall 0 \leq i < n`. The approach taken here [3]_ works by evaluating the function :math:`f(t)` at times :math:`t = t_0, t_1, \ldots t_n`, which results in :math:`n` equations, that we can use to solve for the coefficients of the potentially :math:`n`-dimensional dynamical system.
+The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}`, with :math:`a_i\in\mathbb{R}\,\forall 0 \leq i < n`. The approach taken here [4]_ works by evaluating the function :math:`f(t)` at times :math:`t = t_0, t_1, \ldots t_n`, which results in :math:`n` equations, that we can use to solve for the coefficients of the potentially :math:`n`-dimensional dynamical system.
 
 1. Begin by assuming that the dynamical system is of order :math:`n`.
 2. Find timepoints :math:`t = t_0, t_1, ..., t_n` such that :math:`f(t_i) \neq 0 \forall 0 \leq i \leq n`. The times can be selected at random.
@@ -563,19 +563,23 @@ Citing ODE-toolbox
 
 If you use ODE-toolbox in your work, please cite it depending on the version you are using. (It is recommended to use the latest release version whenever possible.)
 
-For the versions 2.1, 2.2 and 2.3:
+For version 2.4:
 
-.. [1] Charl Linssen, Shraddha Jain, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.4245012 <https://doi.org/10.5281/zenodo.4245012>`__.
+.. [1] Charl Linssen, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.5768597 <https://doi.org/10.5281/zenodo.5768597>`__.
+
+For versions 2.3, 2.2 and 2.1:
+
+.. [2] Charl Linssen, Shraddha Jain, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.4245012 <https://doi.org/10.5281/zenodo.4245012>`__.
 
 For version 2.0:
 
-.. [2] Charl Linssen, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.3822082 <https://doi.org/10.5281/zenodo.3822082>`__.
+.. [3] Charl Linssen, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.3822082 <https://doi.org/10.5281/zenodo.3822082>`__.
 
 
 References
 ----------
 
-.. [3] Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. `doi:10.3389/fninf.2018.00050 <https://doi.org/10.3389/fninf.2018.00050>`__.
+.. [4] Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. `doi:10.3389/fninf.2018.00050 <https://doi.org/10.3389/fninf.2018.00050>`__.
 
 
 Acknowledgements
