@@ -33,6 +33,33 @@ from odetoolbox.system_of_shapes import SystemOfShapes, PropagatorGenerationExce
 class TestInhomogeneous:
     """Test correct propagators returned for simple inhomogeneous ODEs"""
 
+    def test_constant_rate(self):
+        r"""Test an ODE of the form x' = 42 with x(t = 0) = -42."""
+        x0 = -42.
+
+        shape = Shape.from_ode("x", "42", initial_values={"x": str(x0)})
+        sys_of_shape = SystemOfShapes.from_shapes([shape])
+        solver_dict = sys_of_shape.generate_propagator_solver()
+
+        analytic_integrator = AnalyticIntegrator(solver_dict)
+        analytic_integrator.set_initial_values({"x": str(x0)})
+        analytic_integrator.reset()
+
+        dt = 1.
+
+        actual = []
+        correct = []
+        cur_x = x0
+        timevec = np.arange(0., 100., dt)
+        for step, t in enumerate(timevec):
+            state_ = analytic_integrator.get_value(t)["x"]
+            actual.append(state_)
+
+            cur_x = x0 + 42 * t
+            correct.append(cur_x)
+
+        np.testing.assert_allclose(correct, actual)
+
     @pytest.mark.parametrize("ode_definition", ["(U - x) / tau",
                                                 "(1 - x) / tau"])
     def test_inhomogeneous_solver(self, ode_definition):
@@ -52,10 +79,8 @@ class TestInhomogeneous:
         assert shape.is_lin_const_coeff()
 
         sys_of_shape = SystemOfShapes.from_shapes([shape], parameters=parameters_dict)
-        print(sys_of_shape.reconstitute_expr())
         solver_dict = sys_of_shape.generate_propagator_solver()
         solver_dict["parameters"] = parameters_dict
-        print(solver_dict)
 
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"x": str(x0)})
@@ -90,10 +115,8 @@ class TestInhomogeneous:
         shape_y = Shape.from_ode("y", "(1 - y) / tau2", initial_values={"y": str(x0)}, parameters=parameters_dict)
 
         sys_of_shape = SystemOfShapes.from_shapes([shape_x, shape_y], parameters=parameters_dict)
-        print(sys_of_shape.reconstitute_expr())
         solver_dict = sys_of_shape.generate_propagator_solver()
         solver_dict["parameters"] = parameters_dict
-        print(solver_dict)
 
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"x": str(x0), "y": str(x0)})

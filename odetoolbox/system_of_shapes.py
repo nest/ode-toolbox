@@ -221,8 +221,11 @@ class SystemOfShapes:
                         update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
                     else:
                         # inhomogeneous ODE
-                        particular_solution = -self.b_[row] / self.A_[row, row]
-                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
+                        if _is_zero(self.A_[row, row]):
+                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + str(self.b_[row]))
+                        else:
+                            particular_solution = -self.b_[row] / self.A_[row, row]
+                            update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)

@@ -152,8 +152,9 @@ class AnalyticIntegrator(Integrator):
             assert k in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
             expr = sympy.parsing.sympy_parser.parse_expr(str(v), global_dict=Shape._sympy_globals)
             subs_dict = {}
-            for param_symbol, param_val in self.solver_dict["parameters"].items():
-                subs_dict[param_symbol] = param_val
+            if "parameters" in self.solver_dict.keys():
+                for param_symbol, param_val in self.solver_dict["parameters"].items():
+                    subs_dict[param_symbol] = param_val
             try:
                 self.initial_values[k] = float(expr.evalf(subs=subs_dict))
             except TypeError:
@@ -229,6 +230,7 @@ class AnalyticIntegrator(Integrator):
 
             delta_t = spike_t - t_curr
             if delta_t > 0:
+                t_curr = spike_t
                 state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
 
             #
@@ -239,18 +241,6 @@ class AnalyticIntegrator(Integrator):
                 if spike_sym in self.initial_values.keys():
                     state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
 
-            t_curr = spike_t
-
-
-        #
-        #   update cache with the value at the last spike time (if we update with the value at the last requested time (`t`), we would accumulate roundoff errors)
-        #
-
-        if self.enable_cache_update_:
-            self.t_curr = t_curr
-            self.state_at_t_curr = state_at_t_curr
-
-
         #
         #   apply propagator to update the state from `t_curr` to `t`
         #
@@ -259,5 +249,13 @@ class AnalyticIntegrator(Integrator):
         if delta_t > 0:
             state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
             t_curr = t
+
+        #
+        #   update cache with the value at the last spike time (if we update with the value at the last requested time (`t`), we would accumulate roundoff errors)
+        #
+
+        if self.enable_cache_update_:
+            self.t_curr = t_curr
+            self.state_at_t_curr = state_at_t_curr
 
         return state_at_t_curr
