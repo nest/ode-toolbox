@@ -121,7 +121,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
         np.testing.assert_allclose(state[True]["timevec"], timevec)
         np.testing.assert_allclose(state[True]["timevec"], state[False]["timevec"])
         for sym, val in state_.items():
-            np.testing.assert_allclose(state[True][sym], state[False][sym], atol=1E-12)
+            np.testing.assert_allclose(state[True][sym], state[False][sym])
 
 
 if __name__ == "__main__":

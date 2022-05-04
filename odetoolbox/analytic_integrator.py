@@ -212,7 +212,7 @@ class AnalyticIntegrator(Integrator):
 
 
         #
-        #   process spikes between t_curr and t
+        #   process spikes between ⟨t_curr, t]
         #
 
         for spike_t, spike_syms in zip(all_spike_times, all_spike_times_sym):
@@ -230,8 +230,8 @@ class AnalyticIntegrator(Integrator):
 
             delta_t = spike_t - t_curr
             if delta_t > 0:
-                t_curr = spike_t
                 state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
+                t_curr = spike_t
 
             #
             #   delta impulse increment
@@ -242,6 +242,15 @@ class AnalyticIntegrator(Integrator):
                     state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
 
         #
+        #   update cache with the value at the last spike time (if we update with the value at the last requested time (`t`), we would accumulate roundoff errors)
+        #
+
+        if self.enable_cache_update_:
+            self.t_curr = t_curr
+            self.state_at_t_curr = state_at_t_curr
+
+
+        #
         #   apply propagator to update the state from `t_curr` to `t`
         #
 
@@ -249,13 +258,5 @@ class AnalyticIntegrator(Integrator):
         if delta_t > 0:
             state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
             t_curr = t
-
-        #
-        #   update cache with the value at the last spike time (if we update with the value at the last requested time (`t`), we would accumulate roundoff errors)
-        #
-
-        if self.enable_cache_update_:
-            self.t_curr = t_curr
-            self.state_at_t_curr = state_at_t_curr
 
         return state_at_t_curr
