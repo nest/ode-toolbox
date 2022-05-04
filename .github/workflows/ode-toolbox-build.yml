@@ -43,7 +43,7 @@ jobs:
           echo $PYTHON_VERSION
 
           pip uninstall --yes sympy
-          pip install --upgrade sympy${{ matrix.sympy_version }}
+          pip install sympy${{ matrix.sympy_version }}
           echo "Using sympy version:"
           python -c "import sympy; print(sympy.__version__)"
 
