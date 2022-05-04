@@ -33,7 +33,8 @@ from odetoolbox.system_of_shapes import SystemOfShapes, PropagatorGenerationExce
 class TestInhomogeneous:
     """Test correct propagators returned for simple inhomogeneous ODEs"""
 
-    def test_constant_rate(self):
+    @pytest.mark.parametrize("dt", [.1, 1.])
+    def test_constant_rate(self, dt: float):
         r"""Test an ODE of the form x' = 42 with x(t = 0) = -42."""
         x0 = -42.
 
@@ -44,8 +45,6 @@ class TestInhomogeneous:
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"x": str(x0)})
         analytic_integrator.reset()
-
-        dt = 1.
 
         actual = []
         correct = []
@@ -60,9 +59,10 @@ class TestInhomogeneous:
 
         np.testing.assert_allclose(correct, actual)
 
+    @pytest.mark.parametrize("dt", [.1, 1.])
     @pytest.mark.parametrize("ode_definition", ["(U - x) / tau",
                                                 "(1 - x) / tau"])
-    def test_inhomogeneous_solver(self, ode_definition):
+    def test_inhomogeneous_solver(self, dt, ode_definition):
         U = .2
         if ode_definition == "(1 - x) / tau":
             U = 1.
@@ -86,8 +86,6 @@ class TestInhomogeneous:
         analytic_integrator.set_initial_values({"x": str(x0)})
         analytic_integrator.reset()
 
-        dt = 1.
-
         actual = []
         correct = []
         cur_x = x0
@@ -101,7 +99,8 @@ class TestInhomogeneous:
 
         np.testing.assert_allclose(correct, actual)
 
-    def test_inhomogeneous_simultaneous(self):
+    @pytest.mark.parametrize("dt", [.1, 1.])
+    def test_inhomogeneous_simultaneous(self, dt:float):
         U = .2
         tau = 5.  # [s]
 
@@ -121,8 +120,6 @@ class TestInhomogeneous:
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"x": str(x0), "y": str(x0)})
         analytic_integrator.reset()
-
-        dt = 1.
 
         actual_x = []
         actual_y = []
