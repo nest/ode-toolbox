@@ -41,7 +41,9 @@ ODE-toolbox is written in Python and leverages SymPy for the symbolic manipulati
 Installation
 ------------
 
-.. Attention:: The latest SymPy release at time of writing, 1.8, introduces a fourfold regression in runtime performance on the ODE-toolbox unit tests, compared to SymPy 1.4. Unless this conflicts with other version requirements, we would recommend to use SymPy 1.4 for now (for example, by editing ``requirements.txt`` to read ``sympy==1.4``).
+.. Attention:: SymPy releases after 1.4 introduce a fourfold regression in runtime performance on the ODE-toolbox unit tests, compared to SymPy 1.4. Unless this conflicts with other version requirements, we would recommend to use SymPy 1.4 for now (for example, by editing ``requirements.txt`` to read ``sympy==1.4``).
+
+.. Attention:: The latest SymPy release at time of writing, 1.10.1, introduces as issue that prevents ODE-toolbox from being used with many common neuron models. Please see https://github.com/sympy/sympy/issues/23417 and use an older SymPy version until this issue has been resolved.
 
 
 Prerequisites
