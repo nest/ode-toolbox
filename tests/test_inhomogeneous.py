@@ -100,7 +100,7 @@ class TestInhomogeneous:
         np.testing.assert_allclose(correct, actual)
 
     @pytest.mark.parametrize("dt", [.1, 1.])
-    def test_inhomogeneous_simultaneous(self, dt:float):
+    def test_inhomogeneous_simultaneous(self, dt: float):
         U = .2
         tau = 5.  # [s]
 

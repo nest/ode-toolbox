@@ -183,7 +183,7 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def generate_propagator_solver(self, output_timestep_symbol:str = "__h"):
+    def generate_propagator_solver(self, output_timestep_symbol: str = "__h"):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
