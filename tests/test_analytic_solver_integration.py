@@ -212,7 +212,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
                   "Tau_syn_ex": tau_syn,
                   "Tau_syn_gap": tau_syn,
                   "C_m": c_m,
-                  "I_e": 0.,
+                  "I_ext": 0.,
                   "currents": 0.,
                   "e": sympy.exp(1)}
 

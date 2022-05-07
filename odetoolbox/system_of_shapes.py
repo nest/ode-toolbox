@@ -204,6 +204,7 @@ class SystemOfShapes:
         P_expr = {}     # the expression corresponding to each propagator symbol
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
         for row in range(P_sym.shape[0]):
+            # assemble update expression for symbol ``self.x_[row]``
             if not _is_zero(self.c_[row]):
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": nonlinear part should be zero for propagators")
 
@@ -216,15 +217,16 @@ class SystemOfShapes:
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
-                    if _is_zero(self.b_[row]):
+                    if _is_zero(self.b_[col]):
                         # homogeneous ODE
                         update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
                     else:
                         # inhomogeneous ODE
-                        if _is_zero(self.A_[row, row]):
-                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + output_timestep_symbol + " * " + str(self.b_[row]))
+                        if _is_zero(self.A_[col, col]):
+                            # of the form x' = const
+                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + output_timestep_symbol + " * " + str(self.b_[col]))
                         else:
-                            particular_solution = -self.b_[row] / self.A_[row, row]
+                            particular_solution = -self.b_[col] / self.A_[col, col]
                             update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
