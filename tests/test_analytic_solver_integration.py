@@ -113,8 +113,9 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         # neuron parameters
         tau = 20E-3    # [s]
         tau_syn = 5E-3    # [s]
-        c_m = 1E-6    # [F]
-        v_abs_init = -1000.   # [mV]
+        c_m = 1.    # [uF]
+        I_ext = -1.  # [??]
+        v_abs_init = 0.   # [mV]
         i_ex_init = [0., e / tau_syn]   # [A]
         spike_times = [10E-3]  # [s]
         for spike_time in spike_times:
@@ -129,11 +130,11 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         #
 
         def f(t, y):
-            i_ex = y[0:2]
+            i_ex = y[:2]
             V_abs = y[2]
 
             _d_i_ex = np.array([i_ex[1], -i_ex[0] / tau_syn**2 - 2 * i_ex[1] / tau_syn])
-            _d_V_abs_expr_ = -V_abs / tau + 3 * i_ex[0] / c_m    # factor 3 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory and gap currents (which are of the exact same shape/magnitude at all times)
+            _d_V_abs_expr_ = -V_abs / tau + (3 * i_ex[0] + I_ext) / c_m    # factor 3 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory and gap currents (which are of the exact same shape/magnitude at all times)
             _delta_vec = np.concatenate((_d_i_ex, [_d_V_abs_expr_]))
 
             return _delta_vec
@@ -212,8 +213,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
                   "Tau_syn_ex": tau_syn,
                   "Tau_syn_gap": tau_syn,
                   "C_m": c_m,
-                  "I_ext": 0.,
-                  "currents": 0.,
+                  "I_ext": I_ext,
                   "e": sympy.exp(1)}
 
         if not "parameters" in solver_dict.keys():
