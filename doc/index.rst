@@ -474,6 +474,53 @@ If the imaginary unit :math:`i` is found in any of the entries in :math:`\mathbf
 In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated.
 
 
+Computing the update expressions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The update expressions formulate the way in which the propagators are used to compute the new state from the current state. For instance, for a simple leaky integrate-and-fire neuron with membrane potential :math:`V_m` and a decaying exponential-shaped synaptic kernel :math:`I_{syn}`:
+
+.. math::
+
+   I_{syn} \leftarrow P_{I_{syn},I_{syn}} I_{syn}\\
+   V_m \leftarrow P_{V_m,V_m} V_m + P_{V_m,I_{syn}} I_{syn}
+
+In the case of an autonomous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry, and the corresponding entry in :math:`\textbf{A}` is zero), the update equation is of the form:
+
+.. math::
+
+   x \leftarrow P x + \Delta t * b
+
+For example for the ODE:
+
+.. math::
+
+   \frac{dx}{dt} = 1.618
+
+the update equation is:
+
+.. math::
+
+   x \leftarrow P x + \Delta t * 1.618
+
+In the case of an inhomogenous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry, but the corresponding entry in :math:`\textbf{A}` is nonzero), the update equation is of the form:
+
+.. math::
+
+   x \leftarrow P (x + \frac{b}{A}) - \frac{b}{A}
+
+For example for the ODE:
+
+.. math::
+
+   \frac{dx}{dt} = 1.618 - x
+
+the update equation is:
+
+.. math::
+
+   x \leftarrow P (x - 1.618)+ 1.618
+
+
 Working with large expressions
 ------------------------------
 
