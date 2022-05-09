@@ -152,8 +152,9 @@ class AnalyticIntegrator(Integrator):
             assert k in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
             expr = sympy.parsing.sympy_parser.parse_expr(str(v), global_dict=Shape._sympy_globals)
             subs_dict = {}
-            for param_symbol, param_val in self.solver_dict["parameters"].items():
-                subs_dict[param_symbol] = param_val
+            if "parameters" in self.solver_dict.keys():
+                for param_symbol, param_val in self.solver_dict["parameters"].items():
+                    subs_dict[param_symbol] = param_val
             try:
                 self.initial_values[k] = float(expr.evalf(subs=subs_dict))
             except TypeError:
@@ -211,7 +212,7 @@ class AnalyticIntegrator(Integrator):
 
 
         #
-        #   process spikes between t_curr and t
+        #   process spikes between ⟨t_curr, t]
         #
 
         for spike_t, spike_syms in zip(all_spike_times, all_spike_times_sym):
@@ -230,6 +231,7 @@ class AnalyticIntegrator(Integrator):
             delta_t = spike_t - t_curr
             if delta_t > 0:
                 state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
+                t_curr = spike_t
 
             #
             #   delta impulse increment
@@ -238,9 +240,6 @@ class AnalyticIntegrator(Integrator):
             for spike_sym in spike_syms:
                 if spike_sym in self.initial_values.keys():
                     state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
-
-            t_curr = spike_t
-
 
         #
         #   update cache with the value at the last spike time (if we update with the value at the last requested time (`t`), we would accumulate roundoff errors)

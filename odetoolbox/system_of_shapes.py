@@ -183,7 +183,7 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def generate_propagator_solver(self, output_timestep_symbol="__h"):
+    def generate_propagator_solver(self, output_timestep_symbol: str = "__h"):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
@@ -221,8 +221,11 @@ class SystemOfShapes:
                         update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
                     else:
                         # inhomogeneous ODE
-                        particular_solution = -self.b_[row] / self.A_[row, row]
-                        update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
+                        if _is_zero(self.A_[row, row]):
+                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + output_timestep_symbol + " * " + str(self.b_[row]))
+                        else:
+                            particular_solution = -self.b_[row] / self.A_[row, row]
+                            update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
