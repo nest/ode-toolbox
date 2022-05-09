@@ -114,7 +114,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         tau = 20E-3    # [s]
         tau_syn = 5E-3    # [s]
         c_m = 1.    # [uF]
-        I_ext = -1.  # [??]
+        I_ext = -1.  # [pA]
         v_abs_init = 0.   # [mV]
         i_ex_init = [0., e / tau_syn]   # [A]
         spike_times = [10E-3]  # [s]
