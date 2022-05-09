@@ -21,7 +21,7 @@
         "initial_value": "e / Tau_syn_gap"
     },
     {
-      "expression": "V_abs' = -V_abs/Tau + (I_shape_in + I_shape_ex + I_shape_gap1) / C_m",
+      "expression": "V_abs' = -V_abs/Tau + (I_shape_in + I_shape_ex + I_shape_gap1 + I_ext) / C_m",
       "initial_value": "0."
     }
   ]
