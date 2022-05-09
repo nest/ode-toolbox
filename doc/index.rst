@@ -481,14 +481,14 @@ The update expressions formulate the way in which the propagators are used to co
 
 .. math::
 
-   I_{syn} \leftarrow P_{I_{syn},I_{syn}} I_{syn}\\
-   V_m \leftarrow P_{V_m,V_m} V_m + P_{V_m,I_{syn}} I_{syn}
+   I_{syn} &\leftarrow P_{I_{syn},I_{syn}} I_{syn}\\
+   V_m &\leftarrow P_{V_m,V_m} V_m + P_{V_m,I_{syn}} I_{syn}
 
 In the case of an autonomous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry, and the corresponding entry in :math:`\textbf{A}` is zero), the update equation is of the form:
 
 .. math::
 
-   x \leftarrow P x + \Delta t * b
+   x \leftarrow P x + \Delta t \cdot b
 
 For example for the ODE:
 
@@ -500,13 +500,13 @@ the update equation is:
 
 .. math::
 
-   x \leftarrow P x + \Delta t * 1.618
+   x \leftarrow P x + \Delta t \cdot 1.618
 
 In the case of an inhomogenous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry, but the corresponding entry in :math:`\textbf{A}` is nonzero), the update equation is of the form:
 
 .. math::
 
-   x \leftarrow P (x + \frac{b}{A}) - \frac{b}{A}
+   x \leftarrow P \left(x + \frac{b}{A}\right) - \frac{b}{A}
 
 For example for the ODE:
 
