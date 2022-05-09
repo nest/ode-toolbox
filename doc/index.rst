@@ -477,7 +477,7 @@ In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a 
 Computing the update expressions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The update expressions formulate the way in which the propagators are used to compute the new state from the current state. For instance, for a simple leaky integrate-and-fire neuron with membrane potential :math:`V_m` and a decaying exponential-shaped synaptic kernel :math:`I_{syn}`:
+The update expressions formulate the way in which the propagators are used to compute the new state from the current state. For instance, for a simple leaky integrate-and-fire neuron with membrane potential :math:`V_m` and a decaying exponential-shaped synaptic kernel :math:`I_{syn}`, the update expressions are of the form:
 
 .. math::
 
