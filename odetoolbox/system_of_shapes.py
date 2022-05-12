@@ -49,7 +49,7 @@ class PropagatorGenerationException(Exception):
 
 class SystemOfShapes:
     r"""
-    Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} \mathbf{c}`.
+    Represent a dynamical system in the canonical form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}`.
     """
     def __init__(self, x: sympy.Matrix, A: sympy.Matrix, b: sympy.Matrix, c: sympy.Matrix, shapes: List[Shape]):
         r"""
@@ -324,7 +324,7 @@ class SystemOfShapes:
         .. math::
 
            \frac{dx}{dt} &= y\\
-           \frac{dy}{dt} &= y' = -1/tau**2 * x - 2/tau * y
+           \frac{dy}{dt} &= y' = -\frac{1}{\tau^2} x - \frac{2}{\tau} y
         Then ``get_connected_symbols()`` for symbol ``x`` would return ``[x, y]``, and ``get_connected_symbols()`` for ``y`` would return the same.
         """
         N = self.A_.shape[0]
