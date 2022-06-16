@@ -295,9 +295,9 @@ class SystemOfShapes:
                 collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
                 update_expr[name] = sympy.collect(update_expr[name], collect_syms)
         except Exception as e:
-            print("Exception occurred while applying expression simplification function: " + type(e).__name__)
-            print(str(e))
-            print("Check that the parameter ``simplify_expression`` is properly formatted.")
+            logging.error("Exception occurred while applying expression simplification function: " + type(e).__name__)
+            logging.error(str(e))
+            logging.error("Check that the parameter ``simplify_expression`` is properly formatted.")
             sys.exit(1)
 
         return update_expr

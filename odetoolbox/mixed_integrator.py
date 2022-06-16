@@ -40,8 +40,8 @@ try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    print("Warning: PyGSL is not available. The stiffness test will be skipped.")
-    print("Warning: " + str(ie), end="\n\n\n")
+    logging.warn("PyGSL is not available. The stiffness test will be skipped.")
+    logging.warn("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 
@@ -266,10 +266,9 @@ class MixedIntegrator(Integrator):
 
                     if h_min < h_min_lower_bound:
                         estr = "Integration step below %.e (s=%.f). Please check your ODE." % (h_min_lower_bound, h_min)
+                        logging.warn(estr)
                         if raise_errors:
                             raise Exception(estr)
-                        else:
-                            print(estr)
 
                     h_sum += h_suggested
                     n_timesteps_taken += 1
@@ -470,10 +469,10 @@ class MixedIntegrator(Integrator):
             # return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]	# non-wrapped version
             _ret = [self._update_expr_wrapped[str(sym)](*y) for sym in self._system_of_shapes.x_]
         except Exception as e:
-            print("E==>", type(e).__name__ + ": " + str(e))
-            print("     Local parameters at time of failure:")
+            logging.error("E==>", type(e).__name__ + ": " + str(e))
+            logging.error("     Local parameters at time of failure:")
             for k, v in self._locals.items():
-                print("    ", k, "=", v)
+                logging.error("    ", k, "=", v)
             raise
 
         return _ret
