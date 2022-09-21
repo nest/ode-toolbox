@@ -22,7 +22,6 @@ from typing import List, Mapping, Tuple
 
 import functools
 import logging
-import numpy as np
 import re
 import sympy
 import sympy.parsing.sympy_parser

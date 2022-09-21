@@ -27,6 +27,7 @@ from .shapes import MalformedInputException, Shape
 import copy
 import json
 import logging
+import sys
 
 import sympy
 from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
@@ -36,8 +37,8 @@ try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    print("Warning: PyGSL is not available. The stiffness test will be skipped.")
-    print("Warning: " + str(ie), end="\n\n\n")
+    logging.warn("PyGSL is not available. The stiffness test will be skipped.")
+    logging.warn("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 if PYGSL_AVAILABLE:
