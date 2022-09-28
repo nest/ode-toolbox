@@ -40,7 +40,7 @@ class MalformedInputException(Exception):
     pass
 
 
-def is_constant_term(term, parameters: Mapping[sympy.Symbol, str]=None):
+def is_constant_term(term, parameters: Mapping[sympy.Symbol, str] = None):
     r"""
     :return: :python:`True` if and only if this term contains only numerical values and parameters; :python:`False` otherwise.
     """
