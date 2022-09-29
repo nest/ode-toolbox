@@ -27,8 +27,57 @@ import sympy.parsing.sympy_parser
 
 
 class SingularityDetection:
-    r"""
-    This class ...
+    r"""Singularity detection for generated propagator matrix.
+
+    Some ordinary differential equations (ODEs) can be solved analytically: an expression for the solution can be readily derived by algebraic manipulation. This allows us to formulate an "exact integrator", that yields the next state of the system given the current state and the timestep Δt, to floating point (machine) precision [1]_.
+
+    In some cases, an ODE is analytically tractable, but vulnerable to an edge case condition in the generated propagator matrices. Consider the following example: Let the system of ODEs be given by
+
+    .. math::
+
+       y' = A \cdot y
+
+    Then the propagator matrix for a timestep :math:`\Delta t` is
+
+    .. math::
+
+       P = \exp(A \cdot \Delta t)
+
+    which we can use to advance the system
+
+    .. math::
+
+       y(t + \Delta t) = P \cdot y(t)
+
+    If :math:`A` is of the form:
+
+    .. math::
+
+       \begin{bmatrix}
+       -a & 0  & 0\\
+       1  & -a & 0\\
+       0  & 1  & -b
+       \end{bmatrix}
+
+    Then the generated propagator matrix contains denominators that include the factor :math:`a - b`. When the parameters are chosen such that :math:`a = b`, a singularity (division by zero fault) occurs. However, the singularity is readily avoided if we assume that :math:`a = b` before generating the propagator, i.e. we start out with the matrix
+
+    .. math::
+
+       \begin{bmatrix}
+       -a & 0  & 0\\
+       1  & -a & 0\\
+       0  & 1  & -a
+       \end{bmatrix}
+
+    The resulting propagator contains no singularities.
+
+    This class detects the potential occurrence of such singularities (potential division by zero) in the generated propagator matrix, which occur under certain choices of parameter values. These choices are reported as "conditions" by the ``find_singularities()`` function.
+
+
+    References
+    ----------
+
+    .. [1] Stefan Rotter, Markus Diesmann. Exact digital simulation of time-invariant linear systems with applications to neuronal modeling. Neurobiologie und Biophysik, Institut für Biologie III, Universität Freiburg, Freiburg, Germany Biol. Cybern. 81, 381-402 (1999)
     """
 
     @staticmethod
