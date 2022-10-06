@@ -456,7 +456,7 @@ class Shape:
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, time_symbol)]
 
-        logging.info("\nProcessing function-of-time shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
+        logging.info("\nProcessing function-of-time shape \"" + str(symbol) + "\" with defining expression = \"" + str(definition) + "\"")
 
 
         #

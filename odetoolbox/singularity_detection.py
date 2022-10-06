@@ -96,36 +96,20 @@ class SingularityDetection:
             for expr, subs_expr in cond.items():
                 if sympy.simplify(val.subs(expr, subs_expr)) in [sympy.nan, sympy.zoo, sympy.oo]:
                     return False
+
         return True
 
     @staticmethod
-    def _new_system_matrix(A: sympy.Matrix, cond):  # cond is a tuple here (or a tuple of tuples!)
-        M = sympy.zeros(3, 3)
-        for i in range(3):
-            for j in range(3):
-                M[i, j] = A[i, j]
-                for k in range(len(cond)):  # looping over the tuple
-                    M[i, j] = M[i, j].subs(list(cond[k].keys())[0], list(cond[k].values())[0])  # XXX:add check for simplification threshold(later)
-        return M
-
-    @staticmethod
     def _flatten_conditions(cond):
-        """
+        r"""
         Return a list with conditions in the form of dictionaries
         """
         lst = []
         for i in range(len(cond)):
             if cond[i] not in lst:
                 lst.append(cond[i])
-        return lst
 
-    @staticmethod
-    def _combinations_of_conditions(cond):  # cond is a list
-        comb_list = []
-        for r in range(len(cond) + 1):
-            comb = itertools.combinations(cond, r)
-            comb_list = comb_list + list(comb)
-        return comb_list
+        return lst
 
     @staticmethod
     def _filter_valid_conditions(cond, A: sympy.Matrix):
@@ -133,6 +117,7 @@ class SingularityDetection:
         for i in range(len(cond)):  # looping over conditions
             if SingularityDetection._is_matrix_defined_under_substitution(A, cond[i]):
                 filt_cond.append(cond[i])
+
         return filt_cond
 
     @staticmethod
@@ -142,17 +127,16 @@ class SingularityDetection:
         If the expression is quadratic, like let's say "x**2-1" then the function 'solve() returns two dictionaries in a list. each dictionary corresponds to one solution.
         We are then collecting these lists in our own list called 'condition'.
         """
-
-        condition = []
+        conditions = []
         for expr in sympy.flatten(A):
             for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
                 if isinstance(subexpr, sympy.Pow) and subexpr.args[1] < 0:  # find expressions of the form 1/x, which is encoded in sympy as x^-1
                     denom = subexpr.args[0]  # extracting the denominator
-                    sol = sympy.solve(denom, denom.free_symbols, dict=True)  # 'condition' here is a list of all those conditions at which the denominator goes to zero
-                    if sol not in condition:
-                        condition.extend(sol)
+                    cond = sympy.solve(denom, denom.free_symbols, dict=True)  # ``cond`` here is a list of all those conditionss at which the denominator goes to zero
+                    if cond not in conditions:
+                        conditions.extend(cond)
 
-        return condition
+        return conditions
 
     @staticmethod
     def find_singularities(P: sympy.Matrix, A: sympy.Matrix):
@@ -165,7 +149,8 @@ class SingularityDetection:
         A : sympy.Matrix
             system matrix
         """
-        condition = SingularityDetection._generate_singularity_conditions(P)
-        condition = SingularityDetection._flatten_conditions(condition)  # makes a list of conditions with each condition in the form of a dict
-        condition = SingularityDetection._filter_valid_conditions(condition, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
+        conditions = SingularityDetection._generate_singularity_conditions(P)
+        conditions = SingularityDetection._flatten_conditions(conditions)  # makes a list of conditions with each condition in the form of a dict
+        conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
+
         return condition
