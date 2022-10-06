@@ -130,7 +130,7 @@ class SingularityDetection:
             for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
                 if isinstance(subexpr, sympy.Pow) and subexpr.args[1] < 0:  # find expressions of the form 1/x, which is encoded in sympy as x^-1
                     denom = subexpr.args[0]  # extracting the denominator
-                    cond = sympy.solve(denom, denom.free_symbols, dict=True)  # ``cond`` here is a list of all those conditionss at which the denominator goes to zero
+                    cond = sympy.solve(denom, denom.free_symbols, dict=True)  # ``cond`` here is a list of all those conditions at which the denominator goes to zero
                     if cond not in conditions:
                         conditions.extend(cond)
 
