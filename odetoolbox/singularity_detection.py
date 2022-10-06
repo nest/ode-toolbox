@@ -18,10 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
-from typing import List, Mapping, Tuple
+from typing import Mapping
 
-import itertools
-import logging
 import sympy
 import sympy.parsing.sympy_parser
 
@@ -153,4 +151,4 @@ class SingularityDetection:
         conditions = SingularityDetection._flatten_conditions(conditions)  # makes a list of conditions with each condition in the form of a dict
         conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
 
-        return condition
+        return conditions
