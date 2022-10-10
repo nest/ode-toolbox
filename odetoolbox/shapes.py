@@ -40,7 +40,7 @@ class MalformedInputException(Exception):
     pass
 
 
-def is_constant_term(term, parameters: Mapping[sympy.Symbol, str]=None):
+def is_constant_term(term, parameters: Mapping[sympy.Symbol, str] = None):
     r"""
     :return: :python:`True` if and only if this term contains only numerical values and parameters; :python:`False` otherwise.
     """
@@ -456,7 +456,7 @@ class Shape:
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, time_symbol)]
 
-        logging.info("\nProcessing function-of-time shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
+        logging.info("\nProcessing function-of-time shape \"" + str(symbol) + "\" with defining expression = \"" + str(definition) + "\"")
 
 
         #
