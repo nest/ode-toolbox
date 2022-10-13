@@ -23,6 +23,8 @@ from typing import Dict, List, Optional
 
 import sympy
 import sympy.matrices
+import sympy.utilities
+import sympy.utilities.autowrap
 
 from .shapes import Shape
 from .integrator import Integrator
@@ -222,7 +224,6 @@ class AnalyticIntegrator(Integrator):
 
             if spike_t > t:
                 break
-
 
             #
             #   apply propagator to update the state from `t_curr` to `spike_t`

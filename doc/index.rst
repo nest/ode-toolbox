@@ -43,7 +43,7 @@ Installation
 
 .. Attention:: SymPy releases after 1.4 introduce a fourfold regression in runtime performance on the ODE-toolbox unit tests, compared to SymPy 1.4. Unless this conflicts with other version requirements, we would recommend to use SymPy 1.4 for now (for example, by editing ``requirements.txt`` to read ``sympy==1.4``).
 
-.. Attention:: The latest SymPy release at time of writing, 1.10.1, introduces as issue that prevents ODE-toolbox from being used with many common neuron models. Please see https://github.com/sympy/sympy/issues/23417 and use an older SymPy version until this issue has been resolved.
+.. Attention:: The latest SymPy release at time of writing, 1.10.1, introduces an issue that prevents ODE-toolbox from being used with many common neuron models. Please see https://github.com/sympy/sympy/issues/23417 and use an older SymPy version until this issue has been resolved.
 
 
 Prerequisites
@@ -471,7 +471,7 @@ The propagator matrix :math:`\mathbf{P}` is derived from the system matrix by ma
 
 If the imaginary unit :math:`i` is found in any of the entries in :math:`\mathbf{P}`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
 
-In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated.
+In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated. ODE-toolbox will detect conditions (in this example, :python:`param1 = param2`) under which these singularities can occur. If any conditions were found, log warning messages will be emitted during the computation of the propagator matrix. A condition is only reported if the system matrix :math:`A` is defined under that condition, ensuring that only those conditions are returned that are purely an artifact of the propagator computation.
 
 
 Computing the update expressions

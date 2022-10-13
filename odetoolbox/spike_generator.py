@@ -59,7 +59,7 @@ class SpikeGenerator():
 
 
     @classmethod
-    def _generate_homogeneous_poisson_spikes(cls, T: float, rate: float, min_isi: float=1E-6):
+    def _generate_homogeneous_poisson_spikes(cls, T: float, rate: float, min_isi: float = 1E-6):
         r"""
         Generate spike trains for the given simulation length. Uses a Poisson distribution to create biologically realistic characteristics of the spike-trains.
 
