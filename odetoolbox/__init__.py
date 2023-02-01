@@ -20,16 +20,16 @@
 #
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
-from .sympy_printer import SympyPrinter, _is_zero
-from .system_of_shapes import SystemOfShapes
-from .shapes import MalformedInputException, Shape
-
-import copy
 import json
 import logging
-
+import sys
 import sympy
 from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
+
+from .config import Config
+from .sympy_helpers import SympyPrinter, _is_zero
+from .system_of_shapes import SystemOfShapes
+from .shapes import MalformedInputException, Shape
 
 
 try:
@@ -54,16 +54,6 @@ if PLOT_DEPENDENCY_GRAPH:
 
 sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
 
-default_config = {
-    "input_time_symbol": "t",
-    "output_timestep_symbol": "__h",
-    "differential_order_symbol": "__d",
-    "sim_time": 100E-3,
-    "max_step_size": 999.,
-    "integration_accuracy_abs": 1E-6,
-    "integration_accuracy_rel": 1E-6
-}
-
 
 def _dependency_analysis(shape_sys, shapes, differential_order_symbol, parameters=None):
     r"""
@@ -80,26 +70,21 @@ def _dependency_analysis(shape_sys, shapes, differential_order_symbol, parameter
     return dependency_edges, node_is_lin
 
 
-def _read_global_config(indict, default_config):
+def _read_global_config(indict):
     r"""
     Process global configuration options.
     """
     logging.info("Processing global options...")
-    options_dict = copy.deepcopy(default_config)
     if "options" in indict.keys():
         for key, value in indict["options"].items():
-            assert key in default_config.keys(), "Unknown key specified in global options dictionary: \"" + str(key) + "\""
-            options_dict[key] = value
+            assert key in Config.config.keys(), "Unknown key specified in global options dictionary: \"" + str(key) + "\""
+            Config.config[key] = value
 
-    return options_dict
-
-
-def _from_json_to_shapes(indict, options_dict, parameters=None) -> List[Shape]:
+def _from_json_to_shapes(indict, parameters=None) -> List[Shape]:
     r"""
     Process the input, construct Shape instances.
 
     :param indict: ODE-toolbox input dictionary.
-    :param options_dict: ODE-toolbox global configuration dictionary.
     """
 
     logging.info("Processing input shapes...")
@@ -109,9 +94,9 @@ def _from_json_to_shapes(indict, options_dict, parameters=None) -> List[Shape]:
     all_parameter_symbols = set()
     all_variable_symbols_ = set()
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, time_symbol=options_dict["input_time_symbol"], differential_order_symbol=options_dict["differential_order_symbol"], parameters=parameters)
+        shape = Shape.from_json(shape_json, time_symbol=Config.input_time_symbol, differential_order_symbol=Config.differential_order_symbol, parameters=parameters)
         all_variable_symbols.extend(shape.get_state_variables())
-        all_variable_symbols_.update(shape.get_state_variables(derivative_symbol="__d"))
+        all_variable_symbols_.update(shape.get_state_variables(derivative_symbol=Config.differential_order_symbol))
         all_parameter_symbols.update(set(shape.reconstitute_expr().free_symbols))
     all_parameter_symbols -= all_variable_symbols_
     del all_variable_symbols_
@@ -129,7 +114,7 @@ def _from_json_to_shapes(indict, options_dict, parameters=None) -> List[Shape]:
 
     # second run with the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=options_dict["input_time_symbol"], parameters=parameters, _debug=True)
+        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=Config.input_time_symbol, parameters=parameters, _debug=True)
         shapes.append(shape)
 
     return shapes, parameters
@@ -169,7 +154,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
-def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
+def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, log_level: Union[str, int]=logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -177,8 +162,6 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
     """
 
     # import sys;sys.setrecursionlimit(max(sys.getrecursionlimit(), 10000))
-
-    global default_config
 
     _init_logging(log_level)
 
@@ -189,7 +172,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
         logging.info("Warning: empty input (no dynamical equations found); returning empty output")
         return [], SystemOfShapes.from_shapes([]), []
 
-    options_dict = _read_global_config(indict, default_config)
+    _read_global_config(indict)
 
     # copy parameters from the input and make sure keys are of type sympy.Symbol
     parameters = None
@@ -206,7 +189,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
     #   create Shapes and SystemOfShapes
     #
 
-    shapes, parameters = _from_json_to_shapes(indict, options_dict, parameters=parameters)
+    shapes, parameters = _from_json_to_shapes(indict, parameters=parameters)
 
     for shape in shapes:
         if not shape.is_homogeneous() and shape.order > 1:
@@ -214,7 +197,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
             sys.exit(1)
 
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
-    dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=options_dict["differential_order_symbol"], parameters=parameters)
+    dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=Config.differential_order_symbol, parameters=parameters)
 
 
     #
@@ -236,7 +219,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
     if analytic_syms:
         logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
-        analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=options_dict["output_timestep_symbol"])
+        analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=Config.output_timestep_symbol)
         analytic_solver_json["solver"] = "analytical"
         solvers_json.append(analytic_solver_json)
 
@@ -249,8 +232,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
         numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
         logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
         sub_sys = shape_sys.get_sub_system(numeric_syms)
-        solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_,
-                                                      simplify_expression=simplify_expression)
+        solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_)
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
         if not disable_stiffness_check:
             if not PYGSL_AVAILABLE:
@@ -267,8 +249,8 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
             if "stimuli" in indict.keys():
                 kwargs["stimuli"] = indict["stimuli"]
             for key in ["sim_time", "max_step_size", "integration_accuracy_abs", "integration_accuracy_rel"]:
-                if "options" in indict.keys() and key in options_dict.keys():
-                    kwargs[key] = float(options_dict[key])
+                if "options" in indict.keys() and key in Config.keys():
+                    kwargs[key] = float(Config[key])
             if not analytic_solver_json is None:
                 kwargs["analytic_solver_dict"] = analytic_solver_json
             tester = StiffnessTester(sub_sys, shapes, **kwargs)
@@ -370,7 +352,7 @@ def _init_logging(log_level: Union[str, int]=logging.WARNING):
     logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, simplify_expression: str="sympy.simplify(expr)", log_level: Union[str, int]=logging.WARNING) -> List[Dict]:
+def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, log_level: Union[str, int]=logging.WARNING) -> List[Dict]:
     r"""
     The main entry point of the ODE-toolbox API.
 
@@ -378,7 +360,6 @@ def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solve
     :param disable_stiffness_check: Whether to perform stiffness checking.
     :param disable_analytic_solver: Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
     :param preserve_expressions: Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
-    :param simplify_expression: For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are evaluated with ``eval()`` in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"``.
     :param log_level: Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
 
     :return: The result of the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#output
@@ -387,6 +368,5 @@ def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solve
                         disable_stiffness_check=disable_stiffness_check,
                         disable_analytic_solver=disable_analytic_solver,
                         preserve_expressions=preserve_expressions,
-                        simplify_expression=simplify_expression,
                         log_level=log_level)
     return d

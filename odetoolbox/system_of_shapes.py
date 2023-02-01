@@ -29,8 +29,9 @@ import sympy
 import sympy.matrices
 import sys
 
+from .config import Config
 from .shapes import Shape
-from .sympy_printer import _is_zero
+from .sympy_helpers import _custom_simplify_expr, _is_zero
 
 
 def off_diagonal_is_zero(row: int, A) -> bool:
@@ -171,10 +172,10 @@ class SystemOfShapes:
         c_old = self.c_.copy()
         for _idx in idx:
             c_old[_idx] += self.A_[_idx, idx_compl].dot(self.x_[idx_compl, :])
-            if len(str(c_old[_idx])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+            if len(str(c_old[_idx])) > Config().expression_simplification_threshold:
                 logging.warning("Skipping simplification of an expression that exceeds sympy simplification threshold")
             else:
-                c_old[_idx] = sympy.simplify(c_old[_idx])
+                c_old[_idx] = _custom_simplify_expr(c_old[_idx])
 
         c_sub = c_old[idx, :]
 
@@ -191,7 +192,9 @@ class SystemOfShapes:
         #   generate the propagator matrix
         #
 
-        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
+        #from odetoolbox.matrix_exp import expMt
+        #P = _custom_simplify_expr(expMt(self.A_ * sympy.Symbol(output_timestep_symbol)))
+        P = _custom_simplify_expr(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
 
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
@@ -217,6 +220,7 @@ class SystemOfShapes:
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
+                    import pdb;pdb.set_trace()
                     if _is_zero(self.b_[col]):
                         # homogeneous ODE
                         update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
@@ -233,7 +237,7 @@ class SystemOfShapes:
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
-                update_expr[str(self.x_[row])] = sympy.simplify(update_expr[str(self.x_[row])])
+                update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
 
         all_state_symbols = [str(sym) for sym in self.x_]
 
@@ -247,11 +251,11 @@ class SystemOfShapes:
         return solver_dict
 
 
-    def generate_numeric_solver(self, state_variables=None, simplify_expression="sympy.simplify(expr)"):
+    def generate_numeric_solver(self, state_variables=None):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
         """
-        update_expr = self.reconstitute_expr(state_variables=state_variables, simplify_expression=simplify_expression)
+        update_expr = self.reconstitute_expr(state_variables=state_variables)
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
 
@@ -262,7 +266,7 @@ class SystemOfShapes:
         return solver_dict
 
 
-    def reconstitute_expr(self, state_variables=None, simplify_expression="sympy.simplify(expr)"):
+    def reconstitute_expr(self, state_variables=None):
         r"""
         Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}`).
 
@@ -283,22 +287,11 @@ class SystemOfShapes:
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.b_[row]) + ") + (" + str(self.c_[row]) + ")"
             update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
 
-        # custom simplification steps (simplify() is not all that great)
-        try:
-            _simplify_expr = compile(simplify_expression, filename="<string>", mode="eval")
-            for name, expr in update_expr.items():
-                # skip simplification for long expressions
-                if len(str(expr)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
-                    logging.warning("Shape \"" + str(name) + "\" initialised with an expression that exceeds sympy simplification threshold")
-                    continue
-                update_expr[name] = eval(_simplify_expr)
-                collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
-                update_expr[name] = sympy.collect(update_expr[name], collect_syms)
-        except Exception as e:
-            print("Exception occurred while applying expression simplification function: " + type(e).__name__)
-            print(str(e))
-            print("Check that the parameter ``simplify_expression`` is properly formatted.")
-            sys.exit(1)
+        # custom expression simplification
+        for name, expr in update_expr.items():
+            update_expr[name] = _custom_simplify_expr(expr)
+            collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
+            update_expr[name] = sympy.collect(update_expr[name], collect_syms)
 
         return update_expr
 

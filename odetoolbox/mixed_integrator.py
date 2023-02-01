@@ -34,7 +34,7 @@ from .analytic_integrator import AnalyticIntegrator
 from .integrator import Integrator
 from .plot_helper import import_matplotlib
 from .shapes import Shape
-from .sympy_printer import _is_sympy_type
+from .sympy_helpers import _is_sympy_type
 
 try:
     import pygsl.odeiv as odeiv

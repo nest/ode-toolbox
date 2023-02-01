@@ -22,7 +22,6 @@ from typing import List, Mapping, Tuple
 
 import functools
 import logging
-import numpy as np
 import re
 import sympy
 import sympy.parsing.sympy_parser
@@ -31,7 +30,8 @@ from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1
 from sympy.core.numbers import One as SympyOne
 from sympy.core.numbers import Zero as SympyZero
 
-from .sympy_printer import _is_sympy_type, _is_zero
+from .config import Config
+from .sympy_helpers import _custom_simplify_expr, _is_sympy_type, _is_zero
 
 
 class MalformedInputException(Exception):
@@ -70,8 +70,6 @@ class Shape:
 
     the :python:`symbol` of the ODE would be :python:`x` (i.e. without any qualifiers), :python:`order` would be 3, :python:`derivative_factors` would contain the linear part in the form of the list :python:`[c1, c2, c3]`, the inhomogeneous term would be :python:`c0` and the nonlinear part :python:`x*y + x**2` is stored in :python:`nonlin_term`.
     """
-
-    EXPRESSION_SIMPLIFICATION_THRESHOLD = 1000
 
     # a minimal subset of sympy classes and functions to avoid "from sympy import *"
     _sympy_globals = {"Symbol": sympy.Symbol,
@@ -160,25 +158,25 @@ class Shape:
 
         self.derivative_factors = derivative_factors
 
-        if len(str(inhom_term)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+        if len(str(inhom_term)) > Config().expression_simplification_threshold:
             logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds SymPy simplification threshold")
             self.inhom_term = inhom_term
         else:
-            self.inhom_term = sympy.simplify(inhom_term)
+            self.inhom_term = _custom_simplify_expr(inhom_term)
 
-        if len(str(nonlin_term)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
+        if len(str(nonlin_term)) > Config().expression_simplification_threshold:
             logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds SymPy simplification threshold")
             self.nonlin_term = nonlin_term
         else:
-            self.nonlin_term = sympy.simplify(nonlin_term)
+            self.nonlin_term = _custom_simplify_expr(nonlin_term)
 
         self.lower_bound = lower_bound
         if not self.lower_bound is None:
-            self.lower_bound = sympy.simplify(self.lower_bound)
+            self.lower_bound = _custom_simplify_expr(self.lower_bound)
 
         self.upper_bound = upper_bound
         if not self.upper_bound is None:
-            self.upper_bound = sympy.simplify(self.upper_bound)
+            self.upper_bound = _custom_simplify_expr(self.upper_bound)
 
         logging.debug("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", inhom_term = " + str(self.inhom_term) + ", nonlin_term = " + str(self.nonlin_term))
 
@@ -492,7 +490,7 @@ class Shape:
 
         derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(time_symbol, t_val)]
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
-        found_ode = _is_zero(sympy.simplify(diff_rhs_lhs))
+        found_ode = _is_zero(diff_rhs_lhs)
 
 
         #
@@ -521,7 +519,7 @@ class Shape:
                     for j in range(order):
                         X[i, j] = derivatives[j].subs(time_symbol, substitute)
 
-                if not _is_zero(sympy.simplify(sympy.det(X))):
+                if not _is_zero(sympy.det(X)):
                     invertible = True
                     break
 
@@ -537,7 +535,7 @@ class Shape:
             #   calculate `derivative_factors`
             #
 
-            derivative_factors = sympy.simplify(X.inv() * Y)
+            derivative_factors = _custom_simplify_expr(X.inv() * Y)
 
 
             #
@@ -550,14 +548,14 @@ class Shape:
                 diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
             diff_rhs_lhs += derivatives[order]
 
-            if len(str(diff_rhs_lhs)) < Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD and _is_zero(sympy.simplify(diff_rhs_lhs)):
+            if len(str(diff_rhs_lhs)) < Config().expression_simplification_threshold and _is_zero(diff_rhs_lhs):
                 found_ode = True
                 break
 
         if not found_ode:
             raise Exception("Shape does not satisfy any ODE of order <= " + str(max_order))
 
-        derivative_factors = [sympy.simplify(df) for df in derivative_factors]
+        derivative_factors = [_custom_simplify_expr(df) for df in derivative_factors]
 
 
         #
