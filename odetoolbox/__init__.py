@@ -36,8 +36,8 @@ try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    print("Warning: PyGSL is not available. The stiffness test will be skipped.")
-    print("Warning: " + str(ie), end="\n\n\n")
+    logging.warn("PyGSL is not available. The stiffness test will be skipped.")
+    logging.warn("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 if PYGSL_AVAILABLE:
@@ -154,7 +154,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
-def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, log_level: Union[str, int]=logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
+def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_solver: bool = False, preserve_expressions: Union[bool, Iterable[str]] = False, log_level: Union[str, int] = logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -341,7 +341,7 @@ def _analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solv
     return solvers_json, shape_sys, shapes
 
 
-def _init_logging(log_level: Union[str, int]=logging.WARNING):
+def _init_logging(log_level: Union[str, int] = logging.WARNING):
     """
     Initialise message logging.
 
@@ -352,7 +352,7 @@ def _init_logging(log_level: Union[str, int]=logging.WARNING):
     logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool=False, disable_analytic_solver: bool=False, preserve_expressions: Union[bool, Iterable[str]]=False, log_level: Union[str, int]=logging.WARNING) -> List[Dict]:
+def analysis(indict, disable_stiffness_check: bool = False, disable_analytic_solver: bool = False, preserve_expressions: Union[bool, Iterable[str]] = False, log_level: Union[str, int] = logging.WARNING) -> List[Dict]:
     r"""
     The main entry point of the ODE-toolbox API.
 

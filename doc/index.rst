@@ -43,7 +43,7 @@ Installation
 
 .. Attention:: SymPy releases after 1.4 introduce a fourfold regression in runtime performance on the ODE-toolbox unit tests, compared to SymPy 1.4. Unless this conflicts with other version requirements, we would recommend to use SymPy 1.4 for now (for example, by editing ``requirements.txt`` to read ``sympy==1.4``).
 
-.. Attention:: The latest SymPy release at time of writing, 1.10.1, introduces as issue that prevents ODE-toolbox from being used with many common neuron models. Please see https://github.com/sympy/sympy/issues/23417 and use an older SymPy version until this issue has been resolved.
+.. Attention:: The latest SymPy release at time of writing, 1.10.1, introduces an issue that prevents ODE-toolbox from being used with many common neuron models. Please see https://github.com/sympy/sympy/issues/23417 and use an older SymPy version until this issue has been resolved.
 
 
 Prerequisites
@@ -450,7 +450,7 @@ Initially, individual expressions are read from JSON into Shape instances. Subse
 Converting direct functions of time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}`, with :math:`a_i\in\mathbb{R}\,\forall 0 \leq i < n`. The approach taken here [4]_ works by evaluating the function :math:`f(t)` at times :math:`t = t_0, t_1, \ldots t_n`, which results in :math:`n` equations, that we can use to solve for the coefficients of the potentially :math:`n`-dimensional dynamical system.
+The aim is to find a representation of the form :math:`a_0 f + a_1 f' + ... + a_{n-1} f^{(n-1)} = f^{(n)}`, with :math:`a_i\in\mathbb{R}\,\forall 0 \leq i < n`. The approach taken here [5]_ works by evaluating the function :math:`f(t)` at times :math:`t = t_0, t_1, \ldots t_n`, which results in :math:`n` equations, that we can use to solve for the coefficients of the potentially :math:`n`-dimensional dynamical system.
 
 1. Begin by assuming that the dynamical system is of order :math:`n`.
 2. Find timepoints :math:`t = t_0, t_1, ..., t_n` such that :math:`f(t_i) \neq 0 \forall 0 \leq i \leq n`. The times can be selected at random.
@@ -472,7 +472,7 @@ The propagator matrix :math:`\mathbf{P}` is derived from the system matrix by ma
 
 If the imaginary unit :math:`i` is found in any of the entries in :math:`\mathbf{P}`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
 
-In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated.
+In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated. ODE-toolbox will detect conditions (in this example, :python:`param1 = param2`) under which these singularities can occur. If any conditions were found, log warning messages will be emitted during the computation of the propagator matrix. A condition is only reported if the system matrix :math:`A` is defined under that condition, ensuring that only those conditions are returned that are purely an artifact of the propagator computation.
 
 
 Computing the update expressions
@@ -613,23 +613,27 @@ Citing ODE-toolbox
 
 If you use ODE-toolbox in your work, please cite it depending on the version you are using. (It is recommended to use the latest release version whenever possible.)
 
+For version 2.5:
+
+.. [1] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2022) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.7193351 <https://doi.org/10.5281/zenodo.7193351>`__.
+
 For version 2.4:
 
-.. [1] Charl Linssen, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.5768597 <https://doi.org/10.5281/zenodo.5768597>`__.
+.. [2] Charl Linssen, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2021) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.5768597 <https://doi.org/10.5281/zenodo.5768597>`__.
 
 For versions 2.3, 2.2 and 2.1:
 
-.. [2] Charl Linssen, Shraddha Jain, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.4245012 <https://doi.org/10.5281/zenodo.4245012>`__.
+.. [3] Charl Linssen, Shraddha Jain, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.4245012 <https://doi.org/10.5281/zenodo.4245012>`__.
 
 For version 2.0:
 
-.. [3] Charl Linssen, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.3822082 <https://doi.org/10.5281/zenodo.3822082>`__.
+.. [4] Charl Linssen, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.3822082 <https://doi.org/10.5281/zenodo.3822082>`__.
 
 
 References
 ----------
 
-.. [4] Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. `doi:10.3389/fninf.2018.00050 <https://doi.org/10.3389/fninf.2018.00050>`__.
+.. [5] Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. `doi:10.3389/fninf.2018.00050 <https://doi.org/10.3389/fninf.2018.00050>`__.
 
 
 Acknowledgements

@@ -34,8 +34,8 @@ try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    print("Warning: PyGSL is not available. The stiffness test will be skipped.")
-    print("Warning: " + str(ie), end="\n\n\n")
+    logging.warn("PyGSL is not available. The stiffness test will be skipped.")
+    logging.warn("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 
@@ -111,10 +111,10 @@ class StiffnessTester:
             step_min_exp, step_average_exp, runtime_exp = self._evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
             step_min_imp, step_average_imp, runtime_imp = self._evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
         except ParametersIncompleteException:
-            print("Stiffness test not possible because numerical values were not specified for all parameters.")
+            logging.warn("Stiffness test not possible because numerical values were not specified for all parameters.")
             return None
 
-        # print("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
+        # logging.info("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 
         return self._draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
