@@ -1,5 +1,5 @@
 #
-# sympy_printer.py
+# config.py
 #
 # This file is part of the NEST ODE toolbox.
 #
@@ -20,7 +20,10 @@
 #
 
 class Config:
-    r"""Static class to store global configuration options"""
+    r"""Static class to store global configuration options.
+
+    Options are stored in the static dict ``config``. Access using either :python:`Config().key` or :python:`Config()[key]` or :python:`Config.config[key]`.
+    """
 
     config = {
         "simplify_expression": "sympy.logcombine(sympy.powsimp(sympy.expand(expr)))",
