@@ -80,6 +80,7 @@ def _read_global_config(indict):
             assert key in Config.config.keys(), "Unknown key specified in global options dictionary: \"" + str(key) + "\""
             Config.config[key] = value
 
+
 def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sympy.Symbol, str]]:
     r"""
     Process the input, construct Shape instances.
