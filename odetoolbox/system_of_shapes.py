@@ -27,7 +27,6 @@ import scipy
 import scipy.sparse
 import sympy
 import sympy.matrices
-import sys
 
 from .config import Config
 from .shapes import Shape
@@ -229,7 +228,7 @@ class SystemOfShapes:
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
-                    import pdb;pdb.set_trace()
+                    # import pdb;pdb.set_trace()
                     if _is_zero(self.b_[col]):
                         # homogeneous ODE
                         update_expr_terms.append(sym_str + " * " + str(self.x_[col]))

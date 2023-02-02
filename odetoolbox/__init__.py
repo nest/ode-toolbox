@@ -94,9 +94,9 @@ def _from_json_to_shapes(indict, parameters=None) -> List[Shape]:
     all_parameter_symbols = set()
     all_variable_symbols_ = set()
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, time_symbol=Config.input_time_symbol, differential_order_symbol=Config.differential_order_symbol, parameters=parameters)
+        shape = Shape.from_json(shape_json, time_symbol=Config().input_time_symbol, differential_order_symbol=Config().differential_order_symbol, parameters=parameters)
         all_variable_symbols.extend(shape.get_state_variables())
-        all_variable_symbols_.update(shape.get_state_variables(derivative_symbol=Config.differential_order_symbol))
+        all_variable_symbols_.update(shape.get_state_variables(derivative_symbol=Config().differential_order_symbol))
         all_parameter_symbols.update(set(shape.reconstitute_expr().free_symbols))
     all_parameter_symbols -= all_variable_symbols_
     del all_variable_symbols_
@@ -114,7 +114,7 @@ def _from_json_to_shapes(indict, parameters=None) -> List[Shape]:
 
     # second run with the now-known list of variable symbols
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=Config.input_time_symbol, parameters=parameters, _debug=True)
+        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, time_symbol=Config().input_time_symbol, parameters=parameters, _debug=True)
         shapes.append(shape)
 
     return shapes, parameters
@@ -197,7 +197,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             sys.exit(1)
 
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
-    dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=Config.differential_order_symbol, parameters=parameters)
+    dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, differential_order_symbol=Config().differential_order_symbol, parameters=parameters)
 
 
     #
@@ -219,7 +219,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     if analytic_syms:
         logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
-        analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=Config.output_timestep_symbol)
+        analytic_solver_json = sub_sys.generate_propagator_solver(output_timestep_symbol=Config().output_timestep_symbol)
         analytic_solver_json["solver"] = "analytical"
         solvers_json.append(analytic_solver_json)
 
@@ -269,10 +269,10 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     for solver_json in solvers_json:
         solver_json["initial_values"] = {}
         for shape in shapes:
-            all_shape_symbols = [str(sympy.Symbol(str(shape.symbol) + options_dict["differential_order_symbol"] * i)) for i in range(shape.order)]
+            all_shape_symbols = [str(sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * i)) for i in range(shape.order)]
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
-                    solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace(options_dict["differential_order_symbol"], "'")))
+                    solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace(Config().differential_order_symbol, "'")))
 
 
     #
@@ -327,7 +327,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
                     logging.info("Preserving expression for variable \"" + sym + "\"")
                     var_def_str = _find_variable_definition(indict, sym, order=1)
                     assert var_def_str is not None
-                    solver_json["update_expressions"][sym] = var_def_str.replace("'", options_dict["differential_order_symbol"])
+                    solver_json["update_expressions"][sym] = var_def_str.replace("'", Config().differential_order_symbol)
                 else:
                     solver_json["update_expressions"][sym] = str(expr)
 

@@ -46,8 +46,6 @@ class TestLorenzAttractor(unittest.TestCase):
     def test_lorenz_attractor(self):
         indict = open_json("lorenz_attractor.json")
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=not PYGSL_AVAILABLE)
-        print("Got solver_dict from ode-toolbox: ")
-        print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"].startswith("numeric")

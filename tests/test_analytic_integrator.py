@@ -62,8 +62,6 @@ class TestAnalyticIntegrator(unittest.TestCase):
 
         indict = open_json("test_analytic_integrator.json")
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
-        print("Got solver_dict from ode-toolbox: ")
-        print(json.dumps(solver_dict, indent=2))
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
@@ -89,7 +87,6 @@ class TestAnalyticIntegrator(unittest.TestCase):
             analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
             analytic_integrator.reset()
             for step, t in enumerate(timevec):
-                print("Step " + str(step) + " of " + str(N))
                 state_ = analytic_integrator.get_value(t)
                 state[use_caching]["timevec"].append(t)
                 for sym, val in state_.items():
