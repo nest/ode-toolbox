@@ -78,8 +78,8 @@ class SystemOfShapes:
 
     def get_initial_value(self, sym):
         for shape in self.shapes_:
-            if str(shape.symbol) == str(sym).replace("__d", "").replace("'", ""):
-                return shape.get_initial_value(sym.replace("__d", "'"))
+            if str(shape.symbol) == str(sym).replace(Config().differential_order_symbol, "").replace("'", ""):
+                return shape.get_initial_value(sym.replace(Config().differential_order_symbol, "'"))
 
         assert False, "Unknown symbol: " + str(sym)
 
@@ -98,7 +98,7 @@ class SystemOfShapes:
         return E
 
 
-    def get_lin_cc_symbols(self, E, differential_order_symbol="__d", parameters=None):
+    def get_lin_cc_symbols(self, E, parameters=None):
         r"""
         Retrieve the variable symbols of those shapes that are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with ``"__d"`` suffixes up to the order of the shape.
         """
@@ -111,7 +111,7 @@ class SystemOfShapes:
                 _node_is_lin = True
             else:
                 _node_is_lin = False
-            all_shape_symbols = shape.get_state_variables(derivative_symbol=differential_order_symbol)
+            all_shape_symbols = shape.get_state_variables(derivative_symbol=Config().differential_order_symbol)
             for sym in all_shape_symbols:
                 node_is_lin[sym] = _node_is_lin
 
@@ -192,8 +192,6 @@ class SystemOfShapes:
         #   generate the propagator matrix
         #
 
-        #from odetoolbox.matrix_exp import expMt
-        #P = _custom_simplify_expr(expMt(self.A_ * sympy.Symbol(output_timestep_symbol)))
         P = _custom_simplify_expr(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
 
         if sympy.I in sympy.preorder_traversal(P):
@@ -362,12 +360,12 @@ class SystemOfShapes:
         i = 0
         for shape in shapes:
             for j in range(shape.order):
-                x[i] = shape.get_state_variables(derivative_symbol="__d")[j]
+                x[i] = shape.get_state_variables(derivative_symbol=Config().differential_order_symbol)[j]
                 i += 1
 
         i = 0
         for shape in shapes:
-            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
+            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * (shape.order - 1))][0]
             shape_expr = shape.reconstitute_expr()
 
             #

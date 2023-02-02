@@ -61,7 +61,7 @@ def _dependency_analysis(shape_sys, shapes, differential_order_symbol, parameter
     """
     logging.info("Dependency analysis...")
     dependency_edges = shape_sys.get_dependency_edges()
-    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges, differential_order_symbol=differential_order_symbol, parameters=parameters)
+    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges, parameters=parameters)
     if PLOT_DEPENDENCY_GRAPH:
         DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph_before.dot")
     node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
@@ -80,7 +80,7 @@ def _read_global_config(indict):
             assert key in Config.config.keys(), "Unknown key specified in global options dictionary: \"" + str(key) + "\""
             Config.config[key] = value
 
-def _from_json_to_shapes(indict, parameters=None) -> List[Shape]:
+def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sympy.Symbol, str]]:
     r"""
     Process the input, construct Shape instances.
 
@@ -94,8 +94,9 @@ def _from_json_to_shapes(indict, parameters=None) -> List[Shape]:
     all_parameter_symbols = set()
     all_variable_symbols_ = set()
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, time_symbol=Config().input_time_symbol, differential_order_symbol=Config().differential_order_symbol, parameters=parameters)
+        shape = Shape.from_json(shape_json, time_symbol=Config().input_time_symbol, parameters=parameters)
         all_variable_symbols.extend(shape.get_state_variables())
+        assert all([isinstance(sym, sympy.core.symbol.Symbol) for sym in all_variable_symbols])
         all_variable_symbols_.update(shape.get_state_variables(derivative_symbol=Config().differential_order_symbol))
         all_parameter_symbols.update(set(shape.reconstitute_expr().free_symbols))
     all_parameter_symbols -= all_variable_symbols_
@@ -249,8 +250,8 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             if "stimuli" in indict.keys():
                 kwargs["stimuli"] = indict["stimuli"]
             for key in ["sim_time", "max_step_size", "integration_accuracy_abs", "integration_accuracy_rel"]:
-                if "options" in indict.keys() and key in Config.keys():
-                    kwargs[key] = float(Config[key])
+                if "options" in indict.keys() and key in Config().keys():
+                    kwargs[key] = float(Config()[key])
             if not analytic_solver_json is None:
                 kwargs["analytic_solver_dict"] = analytic_solver_json
             tester = StiffnessTester(sub_sys, shapes, **kwargs)

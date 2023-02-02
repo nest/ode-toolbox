@@ -30,7 +30,9 @@ import sympy.utilities.autowrap
 from sympy.utilities.autowrap import CodeGenArgumentListError
 import time
 
+
 from .analytic_integrator import AnalyticIntegrator
+from .config import Config
 from .integrator import Integrator
 from .plot_helper import import_matplotlib
 from .shapes import Shape
@@ -107,7 +109,7 @@ class MixedIntegrator(Integrator):
         self.all_variable_symbols = list(self._system_of_shapes.x_)
         if not self.analytic_solver_dict is None:
             self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
-        self.all_variable_symbols = [sympy.Symbol(str(sym).replace("'", "__d")) for sym in self.all_variable_symbols]
+        self.all_variable_symbols = [sympy.Symbol(str(sym).replace("'", Config().differential_order_symbol)) for sym in self.all_variable_symbols]
 
         for sym, expr in self._update_expr.items():
             try:
