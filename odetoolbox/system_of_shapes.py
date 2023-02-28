@@ -172,10 +172,7 @@ class SystemOfShapes:
         c_old = self.c_.copy()
         for _idx in idx:
             c_old[_idx] += self.A_[_idx, idx_compl].dot(self.x_[idx_compl, :])
-            if len(str(c_old[_idx])) > Config().expression_simplification_threshold:
-                logging.warning("Skipping simplification of an expression that exceeds sympy simplification threshold")
-            else:
-                c_old[_idx] = _custom_simplify_expr(c_old[_idx])
+            c_old[_idx] = _custom_simplify_expr(c_old[_idx])
 
         c_sub = c_old[idx, :]
 

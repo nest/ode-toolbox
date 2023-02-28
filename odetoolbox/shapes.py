@@ -160,18 +160,8 @@ class Shape:
                 raise MalformedInputException("Derivative factor \"%r\" is not a SymPy expression" % df)
 
         self.derivative_factors = derivative_factors
-
-        if len(str(inhom_term)) > Config().expression_simplification_threshold:
-            logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds SymPy simplification threshold")
-            self.inhom_term = inhom_term
-        else:
-            self.inhom_term = _custom_simplify_expr(inhom_term)
-
-        if len(str(nonlin_term)) > Config().expression_simplification_threshold:
-            logging.warning("Shape \"" + str(self.symbol) + "\" initialised with an expression that exceeds SymPy simplification threshold")
-            self.nonlin_term = nonlin_term
-        else:
-            self.nonlin_term = _custom_simplify_expr(nonlin_term)
+        self.inhom_term = _custom_simplify_expr(inhom_term)
+        self.nonlin_term = _custom_simplify_expr(nonlin_term)
 
         self.lower_bound = lower_bound
         if not self.lower_bound is None:
@@ -353,8 +343,8 @@ class Shape:
 
         if order == 0:
             return Shape.from_function(symbol, rhs)
-        else:
-            return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound, parameters=parameters)
+
+        return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound, parameters=parameters)
 
 
     def reconstitute_expr(self) -> SympyExpr:
