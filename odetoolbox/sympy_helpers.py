@@ -56,10 +56,10 @@ def _is_sympy_type(var):
 
 
 def _custom_simplify_expr(expr: str):
+    """Custom expression simplification"""
     if isinstance(expr, sympy.matrices.MatrixBase):
         return expr.applyfunc(_custom_simplify_expr)
 
-    # custom expression simplification steps
     try:
         # skip simplification for long expressions
         if len(str(expr)) > Config().expression_simplification_threshold:

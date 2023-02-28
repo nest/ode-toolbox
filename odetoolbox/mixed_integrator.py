@@ -42,8 +42,8 @@ try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    logging.warn("PyGSL is not available. The stiffness test will be skipped.")
-    logging.warn("Error when importing: " + str(ie))
+    logging.warning("PyGSL is not available. The stiffness test will be skipped.")
+    logging.warning("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 
@@ -268,7 +268,7 @@ class MixedIntegrator(Integrator):
 
                     if h_min < h_min_lower_bound:
                         estr = "Integration step below %.e (s=%.f). Please check your ODE." % (h_min_lower_bound, h_min)
-                        logging.warn(estr)
+                        logging.warning(estr)
                         if raise_errors:
                             raise Exception(estr)
 

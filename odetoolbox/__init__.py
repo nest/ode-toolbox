@@ -36,8 +36,8 @@ try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    logging.warn("PyGSL is not available. The stiffness test will be skipped.")
-    logging.warn("Error when importing: " + str(ie))
+    logging.warning("PyGSL is not available. The stiffness test will be skipped.")
+    logging.warning("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 if PYGSL_AVAILABLE:
