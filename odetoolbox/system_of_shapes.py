@@ -189,7 +189,7 @@ class SystemOfShapes:
         #   generate the propagator matrix
         #
 
-        P = _custom_simplify_expr(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
+        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))    # XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
 
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
