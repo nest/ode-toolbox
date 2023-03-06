@@ -58,7 +58,10 @@ jobs:
 
       - name: Run unit tests
         run: |
-          python -m pytest -s -o log_cli=true -o log_cli_level="DEBUG" --cov=./ tests
+          echo "[run]" > .coveragerc
+          echo "omit = tests/*" >> .coveragerc
+          echo >> .coveragerc
+          python -m pytest -s -o log_cli=true -o log_cli_level="DEBUG" --cov=. --cov-config=.coveragerc tests
 
       - name: Run codecov
         run: |
