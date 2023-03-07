@@ -30,18 +30,20 @@ import sympy.utilities.autowrap
 from sympy.utilities.autowrap import CodeGenArgumentListError
 import time
 
+
 from .analytic_integrator import AnalyticIntegrator
+from .config import Config
 from .integrator import Integrator
 from .plot_helper import import_matplotlib
 from .shapes import Shape
-from .sympy_printer import _is_sympy_type
+from .sympy_helpers import _is_sympy_type
 
 try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    logging.warn("PyGSL is not available. The stiffness test will be skipped.")
-    logging.warn("Error when importing: " + str(ie))
+    logging.warning("PyGSL is not available. The stiffness test will be skipped.")
+    logging.warning("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 
@@ -107,7 +109,7 @@ class MixedIntegrator(Integrator):
         self.all_variable_symbols = list(self._system_of_shapes.x_)
         if not self.analytic_solver_dict is None:
             self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
-        self.all_variable_symbols = [sympy.Symbol(str(sym).replace("'", "__d")) for sym in self.all_variable_symbols]
+        self.all_variable_symbols = [sympy.Symbol(str(sym).replace("'", Config().differential_order_symbol)) for sym in self.all_variable_symbols]
 
         for sym, expr in self._update_expr.items():
             try:
@@ -266,7 +268,7 @@ class MixedIntegrator(Integrator):
 
                     if h_min < h_min_lower_bound:
                         estr = "Integration step below %.e (s=%.f). Please check your ODE." % (h_min_lower_bound, h_min)
-                        logging.warn(estr)
+                        logging.warning(estr)
                         if raise_errors:
                             raise Exception(estr)
 

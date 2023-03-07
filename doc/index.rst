@@ -136,9 +136,6 @@ The following flags exist:
    * - ``preserve_expressions``
      - False
      - Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
-   * - ``simplify_expression``
-     - ``"sympy.simplify(expr)"``
-     - For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are evaluated with ``eval()`` in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"``.
    * - ``log_level``
      - :python:`logging.WARN`
      - Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
@@ -348,7 +345,11 @@ The following global options are defined. Note that all are typically formatted 
    * - ``differential_order_symbol``
      - :python:`"__d"`
      - string
-     - String appended n times to output variable names to indicate differential order n. TODO: only the default value works for now.
+     - String appended n times to output variable names to indicate differential order n.
+   * - ``simplify_expression``
+     - :python:`"sympy.simplify(expr)"`
+     - string
+     - For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are evaluated with ``eval()`` in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"``.
 
 
 Output
@@ -524,7 +525,7 @@ the update equation is:
 Working with large expressions
 ------------------------------
 
-In several places during processing, a SymPy expression simplification (\ :python:`simplify()`\ ) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with SymPy, we introduce the :python:`Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD` constant, which causes expressions whose string representation is longer than this number of characters to be skipped when simplifying expressions. The default value is 1000.
+In several places during processing, a SymPy expression simplification (\ :python:`simplify()`\ ) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with SymPy, we introduce the :python:`expression_simplification_threshold` constant, which causes expressions whose string representation is longer than this number of characters to be skipped when simplifying expressions. The default value is 1000.
 
 
 Examples

@@ -19,17 +19,20 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from typing import Mapping, List
+
 import io
 import math
 import numpy as np
 import random
-from typing import Mapping, List
+
+from .config import Config
 
 
 class SpikeGenerator():
 
     @classmethod
-    def spike_times_from_json(cls, stimuli, sim_time, derivative_symbol="__d") -> Mapping[str, List[float]]:
+    def spike_times_from_json(cls, stimuli, sim_time) -> Mapping[str, List[float]]:
         r"""
         Read or generate spike times according to a JSON specification.
 
@@ -39,7 +42,7 @@ class SpikeGenerator():
         for stimulus in stimuli:
             for sym in set(stimulus["variables"]):
                 assert type(sym) is str
-                sym = sym.replace("'", derivative_symbol)
+                sym = sym.replace("'", Config().differential_order_symbol)
                 if not sym in spike_times.keys():
                     spike_times[sym] = []
 

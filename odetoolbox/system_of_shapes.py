@@ -27,11 +27,11 @@ import scipy
 import scipy.sparse
 import sympy
 import sympy.matrices
-import sys
 
+from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection
-from .sympy_printer import _is_zero
+from .sympy_helpers import _custom_simplify_expr, _is_zero
 
 
 def off_diagonal_is_zero(row: int, A) -> bool:
@@ -78,8 +78,8 @@ class SystemOfShapes:
 
     def get_initial_value(self, sym):
         for shape in self.shapes_:
-            if str(shape.symbol) == str(sym).replace("__d", "").replace("'", ""):
-                return shape.get_initial_value(sym.replace("__d", "'"))
+            if str(shape.symbol) == str(sym).replace(Config().differential_order_symbol, "").replace("'", ""):
+                return shape.get_initial_value(sym.replace(Config().differential_order_symbol, "'"))
 
         assert False, "Unknown symbol: " + str(sym)
 
@@ -98,7 +98,7 @@ class SystemOfShapes:
         return E
 
 
-    def get_lin_cc_symbols(self, E, differential_order_symbol="__d", parameters=None):
+    def get_lin_cc_symbols(self, E, parameters=None):
         r"""
         Retrieve the variable symbols of those shapes that are linear and constant coefficient. In the case of a higher-order shape, will return all the variable symbols with ``"__d"`` suffixes up to the order of the shape.
         """
@@ -111,7 +111,7 @@ class SystemOfShapes:
                 _node_is_lin = True
             else:
                 _node_is_lin = False
-            all_shape_symbols = shape.get_state_variables(derivative_symbol=differential_order_symbol)
+            all_shape_symbols = shape.get_state_variables(derivative_symbol=Config().differential_order_symbol)
             for sym in all_shape_symbols:
                 node_is_lin[sym] = _node_is_lin
 
@@ -172,10 +172,7 @@ class SystemOfShapes:
         c_old = self.c_.copy()
         for _idx in idx:
             c_old[_idx] += self.A_[_idx, idx_compl].dot(self.x_[idx_compl, :])
-            if len(str(c_old[_idx])) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
-                logging.warning("Skipping simplification of an expression that exceeds sympy simplification threshold")
-            else:
-                c_old[_idx] = sympy.simplify(c_old[_idx])
+            c_old[_idx] = _custom_simplify_expr(c_old[_idx])
 
         c_sub = c_old[idx, :]
 
@@ -184,7 +181,7 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def generate_propagator_solver(self, output_timestep_symbol: str = "__h"):
+    def generate_propagator_solver(self):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
@@ -192,7 +189,7 @@ class SystemOfShapes:
         #   generate the propagator matrix
         #
 
-        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))
+        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(Config().output_timestep_symbol)))    # XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
 
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
@@ -233,7 +230,7 @@ class SystemOfShapes:
                         # inhomogeneous ODE
                         if _is_zero(self.A_[col, col]):
                             # of the form x' = const
-                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + output_timestep_symbol + " * " + str(self.b_[col]))
+                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + Config().output_timestep_symbol + " * " + str(self.b_[col]))
                         else:
                             particular_solution = -self.b_[col] / self.A_[col, col]
                             update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
@@ -242,7 +239,7 @@ class SystemOfShapes:
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
-                update_expr[str(self.x_[row])] = sympy.simplify(update_expr[str(self.x_[row])])
+                update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
 
         all_state_symbols = [str(sym) for sym in self.x_]
 
@@ -256,11 +253,11 @@ class SystemOfShapes:
         return solver_dict
 
 
-    def generate_numeric_solver(self, state_variables=None, simplify_expression="sympy.simplify(expr)"):
+    def generate_numeric_solver(self, state_variables=None):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
         """
-        update_expr = self.reconstitute_expr(state_variables=state_variables, simplify_expression=simplify_expression)
+        update_expr = self.reconstitute_expr(state_variables=state_variables)
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
 
@@ -271,7 +268,7 @@ class SystemOfShapes:
         return solver_dict
 
 
-    def reconstitute_expr(self, state_variables=None, simplify_expression="sympy.simplify(expr)"):
+    def reconstitute_expr(self, state_variables=None):
         r"""
         Reconstitute a sympy expression from a system of shapes (which is internally encoded in the form :math:`\mathbf{x}' = \mathbf{Ax} + \mathbf{b} + \mathbf{c}`).
 
@@ -292,22 +289,11 @@ class SystemOfShapes:
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.b_[row]) + ") + (" + str(self.c_[row]) + ")"
             update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
 
-        # custom simplification steps (simplify() is not all that great)
-        try:
-            _simplify_expr = compile(simplify_expression, filename="<string>", mode="eval")
-            for name, expr in update_expr.items():
-                # skip simplification for long expressions
-                if len(str(expr)) > Shape.EXPRESSION_SIMPLIFICATION_THRESHOLD:
-                    logging.warning("Shape \"" + str(name) + "\" initialised with an expression that exceeds sympy simplification threshold")
-                    continue
-                update_expr[name] = eval(_simplify_expr)
-                collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
-                update_expr[name] = sympy.collect(update_expr[name], collect_syms)
-        except Exception as e:
-            logging.error("Exception occurred while applying expression simplification function: " + type(e).__name__)
-            logging.error(str(e))
-            logging.error("Check that the parameter ``simplify_expression`` is properly formatted.")
-            sys.exit(1)
+        # custom expression simplification
+        for name, expr in update_expr.items():
+            update_expr[name] = _custom_simplify_expr(expr)
+            collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
+            update_expr[name] = sympy.collect(update_expr[name], collect_syms)
 
         return update_expr
 
@@ -370,12 +356,12 @@ class SystemOfShapes:
         i = 0
         for shape in shapes:
             for j in range(shape.order):
-                x[i] = shape.get_state_variables(derivative_symbol="__d")[j]
+                x[i] = shape.get_state_variables(derivative_symbol=Config().differential_order_symbol)[j]
                 i += 1
 
         i = 0
         for shape in shapes:
-            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + "__d" * (shape.order - 1))][0]
+            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * (shape.order - 1))][0]
             shape_expr = shape.reconstitute_expr()
 
             #

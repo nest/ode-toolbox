@@ -19,8 +19,11 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import sympy
-from sympy.printing import StrPrinter
+import sys
+
+from .config import Config
 
 
 def _is_zero(x):
@@ -52,7 +55,28 @@ def _is_sympy_type(var):
     raise Exception("Unsupported sympy version used")
 
 
-class SympyPrinter(StrPrinter):
+def _custom_simplify_expr(expr: str):
+    """Custom expression simplification"""
+    if isinstance(expr, sympy.matrices.MatrixBase):
+        return expr.applyfunc(_custom_simplify_expr)
+
+    try:
+        # skip simplification for long expressions
+        if len(str(expr)) > Config().expression_simplification_threshold:
+            logging.warning("Length of expression \"" + str(expr) + "\" exceeds sympy simplification threshold")
+
+        _simplify_expr = compile(Config().simplify_expression, filename="<string>", mode="eval")
+        expr_simplified = eval(_simplify_expr)
+
+        return expr_simplified
+    except Exception as e:
+        print("Exception occurred while applying expression simplification function: " + type(e).__name__)
+        print(str(e))
+        print("Check that the parameter ``simplify_expression`` is properly formatted.")
+        sys.exit(1)
+
+
+class SympyPrinter(sympy.printing.StrPrinter):
 
     def _print_Exp1(self, expr):
         return 'e'

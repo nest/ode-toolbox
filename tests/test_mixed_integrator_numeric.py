@@ -19,8 +19,6 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-
-import json
 import os
 import pytest
 import sympy
@@ -42,13 +40,7 @@ except ImportError:
 
 import odetoolbox
 from odetoolbox.mixed_integrator import MixedIntegrator
-
-
-def _open_json(fname):
-    absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
-    with open(absfname) as infile:
-        indict = json.load(infile)
-    return indict
+from tests.test_utils import _open_json
 
 
 def _timeseries_plot(t_log, h_log, y_log, sym_list, basedir="/tmp", fn_snip="", title_snip=""):
@@ -69,7 +61,7 @@ def _timeseries_plot(t_log, h_log, y_log, sym_list, basedir="/tmp", fn_snip="", 
     plt.close(fig)
 
 
-def _run_simulation(fn, alias_spikes, integrator, params=None, **kwargs):
+def _run_simulation(indict, alias_spikes, integrator, params=None, **kwargs):
     """
     Parameters
     ----------
@@ -85,7 +77,6 @@ def _run_simulation(fn, alias_spikes, integrator, params=None, **kwargs):
     initial_values = {sympy.Symbol(k): v for k, v in initial_values.items()}
     spike_times = {"g_ex__d": np.array([10E-3]), "g_in__d": np.array([6E-3])}
 
-    indict = _open_json(fn)
     analysis_json, shape_sys, shapes = odetoolbox._analysis(indict, disable_stiffness_check=True, disable_analytic_solver=True, log_level="DEBUG", **kwargs)
 
     assert len(analysis_json) == 1
@@ -131,7 +122,8 @@ def test_mixed_integrator_numeric(**kwargs):
     integrator = odeiv.step_rk4
 
     for alias_spikes in [True, False]:
-        h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list, analysis_json = _run_simulation("iaf_cond_alpha.json", alias_spikes, integrator)
+        indict = _open_json("iaf_cond_alpha.json")
+        h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list, analysis_json = _run_simulation(indict, alias_spikes, integrator)
 
         if INTEGRATION_TEST_DEBUG_PLOTS:
             _timeseries_plot(t_log,
