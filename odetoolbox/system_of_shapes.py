@@ -181,7 +181,7 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def generate_propagator_solver(self, output_timestep_symbol: str = "__h"):
+    def generate_propagator_solver(self):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
@@ -189,7 +189,7 @@ class SystemOfShapes:
         #   generate the propagator matrix
         #
 
-        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(output_timestep_symbol)))    # XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
+        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(Config().output_timestep_symbol)))    # XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
 
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
@@ -230,7 +230,7 @@ class SystemOfShapes:
                         # inhomogeneous ODE
                         if _is_zero(self.A_[col, col]):
                             # of the form x' = const
-                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + output_timestep_symbol + " * " + str(self.b_[col]))
+                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + Config().output_timestep_symbol + " * " + str(self.b_[col]))
                         else:
                             particular_solution = -self.b_[col] / self.A_[col, col]
                             update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")

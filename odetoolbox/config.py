@@ -26,7 +26,7 @@ class Config:
     """
 
     config = {
-        "simplify_expression": "sympy.logcombine(sympy.powsimp(sympy.expand(expr)))",
+        "simplify_expression": "sympy.simplify(expr)",
         "expression_simplification_threshold": 1000,
         "input_time_symbol": "t",
         "output_timestep_symbol": "__h",

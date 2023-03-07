@@ -107,7 +107,7 @@ class Shape:
                                ("Max", (abs(sympy.symbols("x") + sympy.symbols("y")) + abs(sympy.symbols("x") - sympy.symbols("y"))) / 2, [sympy.symbols("x"), sympy.symbols("y")]),
                                ("Heaviside", (sympy.symbols("x") + abs(sympy.symbols("x"))) / (2 * abs(sympy.symbols("x")) + 1E-300), [sympy.symbols("x")])]
 
-    def __init__(self, symbol, order, initial_values, derivative_factors, inhom_term=sympy.Float(0.), nonlin_term=sympy.Float(0.), lower_bound=None, upper_bound=None, debug=False):
+    def __init__(self, symbol, order, initial_values, derivative_factors, inhom_term=sympy.Float(0.), nonlin_term=sympy.Float(0.), lower_bound=None, upper_bound=None):
         r"""
         Perform type and consistency checks and assign arguments to member variables.
 
@@ -278,13 +278,12 @@ class Shape:
 
 
     @classmethod
-    def from_json(cls, indict, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), parameters=None, _debug=False):
+    def from_json(cls, indict, all_variable_symbols=None, parameters=None, _debug=False):
         r"""
         Create a :python:`Shape` instance from an input dictionary.
 
         :param indict: Input dictionary, i.e. one element of the :python:`"dynamics"` list supplied in the ODE-toolbox input dictionary.
         :param all_variable_symbols: All known variable symbols. :python:`None` or list of string.
-        :param time_symbol: sympy Symbol representing the independent time variable.
         :param parameters: An optional dictionary of parameters to their defining expressions.
         """
         if not "expression" in indict:
@@ -414,7 +413,7 @@ class Shape:
 
 
     @classmethod
-    def from_function(cls, symbol: str, definition, max_t=100, max_order=4, all_variable_symbols=None, time_symbol=sympy.Symbol("t"), debug=False) -> Shape:
+    def from_function(cls, symbol: str, definition, max_t=100, max_order=4, all_variable_symbols=None, debug=False) -> Shape:
         r"""
         Create a Shape object given a function of time.
 
@@ -441,7 +440,7 @@ class Shape:
         definition = sympy.parsing.sympy_parser.parse_expr(definition, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)
 
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
-        derivatives = [definition, sympy.diff(definition, time_symbol)]
+        derivatives = [definition, sympy.diff(definition, Config().input_time_symbol)]
 
         logging.info("\nProcessing function-of-time shape \"" + symbol + "\" with defining expression = \"" + str(definition) + "\"")
 
@@ -452,7 +451,7 @@ class Shape:
 
         t_val = None
         for t_ in range(0, max_t):
-            if not _is_zero(definition.subs(time_symbol, t_)):
+            if not _is_zero(definition.subs(Config().input_time_symbol, t_)):
                 t_val = t_
                 break
 
@@ -476,7 +475,7 @@ class Shape:
 
         logging.debug("\tFinding ode for order 1...")
 
-        derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(time_symbol, t_val)]
+        derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(Config().input_time_symbol, t_val)]
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
         found_ode = _is_zero(diff_rhs_lhs)
 
@@ -491,7 +490,7 @@ class Shape:
             logging.debug("\tFinding ode for order " + str(order) + "...")
 
             # Add the next higher derivative to the list
-            derivatives.append(sympy.diff(derivatives[-1], time_symbol))
+            derivatives.append(sympy.diff(derivatives[-1], Config().input_time_symbol))
 
             X = sympy.zeros(order)
 
@@ -503,9 +502,9 @@ class Shape:
             for t_ in range(1, max_t):
                 for i in range(order):
                     substitute = i + t_
-                    Y[i] = derivatives[order].subs(time_symbol, substitute)
+                    Y[i] = derivatives[order].subs(Config().input_time_symbol, substitute)
                     for j in range(order):
-                        X[i, j] = derivatives[j].subs(time_symbol, substitute)
+                        X[i, j] = derivatives[j].subs(Config().input_time_symbol, substitute)
 
                 if not _is_zero(sympy.det(X)):
                     invertible = True
@@ -550,7 +549,7 @@ class Shape:
         #    calculate the initial values of the found ODE
         #
 
-        initial_values = {symbol + derivative_order * "'": x.subs(time_symbol, 0) for derivative_order, x in enumerate(derivatives[:-1])}
+        initial_values = {symbol + derivative_order * "'": x.subs(Config().input_time_symbol, 0) for derivative_order, x in enumerate(derivatives[:-1])}
 
         return cls(sympy.Symbol(symbol), order, initial_values, derivative_factors)
 
@@ -597,7 +596,7 @@ class Shape:
         derivative_factors, inhom_term, nonlin_term = Shape.split_lin_inhom_nonlin(definition, all_variable_symbols_sympy, parameters=parameters)
         local_symbols_idx = [all_variable_symbols.index(sym) for sym in local_symbols]
         local_derivative_factors = [derivative_factors[i] for i in local_symbols_idx]
-        nonlocal_derivative_terms = [derivative_factors[i] * sympy.Symbol(all_variable_symbols[i]) for i in range(len(all_variable_symbols)) if i not in local_symbols_idx]
+        nonlocal_derivative_terms = [derivative_factors[i] * all_variable_symbols_sympy[i] for i in range(len(all_variable_symbols)) if i not in local_symbols_idx]
         if nonlocal_derivative_terms:
             nonlin_term = nonlin_term + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 

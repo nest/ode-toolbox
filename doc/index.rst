@@ -347,9 +347,9 @@ The following global options are defined. Note that all are typically formatted 
      - string
      - String appended n times to output variable names to indicate differential order n.
    * - ``simplify_expression``
-     - :python:`"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"`
+     - :python:`"sympy.simplify(expr)"`
      - string
-     - For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are evaluated with ``eval()`` in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.simplify(expr)"``.
+     - For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are evaluated with ``eval()`` in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"``.
 
 
 Output
