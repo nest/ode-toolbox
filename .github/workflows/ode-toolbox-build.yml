@@ -2,7 +2,42 @@ name: ODE-toolbox build
 on: [push, pull_request]
 
 jobs:
+  static_checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ODE-toolbox code
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install apt dependencies
+        run: |
+          sudo apt update
+          sudo apt install pkg-config python3-all-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip pytest pycodestyle codecov pytest-cov wheel
+          python -m pip install -r requirements.txt
+          export PYTHON_VERSION=`python -c "import sys; print('.'.join(map(str, [sys.version_info.major, sys.version_info.minor])))"`
+          echo "Python version detected:"
+          echo $PYTHON_VERSION
+
+      - name: Install ODE-toolbox
+        run: |
+          echo PYTHONPATH=`pwd` >> $GITHUB_ENV
+          python setup.py install
+
+      - name: Static code style analysis
+        run: |
+          python3 -m pycodestyle $GITHUB_WORKSPACE -v --ignore=E241,E501,E303,E714,E713,E714,E252 --exclude=$GITHUB_WORKSPACE/doc,$GITHUB_WORKSPACE/.eggs,$GITHUB_WORKSPACE/build,$GITHUB_WORKSPACE/.git,$GITHUB_WORKSPACE/odetoolbox.egg-info,$GITHUB_WORKSPACE/dist
+
+
   build:
+    needs: [static_checks]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -51,10 +86,6 @@ jobs:
         run: |
           echo PYTHONPATH=`pwd` >> $GITHUB_ENV
           python setup.py install
-
-      - name: Static code style analysis
-        run: |
-          python3 -m pycodestyle $GITHUB_WORKSPACE -v --ignore=E241,E501,E303,E714,E713,E714,E252 --exclude=$GITHUB_WORKSPACE/doc,$GITHUB_WORKSPACE/.eggs,$GITHUB_WORKSPACE/build,$GITHUB_WORKSPACE/.git,$GITHUB_WORKSPACE/odetoolbox.egg-info,$GITHUB_WORKSPACE/dist
 
       - name: Run unit tests
         run: |
