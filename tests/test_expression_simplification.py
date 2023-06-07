@@ -19,12 +19,12 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
 import numpy as np
 import pytest
 from tests.test_mixed_integrator_numeric import _run_simulation
 from tests.test_utils import _open_json
 
+import odetoolbox
 
 try:
     import pygsl.odeiv as odeiv
@@ -48,7 +48,9 @@ def test_expression_simplification():
         print("Running test with preserve_expressions = " + str(preserve_expressions) + ", simplify_expression = " + str(simplify_expression))
 
         indict = _open_json("eiaf_cond_alpha.json")
-        indict["options"]["simplify_expr"] = simplify_expression
+        if "options" not in indict.keys():
+            indict["options"] = {}
+        indict["options"]["simplify_expression"] = simplify_expression
 
         _, _, _, _, t_log, _, y_log, _, analysis_json = _run_simulation(indict, alias_spikes=False, integrator=odeiv.step_rk4, preserve_expressions=preserve_expressions)
         ts[(preserve_expressions, simplify_expression)] = y_log
@@ -57,3 +59,16 @@ def test_expression_simplification():
     x_ref = list(ts.values())[0]
     for x in ts.values():
         np.testing.assert_allclose(x, x_ref)
+
+
+def test_expression_simplification_analytic():
+    """
+    Test expression simplification: test that ``preserve_expression`` is ignored for equations that are solved analytically
+    """
+
+    indict = {"dynamics": [{"expression": "x' = -x / 42",
+                            "initial_value": "42"}]}
+
+    analysis_json = odetoolbox.analysis(indict, preserve_expressions=True, log_level="DEBUG")
+
+    assert "__P__x__x" in analysis_json[0]["update_expressions"]["x"]

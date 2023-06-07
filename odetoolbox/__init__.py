@@ -328,13 +328,17 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     for solver_json in solvers_json:
         if "update_expressions" in solver_json.keys():
             for sym, expr in solver_json["update_expressions"].items():
+                solver_json["update_expressions"][sym] = str(expr)
+
                 if preserve_expressions and sym in preserve_expressions:
+                    if "analytic" in solver_json["solver"]:
+                        logging.warning("Not preserving expression for variable \"" + sym + "\" as it is solved by propagator solver")
+                        continue
+
                     logging.info("Preserving expression for variable \"" + sym + "\"")
                     var_def_str = _find_variable_definition(indict, sym, order=1)
                     assert var_def_str is not None
                     solver_json["update_expressions"][sym] = var_def_str.replace("'", Config().differential_order_symbol)
-                else:
-                    solver_json["update_expressions"][sym] = str(expr)
 
         if "propagators" in solver_json.keys():
             for sym, expr in solver_json["propagators"].items():

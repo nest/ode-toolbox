@@ -535,7 +535,7 @@ class Shape:
                 diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
             diff_rhs_lhs += derivatives[order]
 
-            if len(str(diff_rhs_lhs)) < Config().expression_simplification_threshold and _is_zero(diff_rhs_lhs):
+            if _is_zero(sympy.simplify(diff_rhs_lhs)):
                 found_ode = True
                 break
 
