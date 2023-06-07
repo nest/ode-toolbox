@@ -66,7 +66,7 @@ def test_expression_simplification_analytic():
     Test expression simplification: test that ``preserve_expression`` is ignored for equations that are solved analytically
     """
 
-    indict = {"dynamics": [{"expression": "x' = x' / 42",
+    indict = {"dynamics": [{"expression": "x' = -x / 42",
                             "initial_value": "42"}]}
 
     analysis_json = odetoolbox.analysis(indict, preserve_expressions=True, log_level="DEBUG")
