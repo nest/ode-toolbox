@@ -24,6 +24,7 @@ from typing import List, Optional
 import logging
 import numpy as np
 import scipy
+import scipy.linalg
 import scipy.sparse
 import sympy
 import sympy.matrices
@@ -39,6 +40,29 @@ def off_diagonal_is_zero(row: int, A) -> bool:
         if col != row and not _is_zero(A[row, col]):
             return False
     return True
+
+
+def get_block_diagonal_blocks(A):
+    assert A.shape[0] == A.shape[1], "matrix A should be square"
+
+    N = A.shape[0]
+
+    A_mirrored = A + A.T   # make the matrix symmetric so we only have to check one triangle
+
+    blocks = []
+    start = 0
+    blocksize = 0
+
+    while start < N:
+        blocksize += 1
+
+        if np.all(A_mirrored[start:start + blocksize, start + blocksize:N] == 0):
+            block = A[start:start + blocksize, start:start + blocksize]
+            blocks.append(block)
+            start += blocksize
+            blocksize = 0
+
+    return blocks
 
 
 class PropagatorGenerationException(Exception):
@@ -181,26 +205,40 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def generate_propagator_solver(self):
-        r"""
-        Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
+    def _generate_propagator_matrix(self, A):
+        r"""Generate the propagator matrix by matrix exponentiation.
+
+        XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
         """
-        #
-        #   generate the propagator matrix
-        #
 
-        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(Config().output_timestep_symbol)))    # XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
+        # naive: calculate propagators in one step
+        # P_naive = sympy.simplify(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
 
+        # optimized: be explicit about block diagonal elements; much faster!
+        blocks = get_block_diagonal_blocks(np.array(A))
+        propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
+        P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
+
+        # check the result
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
-        condition = SingularityDetection.find_singularities(P, self.A_)
+        condition = SingularityDetection.find_singularities(P, A)
         if condition:
             logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
             logging.warning("List of all conditions that result in a singular propagator:")
             for cond in condition:
                 logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
 
+        return P
+
+
+    def generate_propagator_solver(self):
+        r"""
+        Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
+        """
+
+        P = self._generate_propagator_matrix(self.A_)
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
