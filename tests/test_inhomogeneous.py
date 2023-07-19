@@ -20,14 +20,14 @@
 #
 
 import numpy as np
-import sympy
 import pytest
+import sympy
 
 import odetoolbox
 
 from odetoolbox.analytic_integrator import AnalyticIntegrator
 from odetoolbox.shapes import Shape
-from odetoolbox.system_of_shapes import SystemOfShapes, PropagatorGenerationException
+from odetoolbox.system_of_shapes import PropagatorGenerationException, SystemOfShapes
 
 
 class TestInhomogeneous:

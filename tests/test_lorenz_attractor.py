@@ -19,11 +19,10 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
-import os
-import unittest
 import sympy
 import sympy.parsing.sympy_parser
+
+from tests.test_utils import _open_json
 
 from .context import odetoolbox
 from odetoolbox.shapes import Shape
@@ -35,16 +34,9 @@ except ImportError:
     PYGSL_AVAILABLE = False
 
 
-def open_json(fname):
-    absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
-    with open(absfname) as infile:
-        indict = json.load(infile)
-    return indict
-
-
-class TestLorenzAttractor(unittest.TestCase):
+class TestLorenzAttractor:
     def test_lorenz_attractor(self):
-        indict = open_json("lorenz_attractor.json")
+        indict = _open_json("lorenz_attractor.json")
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=not PYGSL_AVAILABLE)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
@@ -55,7 +47,3 @@ class TestLorenzAttractor(unittest.TestCase):
                == sympy.parsing.sympy_parser.parse_expr("rho*x - x*z - y", global_dict=Shape._sympy_globals).expand().simplify()
         assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["z"], global_dict=Shape._sympy_globals).expand().simplify() \
                == sympy.parsing.sympy_parser.parse_expr("-beta*z + x*y", global_dict=Shape._sympy_globals).expand().simplify()
-
-
-if __name__ == '__main__':
-    unittest.main()

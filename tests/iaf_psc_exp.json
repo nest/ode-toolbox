@@ -1,0 +1,16 @@
+{
+  "dynamics": [
+    {
+        "expression": "I_1' = -I_1 / tau_1 + I_inj1",
+        "initial_value": "0"
+    },
+    {
+        "expression": "I_2' = -I_2 / tau_2 + I_inj2",
+        "initial_value": "0"
+    },
+    {
+      "expression": "V_m' = -(V_m - E_L) / tau_m + (I_1 + I_2) / C_m",
+      "initial_value": "0."
+    }
+  ]
+}

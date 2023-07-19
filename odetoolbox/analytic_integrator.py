@@ -98,12 +98,11 @@ class AnalyticIntegrator(Integrator):
 
 
         #
-        #   perform substtitution in update expressions ahead of time to save time later
+        #   perform substitution in update expressions ahead of time to save time later
         #
 
         for k, v in self.update_expressions.items():
             self.update_expressions[k] = self.update_expressions[k].subs(self.subs_dict).subs(self.subs_dict)
-
 
         #
         #    autowrap
@@ -225,6 +224,7 @@ class AnalyticIntegrator(Integrator):
             if spike_t > t:
                 break
 
+
             #
             #   apply propagator to update the state from `t_curr` to `spike_t`
             #
@@ -234,6 +234,7 @@ class AnalyticIntegrator(Integrator):
                 state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
                 t_curr = spike_t
 
+
             #
             #   delta impulse increment
             #
@@ -241,6 +242,7 @@ class AnalyticIntegrator(Integrator):
             for spike_sym in spike_syms:
                 if spike_sym in self.initial_values.keys():
                     state_at_t_curr[spike_sym] += self.shape_starting_values[spike_sym]
+
 
         #
         #   update cache with the value at the last spike time (if we update with the value at the last requested time (`t`), we would accumulate roundoff errors)
