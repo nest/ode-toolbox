@@ -149,7 +149,7 @@ class MixedIntegrator(Integrator):
         if initial_values is None:
             initial_values = {}
 
-        assert all([type(k) == sympy.Symbol for k in initial_values.keys()]), 'Initial value dictionary keys should be of type sympy.Symbol'
+        assert all([isinstance(k, sympy.Symbol) for k in initial_values.keys()]), 'Initial value dictionary keys should be of type sympy.Symbol'
 
         #
         #   grab stimulus spike times
