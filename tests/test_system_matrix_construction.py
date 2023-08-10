@@ -19,26 +19,18 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
-import os
 import unittest
 import sympy
 
 from odetoolbox import _from_json_to_shapes
 from odetoolbox.system_of_shapes import SystemOfShapes
+from tests.test_utils import _open_json
 
 
-def open_json(fname):
-    absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
-    with open(absfname) as infile:
-        indict = json.load(infile)
-    return indict
-
-
-class TestSystemMatrixConstruction(unittest.TestCase):
+class TestSystemMatrixConstruction:
 
     def test_system_matrix_construction(self):
-        indict = open_json("system_matrix_test.json")
+        indict = _open_json("system_matrix_test.json")
         shapes, parameters = _from_json_to_shapes(indict)
         sigma, beta = sympy.symbols("sigma beta")
         shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
@@ -52,7 +44,7 @@ class TestSystemMatrixConstruction(unittest.TestCase):
 
 
     def test_lorenz_attractor(self):
-        indict = open_json("lorenz_attractor.json")
+        indict = _open_json("lorenz_attractor.json")
         shapes, parameters = _from_json_to_shapes(indict)
         sigma, beta, rho = sympy.symbols("sigma beta rho")
         shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
@@ -66,7 +58,7 @@ class TestSystemMatrixConstruction(unittest.TestCase):
 
 
     def test_morris_lecar(self):
-        indict = open_json("morris_lecar.json")
+        indict = _open_json("morris_lecar.json")
         shapes, parameters = _from_json_to_shapes(indict)
         shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
         C_m, g_Ca, g_K, g_L, E_Ca, E_K, E_L, I_ext = sympy.symbols("C_m g_Ca g_K g_L E_Ca E_K E_L I_ext")
@@ -78,7 +70,3 @@ class TestSystemMatrixConstruction(unittest.TestCase):
                                              [sympy.parsing.sympy_parser.parse_expr("0.0")]])
         assert shape_sys.c_ == sympy.Matrix([[sympy.parsing.sympy_parser.parse_expr("500.0 * E_Ca * g_Ca * tanh(V / 15 + 1 / 15) / C_m - 1000.0 * V * W * g_K / C_m - 500.0 * V * g_Ca * tanh(V / 15 + 1 / 15) / C_m")],
                                              [sympy.parsing.sympy_parser.parse_expr("-200.0 * W * cosh(V / 60) + 100.0 * cosh(V / 60) * tanh(V / 30) + 100.0 * cosh(V / 60)")]])
-
-
-if __name__ == '__main__':
-    unittest.main()

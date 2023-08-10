@@ -19,10 +19,9 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
-import os
-import unittest
 import pytest
+
+from tests.test_utils import _open_json
 
 try:
     import pygsl
@@ -33,17 +32,10 @@ except ImportError:
 from .context import odetoolbox
 
 
-def open_json(fname):
-    absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
-    with open(absfname) as infile:
-        indict = json.load(infile)
-    return indict
-
-
-class TestAnalysisMixedAnalyticNumerical(unittest.TestCase):
+class TestAnalysisMixedAnalyticNumerical:
 
     def test_mixed_analytic_numerical_no_stiffness(self):
-        indict = open_json("mixed_analytic_numerical_no_stiffness.json")
+        indict = _open_json("mixed_analytic_numerical_no_stiffness.json")
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
         assert len(solver_dict) == 2
         assert (solver_dict[0]["solver"] == "analytical" and solver_dict[1]["solver"][:7] == "numeric") \
@@ -51,12 +43,8 @@ class TestAnalysisMixedAnalyticNumerical(unittest.TestCase):
 
     @pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Cannot run stiffness test if GSL is not installed.")
     def test_mixed_analytic_numerical_with_stiffness(self):
-        indict = open_json("mixed_analytic_numerical_with_stiffness.json")
+        indict = _open_json("mixed_analytic_numerical_with_stiffness.json")
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=False)
         assert len(solver_dict) == 2
         assert (solver_dict[0]["solver"] == "analytical" and solver_dict[1]["solver"][:7] == "numeric") \
                or (solver_dict[1]["solver"] == "analytical" and solver_dict[0]["solver"][:7] == "numeric")
-
-
-if __name__ == '__main__':
-    unittest.main()

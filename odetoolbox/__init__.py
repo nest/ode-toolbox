@@ -27,7 +27,7 @@ import sympy
 from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
 
 from .config import Config
-from .sympy_helpers import SympyPrinter, _is_zero, _is_sympy_type
+from .sympy_helpers import _find_in_matrix, _is_zero, _is_sympy_type, SympyPrinter
 from .system_of_shapes import SystemOfShapes
 from .shapes import MalformedInputException, Shape
 
@@ -55,19 +55,39 @@ if PLOT_DEPENDENCY_GRAPH:
 sympy.Basic.__str__ = lambda self: SympyPrinter().doprint(self)
 
 
-def _dependency_analysis(shape_sys, shapes, parameters=None):
+def _find_analytically_solvable_equations(shape_sys, shapes, parameters=None):
     r"""
+    Find which equations can be solved analytically (and, conversely, which cannot).
+
     Perform dependency analysis and plot dependency graph.
     """
-    logging.info("Dependency analysis...")
+    logging.info("Finding analytically solvable equations...")
     dependency_edges = shape_sys.get_dependency_edges()
-    node_is_lin = shape_sys.get_lin_cc_symbols(dependency_edges, parameters=parameters)
+
     if PLOT_DEPENDENCY_GRAPH:
-        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph_before.dot")
-    node_is_lin = shape_sys.propagate_lin_cc_judgements(node_is_lin, dependency_edges)
+        node_is_analytically_solvable = {sym: False for sym in list(shape_sys.x_)}
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_analytically_solvable, fn="/tmp/ode_dependency_graph.dot")
+
+    node_is_analytically_solvable = shape_sys.get_lin_cc_symbols(dependency_edges, parameters=parameters)
+
     if PLOT_DEPENDENCY_GRAPH:
-        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_lin, fn="/tmp/ode_dependency_graph.dot")
-    return dependency_edges, node_is_lin
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_analytically_solvable, fn="/tmp/ode_dependency_graph_analytically_solvable_before_propagated.dot")
+
+    # cannot analytically solve inhomogeneous, order > 1 shapes
+    for i in range(len(shape_sys.x_)):
+        if not _is_zero(shape_sys.b_[i]) and shape_sys.shape_order_from_system_matrix(i) > 1 and shape_sys.x_[i] in shape_sys.get_connected_symbols(i):
+            node_is_analytically_solvable[shape_sys.x_[i]] = False
+
+        for j in range(len(shape_sys.x_)):
+            if not i == j and not _is_zero(shape_sys.A_[i, j]) and not _is_zero(shape_sys.b_[_find_in_matrix(shape_sys.x_, shape_sys.x_[j])]):
+                # this shape depends on another ODE that is inhomogeneous -- can't be solved analytically by this version of ODE-toolbox
+                node_is_analytically_solvable[shape_sys.x_[i]] = False
+
+    node_is_analytically_solvable = shape_sys.propagate_lin_cc_judgements(node_is_analytically_solvable, dependency_edges)
+    if PLOT_DEPENDENCY_GRAPH:
+        DependencyGraphPlotter.plot_graph(shapes, dependency_edges, node_is_analytically_solvable, fn="/tmp/ode_dependency_graph_analytically_solvable.dot")
+
+    return dependency_edges, node_is_analytically_solvable
 
 
 def _read_global_config(indict):
@@ -202,7 +222,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             sys.exit(1)
 
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
-    dependency_edges, node_is_lin = _dependency_analysis(shape_sys, shapes, parameters=parameters)
+    _, node_is_analytically_solvable = _find_analytically_solvable_equations(shape_sys, shapes, parameters=parameters)
 
 
     #
@@ -210,17 +230,12 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     #
 
     solvers_json = []
-    analytic_solver_json = None
     if disable_analytic_solver:
         analytic_syms = []
     else:
-        analytic_syms = [node_sym for node_sym, _node_is_lin in node_is_lin.items() if _node_is_lin]
+        analytic_syms = [node_sym for node_sym, _node_is_analytically_solvable in node_is_analytically_solvable.items() if _node_is_analytically_solvable]
 
-    # remove inhomogeneous and order > 1 shapes from ``analytic_syms``
-    for i in range(shape_sys.A_.shape[0]):
-        if not _is_zero(shape_sys.b_[i]) and shape_sys.shape_order_from_system_matrix(i) > 1:
-            analytic_syms = [sym for sym in analytic_syms if not sym in shape_sys.get_connected_symbols(i)]
-
+    analytic_solver_json = None
     if analytic_syms:
         logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
