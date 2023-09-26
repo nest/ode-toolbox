@@ -24,6 +24,13 @@ import sympy
 import sympy.parsing.sympy_parser
 
 
+class SingularityDetectionException(Exception):
+    """
+    Thrown in case an error occurs while detecting singularities.
+    """
+    pass
+
+
 class SingularityDetection:
     r"""Singularity detection for generated propagator matrix.
 
@@ -147,8 +154,11 @@ class SingularityDetection:
         A : sympy.Matrix
             system matrix
         """
-        conditions = SingularityDetection._generate_singularity_conditions(P)
-        conditions = SingularityDetection._flatten_conditions(conditions)  # makes a list of conditions with each condition in the form of a dict
-        conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
+        try:
+            conditions = SingularityDetection._generate_singularity_conditions(P)
+            conditions = SingularityDetection._flatten_conditions(conditions)  # makes a list of conditions with each condition in the form of a dict
+            conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
+        except Exception as e:
+            raise SingularityDetectionException()
 
         return conditions

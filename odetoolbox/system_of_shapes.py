@@ -30,7 +30,7 @@ import sympy.matrices
 
 from .config import Config
 from .shapes import Shape
-from .singularity_detection import SingularityDetection
+from .singularity_detection import SingularityDetection, SingularityDetectionException
 from .sympy_helpers import _custom_simplify_expr, _is_zero
 
 
@@ -195,12 +195,15 @@ class SystemOfShapes:
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
-        condition = SingularityDetection.find_singularities(P, self.A_)
-        if condition:
-            logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-            logging.warning("List of all conditions that result in a singular propagator:")
-            for cond in condition:
-                logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
+        try:
+            condition = SingularityDetection.find_singularities(P, self.A_)
+            if condition:
+                logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
+                logging.warning("List of all conditions that result in a singular propagator:")
+                for cond in condition:
+                    logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
+        except SingularityDetectionException:
+            logging.warning("Could not check the propagator matrix for singularities.")
 
         logging.debug("System of equations:")
         logging.debug("x = " + str(self.x_))
