@@ -89,11 +89,8 @@ class SystemOfShapes:
 
         for i, sym1 in enumerate(self.x_):
             for j, sym2 in enumerate(self.x_):
-                if not _is_zero(self.A_[j, i]):
+                if not _is_zero(self.A_[j, i]) or sym1 in self.c_[j].free_symbols:
                     E.append((sym2, sym1))
-                else:
-                    if not _is_zero(sympy.diff(self.c_[j], sym1)):
-                        E.append((sym2, sym1))
 
         return E
 
