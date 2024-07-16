@@ -212,3 +212,17 @@ class TestInhomogeneous:
         result = odetoolbox.analysis(indict)
         assert len(result) == 1 \
                and result[0]["solver"] == "analytical"
+
+    def test_inhomogeneous_solver_combined_system(self):
+        r"""test propagators generation for combined homogeneous/inhomogeneous ODEs when called via analysis()"""
+        indict = {"dynamics": [{"expression": "x' = a * 0.001",
+                                "initial_value": "0.3"},
+                               {"expression": "y' = -y / b",
+                                "initial_value": "0"}]}
+
+        result = odetoolbox.analysis(indict, log_level="DEBUG")
+
+        assert len(result) == 1
+        assert result[0]["solver"] == "analytical"
+        assert "__h" in result[0]["update_expressions"]["x"]
+        assert "__h" not in result[0]["update_expressions"]["y"]

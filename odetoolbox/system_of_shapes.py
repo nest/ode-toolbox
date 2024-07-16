@@ -240,7 +240,7 @@ class SystemOfShapes:
                 # this is an inhomogeneous ODE
                 if _is_zero(self.A_[row, row]):
                     # of the form x' = const
-                    update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[col]))
+                    update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[row]))
                 else:
                     particular_solution = -self.b_[row] / self.A_[row, row]
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
