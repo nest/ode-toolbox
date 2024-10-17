@@ -62,9 +62,9 @@ jobs:
       - name: Install GSL
         run: |
           cd ..
-          wget http://ftp.wrz.de/pub/gnu/gsl/gsl-2.5.tar.gz
-          tar -xzf gsl-2.5.tar.gz
-          cd gsl-2.5
+          wget https://mirror.ibcp.fr/pub/gnu/gsl/gsl-latest.tar.gz
+          tar -xzf gsl-latest.tar.gz
+          cd gsl-2.*
           ./configure && make && sudo make install
 
       - name: Install Python dependencies
