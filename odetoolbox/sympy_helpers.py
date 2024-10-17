@@ -1,5 +1,5 @@
 #
-# sympy_printer.py
+# sympy_helpers.py
 #
 # This file is part of the NEST ODE toolbox.
 #
@@ -19,11 +19,44 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from typing import Mapping
+
 import logging
 import sympy
 import sys
 
 from .config import Config
+
+
+class NumericalIssueException(Exception):
+    r"""Thrown in case of numerical issues, like division by zero."""
+    pass
+
+
+def _is_constant_term(term, parameters: Mapping[sympy.Symbol, str] = None) -> bool:
+    r"""
+    :return: :python:`True` if and only if this term contains only numerical values and parameters; :python:`False` otherwise.
+    """
+    if parameters is None:
+        parameters = {}
+    assert all([type(k) is sympy.Symbol for k in parameters.keys()])
+    return type(term) in [sympy.Float, sympy.Integer, sympy.core.numbers.Zero, sympy.core.numbers.One] \
+        or all([sym in parameters.keys() for sym in term.free_symbols])
+
+
+def _check_numerical_issue(var: str) -> None:
+    forbidden_vars = ["zoo", "oo", "nan", "NaN"]
+    stripped_var_name = str(var).strip("'")
+    if stripped_var_name in forbidden_vars:
+        raise NumericalIssueException("The variable \"" + stripped_var_name + "\" was found. This indicates a numerical problem while solving the system of ODEs. Please check the input for correctness (such as the presence of divisions by zero).")
+
+
+def _check_forbidden_name(var: str) -> None:
+    from .shapes import MalformedInputException
+
+    stripped_var_name = str(var).strip("'")
+    if stripped_var_name in Config().forbidden_names + dir(sympy.core.numbers):
+        raise MalformedInputException("Variable by name \"" + stripped_var_name + "\" not allowed; this is a reserved name.")
 
 
 def _is_zero(x):
