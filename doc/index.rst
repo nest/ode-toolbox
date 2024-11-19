@@ -350,10 +350,6 @@ The following global options are defined. Note that all are typically formatted 
      - :python:`"sympy.simplify(expr)"`
      - string
      - For all expressions ``expr`` that are rewritten internally: the contents of this parameter string are evaluated with ``eval()`` in Python to obtain the final output expression. Override for custom expression simplification steps. Example: ``"sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"``.
-   * - ``forbidden_names``
-     - :python:`["oo", "zoo", "nan", "NaN", "__h"]`
-     - list of strings
-     - For each forbidden name: emit an error if a variable or parameter by this name occurs in the input.
 
 
 Output
