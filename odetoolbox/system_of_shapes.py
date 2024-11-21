@@ -203,7 +203,6 @@ class SystemOfShapes:
         XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
         """
 
-
         # naive: calculate propagators in one step
         # P_naive = sympy.simplify(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
 
