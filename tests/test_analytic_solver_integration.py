@@ -19,11 +19,16 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
-import os
-import unittest
-import sympy
+import math
 import numpy as np
+import os
+import sympy
+import sympy.parsing.sympy_parser
+import scipy
+import scipy.special
+import scipy.linalg
+import scipy.integrate
+
 
 try:
     import matplotlib as mpl
@@ -36,24 +41,10 @@ except ImportError:
 
 from .context import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
-
-import sympy.parsing.sympy_parser
-from math import e
-
-import scipy
-import scipy.special
-import scipy.linalg
-from scipy.integrate import solve_ivp
+from tests.test_utils import _open_json
 
 
-def open_json(fname):
-    absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
-    with open(absfname) as infile:
-        indict = json.load(infile)
-    return indict
-
-
-class TestAnalyticSolverIntegration(unittest.TestCase):
+class TestAnalyticSolverIntegration:
     r"""
     Numerical comparison between ode-toolbox calculated propagators, hand-calculated propagators expressed in Python, and numerical integration, for the iaf_cond_alpha neuron.
 
@@ -115,8 +106,8 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         tau_syn = 5E-3    # [s]
         c_m = 1.    # [uF]
         I_ext = -1.  # [pA]
-        v_abs_init = 0.   # [mV]
-        i_ex_init = [0., e / tau_syn]   # [A]
+        V_rel_init = 0.   # [mV]
+        i_ex_init = [0., math.e / tau_syn]   # [A]
         spike_times = [10E-3]  # [s]
         for spike_time in spike_times:
             assert spike_time < T, "spike needs to occur before end of simulation"
@@ -131,18 +122,18 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
         def f(t, y):
             i_ex = y[:2]
-            V_abs = y[2]
+            V_rel = y[2]
 
             _d_i_ex = np.array([i_ex[1], -i_ex[0] / tau_syn**2 - 2 * i_ex[1] / tau_syn])
-            _d_V_abs_expr_ = -V_abs / tau + (3 * i_ex[0] + I_ext) / c_m    # factor 3 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory and gap currents (which are of the exact same shape/magnitude at all times)
-            _delta_vec = np.concatenate((_d_i_ex, [_d_V_abs_expr_]))
+            _d_V_rel_expr_ = -V_rel / tau + (3 * i_ex[0] + I_ext) / c_m    # factor 3 here because only simulating one inhibitory conductance, but ode-toolbox will add both inhibitory and excitatory and gap currents (which are of the exact same shape/magnitude at all times)
+            _delta_vec = np.concatenate((_d_i_ex, [_d_V_rel_expr_]))
 
             return _delta_vec
 
         numerical_timevec = np.zeros((1, 0), dtype=float)
         numerical_sol = np.zeros((3, 0), dtype=float)
 
-        _init_value = [0., 0., v_abs_init]
+        _init_value = [0., 0., V_rel_init]
 
         numerical_timevec = np.hstack((numerical_timevec, np.array([0])[np.newaxis, :]))
         numerical_sol = np.hstack((numerical_sol, np.array(_init_value)[:, np.newaxis]))
@@ -155,7 +146,7 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
             else:
                 _t_stop = T
 
-            sol = solve_ivp(f, t_span=[t, _t_stop], y0=_init_value, t_eval=timevec[np.logical_and(t < timevec, timevec <= _t_stop)], rtol=1E-9, atol=1E-9)
+            sol = scipy.integrate.solve_ivp(f, t_span=[t, _t_stop], y0=_init_value, t_eval=timevec[np.logical_and(t < timevec, timevec <= _t_stop)], rtol=1E-9, atol=1E-9)
             _init_value[:2] = i_ex_init       # "apply" the spike
             _init_value[2] = sol.y[2, -1]
 
@@ -169,11 +160,11 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
             spike_time_idx += 1
 
         i_ex = numerical_sol[:2, :]
-        v_abs = numerical_sol[2, :]
+        v_rel = numerical_sol[2, :]
 
 
         #
-        #   timeseries using hand-calculated propagators (only for alpha postsynaptic currents, not V_abs)
+        #   timeseries using hand-calculated propagators (only for alpha postsynaptic currents, not V_rel)
         #
 
         P = scipy.linalg.expm(h * np.array([[0., 1.], [-1 / tau_syn**2, -2 / tau_syn]]))
@@ -198,13 +189,13 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
         #
 
         print("Starting ODE-toolbox analysis...")
-        indict = open_json("test_integration.json")
+        indict = _open_json("test_integration.json")
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, log_level="DEBUG")
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
 
-        ODE_INITIAL_VALUES = {"V_abs": v_abs_init, "I_shape_ex": 0., "I_shape_ex__d": 0., "I_shape_in": 0., "I_shape_in__d": 0., "I_shape_gap1": 0., "I_shape_gap2": 0.}
+        ODE_INITIAL_VALUES = {"V_rel": V_rel_init, "I_shape_ex": 0., "I_shape_ex__d": 0., "I_shape_in": 0., "I_shape_in__d": 0., "I_shape_gap1": 0., "I_shape_gap2": 0.}
 
         _parms = {"Tau": tau,
                   "Tau_syn_in": tau_syn,
@@ -235,8 +226,8 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
         if INTEGRATION_TEST_DEBUG_PLOTS:
             fig, ax = plt.subplots(3, sharex=True)
-            ax[0].plot(1E3 * numerical_timevec.squeeze(), v_abs, label="V_abs (num)")
-            ax[0].plot(1E3 * state["timevec"], state["V_abs"], linestyle=":", marker="+", label="V_abs (prop)")
+            ax[0].plot(1E3 * numerical_timevec.squeeze(), v_rel, label="V_rel (num)")
+            ax[0].plot(1E3 * state["timevec"], state["V_rel"], linestyle=":", marker="+", label="V_rel (prop)")
 
             ax[1].plot(1E3 * numerical_timevec.squeeze(), i_ex[0, :], linewidth=2, label="i (num)")
             ax[1].plot(1E3 * state["timevec"], state["I_shape_ex"], linewidth=2, linestyle=":", marker="o", label="i_ex (prop)", fillstyle="none")
@@ -277,8 +268,4 @@ class TestAnalyticSolverIntegration(unittest.TestCase):
 
         np.testing.assert_allclose(i_ex__[1, :] / np.amax(np.abs(i_ex__[1, :])), i_ex[1, :] / np.amax(np.abs(i_ex__[1, :])), atol=_num_norm_atol, rtol=_num_norm_rtol)
 
-        np.testing.assert_allclose(v_abs / np.amax(v_abs), state["V_abs"] / np.amax(v_abs), atol=_num_norm_atol, rtol=_num_norm_rtol)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        np.testing.assert_allclose(v_rel / np.amax(v_rel), state["V_rel"] / np.amax(v_rel), atol=_num_norm_atol, rtol=_num_norm_rtol)

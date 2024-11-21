@@ -19,11 +19,10 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import json
-import os
-import unittest
 import sympy
 import numpy as np
+
+from tests.test_utils import _open_json
 
 try:
     import matplotlib as mpl
@@ -39,19 +38,12 @@ from odetoolbox.analytic_integrator import AnalyticIntegrator
 from odetoolbox.spike_generator import SpikeGenerator
 
 
-def open_json(fname):
-    absfname = os.path.join(os.path.abspath(os.path.dirname(__file__)), fname)
-    with open(absfname) as infile:
-        indict = json.load(infile)
-    return indict
-
-
-class TestAnalyticIntegrator(unittest.TestCase):
+class TestAnalyticIntegrator:
     """
     Test that analytic integrator returns the same result when caching is disabled and enabled.
     """
 
-    def test_analytic_integrator_iaf_psc_alpha(self):
+    def test_analytic_integrator_alpha_function_of_time(self):
         h = 1E-3    # [s]
         T = 100E-3    # [s]
 
@@ -60,7 +52,7 @@ class TestAnalyticIntegrator(unittest.TestCase):
         #   timeseries using ode-toolbox generated propagators
         #
 
-        indict = open_json("test_analytic_integrator.json")
+        indict = _open_json("test_alpha_function_of_time.json")
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
@@ -119,8 +111,3 @@ class TestAnalyticIntegrator(unittest.TestCase):
         np.testing.assert_allclose(state[True]["timevec"], state[False]["timevec"])
         for sym, val in state_.items():
             np.testing.assert_allclose(state[True][sym], state[False][sym])
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__])

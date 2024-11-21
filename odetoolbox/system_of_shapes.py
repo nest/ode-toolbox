@@ -31,7 +31,7 @@ import sympy.matrices
 
 from .config import Config
 from .shapes import Shape
-from .singularity_detection import SingularityDetection
+from .singularity_detection import SingularityDetection, SingularityDetectionException
 from .sympy_helpers import _custom_simplify_expr, _is_zero
 
 
@@ -108,11 +108,8 @@ class SystemOfShapes:
 
         for i, sym1 in enumerate(self.x_):
             for j, sym2 in enumerate(self.x_):
-                if not _is_zero(self.A_[j, i]):
+                if not _is_zero(self.A_[j, i]) or sym1 in self.c_[j].free_symbols:
                     E.append((sym2, sym1))
-                else:
-                    if not _is_zero(sympy.diff(self.c_[j], sym1)):
-                        E.append((sym2, sym1))
 
         return E
 
@@ -206,6 +203,7 @@ class SystemOfShapes:
         XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
         """
 
+
         # naive: calculate propagators in one step
         # P_naive = sympy.simplify(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
 
@@ -218,12 +216,21 @@ class SystemOfShapes:
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
-        condition = SingularityDetection.find_singularities(P, A)
-        if condition:
-            logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-            logging.warning("List of all conditions that result in a singular propagator:")
-            for cond in condition:
-                logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
+        try:
+            condition = SingularityDetection.find_singularities(P, A)
+            if condition:
+                logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
+                logging.warning("List of all conditions that result in a singular propagator:")
+                for cond in condition:
+                    logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
+        except SingularityDetectionException:
+            logging.warning("Could not check the propagator matrix for singularities.")
+
+        logging.debug("System of equations:")
+        logging.debug("x = " + str(self.x_))
+        logging.debug("A = " + repr(self.A_))
+        logging.debug("b = " + str(self.b_))
+        logging.debug("c = " + str(self.c_))
 
         return P
 
@@ -256,28 +263,32 @@ class SystemOfShapes:
                     sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
-                    if _is_zero(self.b_[col]):
-                        # homogeneous ODE
-                        update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
-                    else:
-                        # inhomogeneous ODE
-                        if _is_zero(self.A_[col, col]):
-                            # of the form x' = const
-                            update_expr_terms.append(sym_str + " * " + str(self.x_[col]) + " + " + Config().output_timestep_symbol + " * " + str(self.b_[col]))
-                        else:
-                            particular_solution = -self.b_[col] / self.A_[col, col]
-                            update_expr_terms.append(sym_str + " * (" + str(self.x_[col]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
+                    if row != col and not _is_zero(self.b_[col]):
+                        # the ODE for x_[row] depends on the inhomogeneous ODE of x_[col]. We can't solve this analytically in the general case (even though some specific cases might admit a solution)
+                        raise PropagatorGenerationException("the ODE for " + str(self.x_[row]) + " depends on the inhomogeneous ODE of " + str(self.x_[col]) + ". We can't solve this analytically in the general case (even though some specific cases might admit a solution)")
+
+                    update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
+
+            if not _is_zero(self.b_[row]):
+                # this is an inhomogeneous ODE
+                if _is_zero(self.A_[row, row]):
+                    # of the form x' = const
+                    update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[row]))
+                else:
+                    particular_solution = -self.b_[row] / self.A_[row, row]
+                    sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
+                    update_expr_terms.append("-" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
+                    update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
+            logging.info("update_expr[" + str(self.x_[row]) + "] = " + str(update_expr[str(self.x_[row])]))
 
         all_state_symbols = [str(sym) for sym in self.x_]
-
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
-
         solver_dict = {"propagators": P_expr,
                        "update_expressions": update_expr,
                        "state_variables": all_state_symbols,

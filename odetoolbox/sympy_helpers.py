@@ -76,6 +76,19 @@ def _custom_simplify_expr(expr: str):
         sys.exit(1)
 
 
+def _find_in_matrix(A, el):
+    num_rows = A.rows
+    num_cols = A.cols
+
+    # Iterate over the elements of the matrix
+    for i in range(num_rows):
+        for j in range(num_cols):
+            if A[i, j] == el:
+                return (i, j)
+
+    return None
+
+
 class SympyPrinter(sympy.printing.StrPrinter):
 
     def _print_Exp1(self, expr):

@@ -419,7 +419,7 @@ class Shape:
 
         Only functions of time that have a homogeneous ODE equivalent are supported (inhomogeneous ODE functions are not supported).
 
-        For a complete description of the algorithm, see https://ode-toolbox.readthedocs.io/en/latest/index.html#converting-direct-functions-of-time
+        For a complete description of the algorithm, see https://ode-toolbox.readthedocs.io/en/latest/index.html#converting-direct-functions-of-time Note that this function uses sympy.simplify() rather than the custom simplification expression, because the latter risks that we fail to recognize certain shapes.
 
         :param symbol: The variable name of the shape (e.g. :python:`"alpha"`, :python:`"I"`)
         :param definition: The definition of the shape (e.g. :python:`"(e/tau_syn_in) * t *  exp(-t/tau_syn_in)"`)
@@ -522,7 +522,7 @@ class Shape:
             #   calculate `derivative_factors`
             #
 
-            derivative_factors = _custom_simplify_expr(X.inv() * Y)
+            derivative_factors = sympy.simplify(X.inv() * Y)    # XXX: need sympy.simplify() here rather than _custom_simplify_expr()
 
 
             #
@@ -535,15 +535,14 @@ class Shape:
                 diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
             diff_rhs_lhs += derivatives[order]
 
-            if _is_zero(sympy.simplify(diff_rhs_lhs)):
+            if _is_zero(sympy.simplify(diff_rhs_lhs)):    # XXX: need sympy.simplify() here rather than _custom_simplify_expr()
                 found_ode = True
                 break
 
         if not found_ode:
             raise Exception("Shape does not satisfy any ODE of order <= " + str(max_order))
 
-        derivative_factors = [_custom_simplify_expr(df) for df in derivative_factors]
-
+        logging.debug("Shape satisfies ODE of order = " + str(order))
 
         #
         #    calculate the initial values of the found ODE

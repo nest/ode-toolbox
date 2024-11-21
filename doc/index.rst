@@ -381,9 +381,7 @@ Analytic solver generation
 
 If an ODE is constant-coefficient and linear, an analytic solution can be computed. Analytically solvable ODEs can also contain dependencies on other analytically solvable ODEs, but an otherwise analytically tractable ODE cannot depend on an ODE that can only be solved numerically. In the latter case, no analytic solution will be computed.
 
-For example, consider an integrate-and-fire neuron with two alpha-shaped kernels (``I_shape_in`` and ``I_shape_gap``), and one nonlinear kernel (``I_shape_ex``). Each of these kernels can be expressed as a system of ODEs containing two variables. ``I_shape_in`` is specified as a second-order equation, whereas ``I_shape_gap`` is explicitly given as a system of two coupled first-order equations, i.e. as two separate ``dynamics`` entries with names ``I_shape_gap1`` and ``I_shape_gap2``.
-
-Both formulations are mathematically equivalent, and ODE-toolbox treats them the same following input processing.
+For example, consider an integrate-and-fire neuron with two alpha-shaped kernels (``I_shape_in`` and ``I_shape_gap``), and one nonlinear kernel (``I_shape_ex``). Each of these kernels can be expressed as a system of ODEs containing two variables. ``I_shape_in`` is specified as a second-order equation, whereas ``I_shape_gap`` is explicitly given as a system of two coupled first-order equations, i.e. as two separate ``dynamics`` entries with names ``I_shape_gap1`` and ``I_shape_gap2``. Both formulations are mathematically equivalent, and ODE-toolbox treats them the same following input processing. The membrane potential ``V_rel`` is expressed relative to zero, making it a homogeneous equation and one that could be analytically solved, if it were not for its dedependence on the quantity ``I_shape_ex`` which itself requires a numeric solver due to its nonlinear dynamics.
 
 During processing, a dependency graph is generated, where each node corresponds to one dynamical variable, and an arrow from node *a* to *b* indicates that *a* depends on the value of *b*. Boxes enclosing nodes mark input shapes that were specified as either a direct function of time or a higher-order differential equation, and were expanded to a system of first-order ODEs.
 
@@ -399,7 +397,7 @@ Each variable is subsequently marked according to whether it can, by itself, be 
    <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/eq_analysis_1.png" alt="Dependency graph with membrane potential and excitatory and gap junction kernels marked green" width="720" height="383">
 
 
-In the next step, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable. In this example, ``V_abs`` is unmarked as it depends on the nonlinear excitatory kernel.
+In the next step, variables are unmarked as analytically solvable if they depend on other variables that are themselves not analytically solvable. In this example, ``V_rel`` is unmarked as it depends on the nonlinear excitatory kernel.
 
 .. raw:: html
 
@@ -568,7 +566,7 @@ The file `test_analytic_solver_integration.py <https://github.com/nest/ode-toolb
 
 .. raw:: html
 
-   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/test_analytic_solver_integration.png" alt="V_abs, i_ex and i_ex' timeseries plots" width="620" height="465">
+   <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/test_analytic_solver_integration.png" alt="V_rel, i_ex and i_ex' timeseries plots" width="620" height="465">
 
 
 The file `test_mixed_integrator_numeric.py <https://github.com/nest/ode-toolbox/blob/master/tests/test_mixed_integrator_numeric.py>`_ contains an integration test, that uses :py:class:`~odetoolbox.mixed_integrator.MixedIntegrator` and the results dictionary from ODE-toolbox to simulate the same integrate-and-fire neuron with alpha-shaped postsynaptic response, but purely numerically (without the use of propagators). In contrast to the :py:class:`~odetoolbox.analytic_integrator.AnalyticIntegrator`, enforcement of upper- and lower bounds is supported, as can be seen in the behaviour of :math:`V_m` in the plot that is generated:
@@ -599,7 +597,7 @@ Citing ODE-toolbox
 
 If you use ODE-toolbox in your work, please cite it depending on the version you are using. (It is recommended to use the latest release version whenever possible.)
 
-For version 2.5 and 2.5.1:
+For version 2.5:
 
 .. [1] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2022) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.7193351 <https://doi.org/10.5281/zenodo.7193351>`__.
 
