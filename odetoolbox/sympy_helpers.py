@@ -55,7 +55,7 @@ def _check_forbidden_name(var: str) -> None:
     from .shapes import MalformedInputException
 
     stripped_var_name = str(var).strip("'")
-    if stripped_var_name in Config().forbidden_names + dir(sympy.core.numbers):
+    if stripped_var_name in Config().forbidden_names:
         raise MalformedInputException("Variable by name \"" + stripped_var_name + "\" not allowed; this is a reserved name.")
 
 
