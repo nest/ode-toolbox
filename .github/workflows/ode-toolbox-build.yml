@@ -43,7 +43,7 @@ jobs:
       fail-fast: false
       matrix:
         with_gsl: ["0", "1"]
-        sympy_version: ["==1.4", "!=1.5,!=1.5.*,!=1.6rc1,!=1.6rc2,!=1.6,!=1.6.*,!=1.10,!=1.10.*,!=1.13,!=1.13.*"]
+        sympy_version: ["==1.4", ""]  # empty string for "latest"
 
     steps:
       - name: Checkout ODE-toolbox code
