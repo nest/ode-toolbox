@@ -34,7 +34,8 @@ class Config:
         "sim_time": 100E-3,
         "max_step_size": 999.,
         "integration_accuracy_abs": 1E-6,
-        "integration_accuracy_rel": 1E-6
+        "integration_accuracy_rel": 1E-6,
+        "forbidden_names": ["oo", "zoo", "nan", "NaN", "__h"]
     }
 
     def __getitem__(self, key):
