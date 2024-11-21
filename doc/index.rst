@@ -41,7 +41,7 @@ ODE-toolbox is written in Python and leverages SymPy for the symbolic manipulati
 Installation
 ------------
 
-.. Attention:: SymPy releases after 1.4 introduce a regression in runtime performance when computing matrix exponentials. Unless this conflicts with other version requirements, we recommend to use SymPy 1.4 for now (for example, by editing ``requirements.txt`` to read ``sympy==1.4``). This issue is being tracked at https://github.com/sympy/sympy/issues/23417.
+.. Attention:: SymPy releases between 1.4 and 1.13.3 introduce a regression in runtime performance when computing matrix exponentials. Unless this conflicts with other version requirements, we recommend to use either SymPy 1.4, or version 1.13.3 or later.
 
 .. Attention:: To perform solver benchmarking, ODE-toolbox relies on GSL and PyGSL. Currently, the latest PyGSL release is not compatible with GSL. We recommend to use GSL 2.7 for now. This issue is being tracked at https://github.com/pygsl/pygsl/issues/62.
 
