@@ -35,8 +35,8 @@ class TestSystemMatrixConstruction:
         sigma, beta = sympy.symbols("sigma beta")
         shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
         assert shape_sys.A_ == sympy.Matrix([[-sigma, sigma, 0],
-                                              [0, 0, 0],
-                                              [0, 0, -beta]])
+                                             [0, 0, 0],
+                                             [0, 0, -beta]])
         x, y, z = sympy.symbols("x y z")
         assert shape_sys.c_ == sympy.Matrix([[0],
                                              [3 * z * x**2 - x * y],
