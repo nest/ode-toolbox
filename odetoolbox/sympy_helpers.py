@@ -43,11 +43,11 @@ def _is_constant_term(term, parameters: Mapping[sympy.Symbol, str] = None) -> bo
     assert all([type(k) is sympy.Symbol for k in parameters.keys()])
 
     if sympy.__version__.startswith("1.4"):
-       sympy_zero = sympy.numbers.Zero
-       sympy_one = sympy.numbers.One
+        sympy_zero = sympy.numbers.Zero
+        sympy_one = sympy.numbers.One
     else:
-       sympy_zero = sympy.core.numbers.Zero
-       sympy_one = sympy.core.numbers.One
+        sympy_zero = sympy.core.numbers.Zero
+        sympy_one = sympy.core.numbers.One
 
     return type(term) in [sympy.Float, sympy.Integer, sympy_zero, sympy_one] \
         or all([sym in parameters.keys() for sym in term.free_symbols])
