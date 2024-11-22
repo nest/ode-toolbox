@@ -115,7 +115,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
+    'sphinx.ext.mathjax'
 ]
 
 autodoc_default_flags = ['private-members', 'show-inheritance']
@@ -216,10 +216,9 @@ def skip(app, what, name, obj, would_skip, options):
     return would_skip
 
 def setup(app):
-    app.add_stylesheet('css/custom.css')
-    app.add_stylesheet('css/pygments.css')
+    app.add_css_file('_static/css/custom.css')
+    app.add_css_file('_static/css/pygments.css')
     app.connect("autodoc-skip-member", skip)
-
 
 # -- Options for LaTeX output ---------------------------------------------
 
