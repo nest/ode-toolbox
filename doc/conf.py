@@ -218,8 +218,8 @@ def skip(app, what, name, obj, would_skip, options):
 def setup(app):
     app.connect("autodoc-skip-member", skip)
 
-html_css_files = ["css/custom.css",
-                  "css/pygments.css"]
+html_css_files = ["_static/css/custom.css",
+                  "_static/css/pygments.css"]
 
 # -- Options for LaTeX output ---------------------------------------------
 
