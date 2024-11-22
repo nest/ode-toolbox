@@ -1,2 +1,4 @@
-sphinx_rtd_theme==1.0.0
-
+sympy
+scipy
+numpy
+sphinx_rtd_theme
