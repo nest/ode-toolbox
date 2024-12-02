@@ -189,7 +189,7 @@ html_theme_options = {
     'navigation_depth': 1,
     'theme_navigation_depth': 1,
     'collapse_navigation': False,
-    'theme_collapse_navigation': False
+    'sticky_navigation': False,
 }
 
 html_logo = "https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/ode-toolbox-logo.png"
