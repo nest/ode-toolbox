@@ -115,7 +115,8 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.mathjax'
+    'sphinx.ext.mathjax',
+    'sphinx_design'
 ]
 
 autodoc_default_flags = ['private-members', 'show-inheritance']
