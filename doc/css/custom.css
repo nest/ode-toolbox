@@ -141,6 +141,6 @@ tr.row-odd {
 }
 
 figure {
-    margin-bottom: 24px;
+    margin-bottom: 24px !important;
 }
 
