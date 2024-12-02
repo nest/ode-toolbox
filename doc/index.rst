@@ -41,8 +41,6 @@ ODE-toolbox is written in Python and leverages SymPy for the symbolic manipulati
 Installation
 ------------
 
-.. Attention:: SymPy releases after 1.4 introduce a regression in runtime performance when computing matrix exponentials. Unless this conflicts with other version requirements, we recommend to use SymPy 1.4 for now (for example, by editing ``requirements.txt`` to read ``sympy==1.4``). This issue is being tracked at https://github.com/sympy/sympy/issues/23417.
-
 .. Attention:: To perform solver benchmarking, ODE-toolbox relies on GSL and PyGSL. Currently, the latest PyGSL release is not compatible with GSL. We recommend to use GSL 2.7 for now. This issue is being tracked at https://github.com/pygsl/pygsl/issues/62.
 
 
@@ -472,6 +470,12 @@ If the imaginary unit :math:`i` is found in any of the entries in :math:`\mathbf
 
 In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated. ODE-toolbox will detect conditions (in this example, :python:`param1 = param2`) under which these singularities can occur. If any conditions were found, log warning messages will be emitted during the computation of the propagator matrix. A condition is only reported if the system matrix :math:`A` is defined under that condition, ensuring that only those conditions are returned that are purely an artifact of the propagator computation.
 
+To speed up processing, the final system matrix :math:`\mathbf{A}` is rewritten as a block-diagonal matrix :math:`\mathbf{A} = \text{diag}(\mathbf{A}_1, \mathbf{A}_2, \dots, \mathbf{A}_k)`, where each of :math:`\mathbf{A}_1, \mathbf{A}_2, \dots, \mathbf{A}_k` is square. Then, the propagator matrix is computed for each individual block separately, making use of the following identity:
+
+.. math::
+
+   \exp(\mathbf{A}\cdot h) = \text{diag}(\exp(\mathbf{A}_1 \cdot h), \exp(\mathbf{A}_2 \cdot h), \dots, \exp(\mathbf{A}_k \cdot h))
+
 
 Computing the update expressions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -568,26 +572,6 @@ The file `test_mixed_integrator_numeric.py <https://github.com/nest/ode-toolbox/
 .. raw:: html
 
    <img src="https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/test_mixed_integrator_numeric.png" alt="g_in, g_in__d, g_ex, g_ex__d, V_m timeseries plots" width="620" height="451">
-
-
-Caching of results
-------------------
-
-.. admonition:: TODO
-
-   Not implemented yet.
-
-Some operations on SymPy expressions can be quite slow (see the section :ref:`Working with large expressions`\ ).
-
-Even dynamical systems of moderate size can require a few minutes of processing time, in large part due to SymPy calls, and solver selection.
-
-To speed up processing, a caching mechanism analyses the final system matrix :math:`\mathbf{A}` and rewrites it as a block-diagonal matrix :math:`\mathbf{A} = \text{diag}(\mathbf{B}_1, \mathbf{B}_2, \dots, \mathbf{B}_k)`, where each of :math:`\mathbf{B}_1, \mathbf{B}_2, \dots, \mathbf{B}_k` is square.
-
-For propagators, we note that
-
-.. math::
-
-   e^{\mathbf{A}t} = \text{diag}(e^{\mathbf{B}_1t}, e^{\mathbf{B}_2t}, \dots, e^{\mathbf{B}_kt})
 
 
 API documentation
