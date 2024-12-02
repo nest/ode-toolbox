@@ -179,19 +179,32 @@ numfig_format = {'figure': 'Figure %s', 'table': 'Table %s',
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_material"
+html_title = "ODE-toolbox"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-
+#
 html_theme_options = {
-    'logo_only': True,
-    'navigation_depth': 1,
-    'theme_navigation_depth': 1,
-    'collapse_navigation': False,
-    'sticky_navigation': False,
+    "html_minify": False,
+    "html_prettify": False,
+    "css_minify": False,
+    # Set the color and the accent color
+    "color_primary": "orange",
+    "color_accent": "white",
+    "theme_color": "ff6633",
+    "master_doc": False,
+    "nav_links": [],
+    # Visible levels of the global TOC; -1 means unlimited
+    "globaltoc_depth": 1,
+    # If False, expand all TOC entries
+    "globaltoc_collapse": False,
+    # If True, show hidden TOC entries
+    "globaltoc_includehidden": True,
+    "version_dropdown": False,
 }
+
 
 html_logo = "https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/ode-toolbox-logo.png"
 
