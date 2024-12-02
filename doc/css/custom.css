@@ -140,4 +140,7 @@ tr.row-odd {
    background-color: #FFFFFF !important;
 }
 
+figure {
+    margin-bottom: 24px;
+}
 
