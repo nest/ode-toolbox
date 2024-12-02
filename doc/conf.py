@@ -196,6 +196,12 @@ html_logo = "https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/o
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['css', 'fig']
 
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_css_files = [
+    'css/custom.css'
+]
+
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
@@ -217,8 +223,6 @@ def skip(app, what, name, obj, would_skip, options):
     return would_skip
 
 def setup(app):
-    app.add_css_file('css/custom.css')
-    app.add_css_file('css/pygments.css')
     app.connect("autodoc-skip-member", skip)
 
 # -- Options for LaTeX output ---------------------------------------------
