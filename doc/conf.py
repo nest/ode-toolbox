@@ -185,9 +185,7 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 
 html_theme_options = {
-    'logo_only': True,
-    'navigation_depth': 2,
-    'collapse_navigation': False
+    'logo_only': True
 }
 html_logo = "https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/ode-toolbox-logo.png"
 
