@@ -46,6 +46,7 @@ from subprocess import check_output, CalledProcessError
 
 os.system('mkdir _static')
 os.system('install -v -D css/custom.css _static/css/custom.css')
+os.system('install -v -D js/expand_toc_tree.css _static/js/expand_toc_tree.js')
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
