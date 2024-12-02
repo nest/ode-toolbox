@@ -38,9 +38,6 @@ from .sympy_helpers import _custom_simplify_expr, _is_zero
 def get_block_diagonal_blocks(A):
     assert A.shape[0] == A.shape[1], "matrix A should be square"
 
-    N = A.shape[0]
-
-    # A_mirrored = (A + A.T).applyfunc(_is_zero)   # make the matrix symmetric so we only have to check one triangle
     A_mirrored = (A + A.T) != 0   # make the matrix symmetric so we only have to check one triangle
 
     graph_components = scipy.sparse.csgraph.connected_components(A_mirrored)[1]
