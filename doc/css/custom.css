@@ -147,8 +147,8 @@ figure {
 .md-sidebar--primary {
     display: none !important;  /* this is broken and shows an empty list... */
 }
-
-.md-sidebar--secondary{
+/*
+.md-sidebar--secondary {
     position:fixed !important;
     top:0 !important;
     left:-12.1rem !important;
@@ -167,3 +167,5 @@ figure {
     right:-12.1rem !important;
     left:auto !important;
 }
+*/
+
