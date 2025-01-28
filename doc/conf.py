@@ -46,6 +46,7 @@ from subprocess import check_output, CalledProcessError
 
 os.system('mkdir _static')
 os.system('install -v -D css/custom.css _static/css/custom.css')
+# os.system('install -v -D js/expand_toc_tree.js _static/js/expand_toc_tree.js')
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -115,7 +116,9 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.mathjax'
+    'sphinx.ext.mathjax',
+    'sphinx_design',
+    'sphinx_material'
 ]
 
 autodoc_default_flags = ['private-members', 'show-inheritance']
@@ -177,23 +180,49 @@ numfig_format = {'figure': 'Figure %s', 'table': 'Table %s',
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_material"
+html_title = "ODE-toolbox"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-
+#
 html_theme_options = {
-    'logo_only': True,
-    'navigation_depth': 2,
-    'collapse_navigation': False
+    "html_minify": False,
+    "html_prettify": False,
+    "css_minify": False,
+    # Set the color and the accent color
+    "color_primary": "orange",
+    "color_accent": "white",
+    "theme_color": "ff6633",
+    "master_doc": False,
+    "nav_links": [],
+    # Visible levels of the global TOC; -1 means unlimited
+    "globaltoc_depth": 2,
+    # If False, expand all TOC entries
+    "globaltoc_collapse": False,
+    # If True, show hidden TOC entries
+    "globaltoc_includehidden": True,
+    "version_dropdown": False,
 }
+
+
 html_logo = "https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/ode-toolbox-logo.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['css', 'fig']
+html_static_path = ['css', 'fig', 'js', '_static']
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_css_files = [
+    'css/custom.css'
+]
+
+html_js_files = [
+    # 'js/expand_toc_tree.js'
+]
 
 # -- Options for HTMLHelp output ------------------------------------------
 
@@ -216,8 +245,6 @@ def skip(app, what, name, obj, would_skip, options):
     return would_skip
 
 def setup(app):
-    app.add_css_file('_static/css/custom.css')
-    app.add_css_file('_static/css/pygments.css')
     app.connect("autodoc-skip-member", skip)
 
 # -- Options for LaTeX output ---------------------------------------------

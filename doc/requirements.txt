@@ -1,4 +1,7 @@
 sympy
 scipy
 numpy
-sphinx_rtd_theme
+sphinx==6.2.1
+readthedocs-sphinx-ext
+sphinx-material
+sphinx-design
