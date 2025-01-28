@@ -147,25 +147,28 @@ figure {
 .md-sidebar--primary {
     display: none !important;  /* this is broken and shows an empty list... */
 }
-/*
+
 .md-sidebar--secondary {
-    position:fixed !important;
-    top:0 !important;
-    left:-12.1rem !important;
-    width:12.1rem !important;
-    height:100% !important;
-    -webkit-transform:translateX(0) !important;
-    transform:translateX(0) !important;
-    transition:box-shadow .25s,-webkit-transform .25s cubic-bezier(.4,0,.2,1) !important;
-    transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s !important;
-    transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s,-webkit-transform .25s cubic-bezier(.4,0,.2,1) !important;
-    background-color:#fff !important;
-    z-index:3 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: -12.1rem !important;
+    width: 12.1rem !important;
+    height: 100% !important;
+    -webkit-transform: translateX(0) !important;
+    transform: translateX(0) !important;
+    transition: box-shadow .25s,-webkit-transform .25s cubic-bezier(.4,0,.2,1) !important;
+    transition: transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s !important;
+    transition: transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s,-webkit-transform .25s cubic-bezier(.4,0,.2,1) !important;
+    background-color: #fff !important;
+    z-index: 3 !important;
+    display: block;
+    margin-left:0 !important;
+    -webkit-transform: none !important;
+    transform: none !important;
 }
 
 [dir=rtl] .md-sidebar--secondary {
     right:-12.1rem !important;
     left:auto !important;
 }
-*/
 
