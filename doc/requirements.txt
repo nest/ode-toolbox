@@ -1,7 +1,7 @@
 sympy
 scipy
 numpy
-sphinx==6.2.1
+sphinx
 readthedocs-sphinx-ext
 sphinx-material
 sphinx-design
