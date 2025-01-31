@@ -116,9 +116,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx_design',
-    'sphinx_material'
+    'sphinx.ext.mathjax'
 ]
 
 autodoc_default_flags = ['private-members', 'show-inheritance']
@@ -186,7 +184,7 @@ html_title = "ODE-toolbox"
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#
+
 html_theme_options = {
     'logo_only': True,
     'navigation_depth': 2,
