@@ -43,7 +43,6 @@ jobs:
       fail-fast: false
       matrix:
         with_gsl: ["0", "1"]
-        sympy_version: ["1.13.3", ""]  # empty string for "latest"
 
     steps:
       - name: Checkout ODE-toolbox code
@@ -80,7 +79,7 @@ jobs:
           echo $PYTHON_VERSION
 
           pip uninstall --yes sympy
-          pip install sympy${{ matrix.sympy_version }}
+          pip install sympy
           echo "Using sympy version:"
           python -c "import sympy; print(sympy.__version__)"
 
