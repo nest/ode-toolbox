@@ -3,9 +3,11 @@ ODE-toolbox
 
 **Automatic selection and generation of integration schemes for systems of ordinary differential equations**
 
-.. contents:: Table of Contents
-   :depth: 2
-   :local:
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   index
 
 .. role:: python(code)
    :language: python

@@ -3,5 +3,5 @@ scipy
 numpy
 sphinx
 readthedocs-sphinx-ext
-sphinx-material
+sphinx-rtd-theme
 sphinx-design
