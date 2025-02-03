@@ -1,20 +1,15 @@
 function expandTocTree() {
     var toctree = document.querySelector('button.toctree-expand');
+    var parentLink = toctree.closest('a');
 
-    toctree.focus ();
-    toctree.click ();
-}
-
-function expandTocTreeTimer() {                        
-    setTimeout (expandTocTree);
-}
-
-function init() {
-    var anchors = document.querySelectorAll('a.reference.internal');
-    expandTocTree();
-    for (var anchor of anchors) {
-        anchor.addEventListener ('click', expandTocTreeTimer);
+    if (parentLink && parentLink.textContent.includes('ODE-toolbox')) {
+        toctree.focus();
+        toctree.click();
     }
 }
 
-window.addEventListener ('load', init);
+function expandTocTreeTimer() {
+    setTimeout(expandTocTree, 500);
+}
+
+expandTocTreeTimer();
