@@ -3,7 +3,7 @@ function expandTocTree() {
     var parentLink = toctree.closest('a');
     var parentListItem = parentLink.closest('li');
 
-    if (parentLink && parentLink.textContent.includes('ODE-toolbox') && parentListItem.getAttribute("aria-expanded") == "false") {
+    if (parentLink && parentLink.textContent.includes('ODE-toolbox') && (parentListItem.getAttribute("aria-expanded") === "false" || !parentListItem.hasAttribute("aria-expanded"))) {
         toctree.focus();
         toctree.click();
     }
