@@ -188,7 +188,9 @@ html_title = "ODE-toolbox"
 html_theme_options = {
     'logo_only': True,
     'navigation_depth': 1,
-    'collapse_navigation': False
+    'collapse_navigation': False,
+    'globaltoc_collapse': True,
+    'globaltoc_maxdepth': 1
 }
 
 
