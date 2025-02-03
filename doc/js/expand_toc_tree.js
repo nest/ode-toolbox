@@ -9,8 +9,13 @@ function expandTocTree() {
     }
 }
 
-function expandTocTreeTimer() {
-    setInterval(expandTocTree, 100);
+function hideDeeperTocTreeItems() {
+    var toctree = document.getElementsByClassName('local-toc')[0];
+    const subLists = toctree.querySelectorAll('ul ul ul');
+    subLists.forEach(ul => {
+        ul.style.display = 'none';
+    });
 }
 
-expandTocTreeTimer();
+setInterval(expandTocTree, 100);
+setInterval(hideDeeperTocTreeItems, 100);
