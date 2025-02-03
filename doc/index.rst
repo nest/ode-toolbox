@@ -3,6 +3,8 @@ ODE-toolbox
 
 **Automatic selection and generation of integration schemes for systems of ordinary differential equations**
 
+:tocdepth: 1
+
 .. toctree::
    :hidden:
    :maxdepth: 1
