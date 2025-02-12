@@ -24,6 +24,7 @@ from typing import List, Optional
 import logging
 import numpy as np
 import scipy
+import scipy.linalg
 import scipy.sparse
 import sympy
 import sympy.matrices
@@ -34,11 +35,26 @@ from .singularity_detection import SingularityDetection, SingularityDetectionExc
 from .sympy_helpers import _custom_simplify_expr, _is_zero
 
 
-def off_diagonal_is_zero(row: int, A) -> bool:
-    for col in range(A.shape[1]):
-        if col != row and not _is_zero(A[row, col]):
-            return False
-    return True
+def get_block_diagonal_blocks(A):
+    assert A.shape[0] == A.shape[1], "matrix A should be square"
+
+    A_mirrored = (A + A.T) != 0   # make the matrix symmetric so we only have to check one triangle
+
+    graph_components = scipy.sparse.csgraph.connected_components(A_mirrored)[1]
+
+    assert all(np.diff(graph_components) >= 0), "Matrix is not ordered"
+
+    blocks = []
+    for i in np.unique(graph_components):
+        idx = np.where(graph_components == i)[0]
+        assert all(np.diff(idx) > 0)
+        assert len(idx) == 1 or (len(np.unique(np.diff(idx))) == 1 and np.unique(np.diff(idx))[0] == 1)
+        idx_min = np.amin(idx)
+        idx_max = np.amax(idx)
+        block = A[idx_min:idx_max + 1, idx_min:idx_max + 1]
+        blocks.append(block)
+
+    return blocks
 
 
 class PropagatorGenerationException(Exception):
@@ -178,22 +194,26 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def generate_propagator_solver(self):
-        r"""
-        Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
+    def _generate_propagator_matrix(self, A):
+        r"""Generate the propagator matrix by matrix exponentiation.
+
+        XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
         """
 
-        #
-        #   generate the propagator matrix
-        #
+        # naive: calculate propagators in one step
+        # P_naive = sympy.simplify(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
 
-        P = sympy.simplify(sympy.exp(self.A_ * sympy.Symbol(Config().output_timestep_symbol)))    # XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
+        # optimized: be explicit about block diagonal elements; much faster!
+        blocks = get_block_diagonal_blocks(np.array(A))
+        propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
+        P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
 
+        # check the result
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
         try:
-            condition = SingularityDetection.find_singularities(P, self.A_)
+            condition = SingularityDetection.find_singularities(P, A)
             if condition:
                 logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
                 logging.warning("List of all conditions that result in a singular propagator:")
@@ -208,6 +228,15 @@ class SystemOfShapes:
         logging.debug("b = " + str(self.b_))
         logging.debug("c = " + str(self.c_))
 
+        return P
+
+
+    def generate_propagator_solver(self):
+        r"""
+        Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
+        """
+
+        P = self._generate_propagator_matrix(self.A_)
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -331,6 +360,7 @@ class SystemOfShapes:
 
            \frac{dx}{dt} &= y\\
            \frac{dy}{dt} &= y' = -\frac{1}{\tau^2} x - \frac{2}{\tau} y
+
         Then ``get_connected_symbols()`` for symbol ``x`` would return ``[x, y]``, and ``get_connected_symbols()`` for ``y`` would return the same.
         """
         N = self.A_.shape[0]
