@@ -144,6 +144,6 @@ figure {
     margin-bottom: 24px !important;
 }
 
-#toctree-expand {
+.toctree-expand {
     display: none !important;
 }
