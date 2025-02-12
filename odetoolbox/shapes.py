@@ -29,7 +29,7 @@ import re
 import sympy
 import sympy.parsing.sympy_parser
 
-from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
+from sympy.core.expr import Expr as SympyExpr
 
 from .config import Config
 from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _custom_simplify_expr, _is_constant_term, _is_sympy_type, _is_zero
