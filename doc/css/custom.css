@@ -143,3 +143,7 @@ tr.row-odd {
 figure {
     margin-bottom: 24px !important;
 }
+
+#toctree-expand {
+    display: none !important;
+}
