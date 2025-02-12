@@ -5,7 +5,8 @@ ODE-toolbox
 
 .. toctree::
    :hidden:
-   :maxdepth: 2
+   :maxdepth: 1
+   :tocdepth: 1
 
    index
 

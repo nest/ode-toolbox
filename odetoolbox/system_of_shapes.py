@@ -360,6 +360,7 @@ class SystemOfShapes:
 
            \frac{dx}{dt} &= y\\
            \frac{dy}{dt} &= y' = -\frac{1}{\tau^2} x - \frac{2}{\tau} y
+
         Then ``get_connected_symbols()`` for symbol ``x`` would return ``[x, y]``, and ``get_connected_symbols()`` for ``y`` would return the same.
         """
         N = self.A_.shape[0]

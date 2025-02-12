@@ -1,0 +1,7 @@
+sympy
+scipy
+numpy
+sphinx
+readthedocs-sphinx-ext
+sphinx-rtd-theme
+sphinx-design

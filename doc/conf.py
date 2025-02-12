@@ -46,6 +46,7 @@ from subprocess import check_output, CalledProcessError
 
 os.system('mkdir _static')
 os.system('install -v -D css/custom.css _static/css/custom.css')
+os.system('install -v -D js/expand_toc_tree.js _static/js/expand_toc_tree.js')
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -115,7 +116,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
+    'sphinx.ext.mathjax'
 ]
 
 autodoc_default_flags = ['private-members', 'show-inheritance']
@@ -177,7 +178,8 @@ numfig_format = {'figure': 'Figure %s', 'table': 'Table %s',
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
+html_title = "ODE-toolbox"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -185,15 +187,29 @@ html_theme = 'sphinx_rtd_theme'
 
 html_theme_options = {
     'logo_only': True,
-    'navigation_depth': 2,
-    'collapse_navigation': False
+    'navigation_depth': 1,
+    'collapse_navigation': False,
+    'globaltoc_collapse': True,
+    'globaltoc_maxdepth': 1
 }
+
+
 html_logo = "https://raw.githubusercontent.com/nest/ode-toolbox/master/doc/fig/ode-toolbox-logo.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['css', 'fig']
+html_static_path = ['css', 'fig', 'js', '_static']
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_css_files = [
+    'css/custom.css'
+]
+
+html_js_files = [
+    'js/expand_toc_tree.js'
+]
 
 # -- Options for HTMLHelp output ------------------------------------------
 
@@ -216,10 +232,7 @@ def skip(app, what, name, obj, would_skip, options):
     return would_skip
 
 def setup(app):
-    app.add_stylesheet('css/custom.css')
-    app.add_stylesheet('css/pygments.css')
     app.connect("autodoc-skip-member", skip)
-
 
 # -- Options for LaTeX output ---------------------------------------------
 
