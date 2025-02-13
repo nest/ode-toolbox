@@ -35,6 +35,13 @@ from .singularity_detection import SingularityDetection, SingularityDetectionExc
 from .sympy_helpers import _custom_simplify_expr, _is_zero
 
 
+class GetBlockDiagonalException(Exception):
+    """
+    Thrown in case an error occurs while block diagonalising a matrix.
+    """
+    pass
+
+
 def get_block_diagonal_blocks(A):
     assert A.shape[0] == A.shape[1], "matrix A should be square"
 
@@ -42,13 +49,17 @@ def get_block_diagonal_blocks(A):
 
     graph_components = scipy.sparse.csgraph.connected_components(A_mirrored)[1]
 
-    assert all(np.diff(graph_components) >= 0), "Matrix is not ordered"
+    if not all(np.diff(graph_components) >= 0):
+        # matrix is not ordered
+        raise GetBlockDiagonalException()
 
     blocks = []
     for i in np.unique(graph_components):
         idx = np.where(graph_components == i)[0]
-        assert all(np.diff(idx) > 0)
-        assert len(idx) == 1 or (len(np.unique(np.diff(idx))) == 1 and np.unique(np.diff(idx))[0] == 1)
+
+        if not all(np.diff(idx) > 0) or not (len(idx) == 1 or (len(np.unique(np.diff(idx))) == 1 and np.unique(np.diff(idx))[0] == 1)):
+            raise GetBlockDiagonalException()
+
         idx_min = np.amin(idx)
         idx_max = np.amax(idx)
         block = A[idx_min:idx_max + 1, idx_min:idx_max + 1]
@@ -200,13 +211,14 @@ class SystemOfShapes:
         XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
         """
 
-        # naive: calculate propagators in one step
-        # P_naive = sympy.simplify(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
-
         # optimized: be explicit about block diagonal elements; much faster!
-        blocks = get_block_diagonal_blocks(np.array(A))
-        propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
-        P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
+        try:
+            blocks = get_block_diagonal_blocks(np.array(A))
+            propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
+            P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
+        except GetBlockDiagonalException:
+            # naive: calculate propagators in one step
+            P = sympy.simplify(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
 
         # check the result
         if sympy.I in sympy.preorder_traversal(P):

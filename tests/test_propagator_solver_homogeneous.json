@@ -1,0 +1,38 @@
+{
+    "dynamics": [
+        {
+            "expression": "V_m' = (-(V_m - E_L)) / tau_m + (I_kernel_exc__X__exc_spikes * 1.0 - I_kernel_inh__X__inh_spikes * 1.0 + I_e + I_stim) / C_m",
+            "initial_values": {
+                "V_m": "E_L"
+            }
+        },
+        {
+            "expression": "refr_t' = -1",
+            "initial_values": {
+                "refr_t": "0"
+            }
+        },
+        {
+            "expression": "I_kernel_exc__X__exc_spikes = (e / tau_syn_exc) * t * exp(-t / tau_syn_exc)",
+            "initial_values": {}
+        },
+        {
+            "expression": "I_kernel_inh__X__inh_spikes = (e / tau_syn_inh) * t * exp(-t / tau_syn_inh)",
+            "initial_values": {}
+        }
+    ],
+    "options": {
+        "output_timestep_symbol": "__h"
+    },
+    "parameters": {
+        "C_m": "250",
+        "E_L": "(-70)",
+        "I_e": "0",
+        "V_reset": "(-70)",
+        "V_th": "(-55)",
+        "refr_T": "2",
+        "tau_m": "10",
+        "tau_syn_exc": "2",
+        "tau_syn_inh": "2"
+    }
+}
