@@ -24,7 +24,7 @@ import json
 import logging
 import sys
 import sympy
-from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
+from sympy.core.expr import Expr as SympyExpr
 
 from .config import Config
 from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _find_in_matrix, _is_zero, _is_sympy_type, SympyPrinter

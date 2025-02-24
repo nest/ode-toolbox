@@ -43,6 +43,7 @@ jobs:
       fail-fast: false
       matrix:
         with_gsl: ["0", "1"]
+        sympy_version: ["==1.10.1", ""]  # EBRAINS Lab current version and empty string for "latest"
 
     steps:
       - name: Checkout ODE-toolbox code
@@ -79,7 +80,7 @@ jobs:
           echo $PYTHON_VERSION
 
           pip uninstall --yes sympy
-          pip install sympy
+          pip install sympy${{ matrix.sympy_version }}
           echo "Using sympy version:"
           python -c "import sympy; print(sympy.__version__)"
 
