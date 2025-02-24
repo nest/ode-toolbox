@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import List, Mapping, Tuple
+from typing import List, Tuple
 
 import functools
 import logging
@@ -29,12 +29,10 @@ import re
 import sympy
 import sympy.parsing.sympy_parser
 
-from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
-from sympy.core.numbers import One as SympyOne
-from sympy.core.numbers import Zero as SympyZero
+from sympy.core.expr import Expr as SympyExpr
 
 from .config import Config
-from .sympy_helpers import _custom_simplify_expr, _is_sympy_type, _is_zero
+from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _custom_simplify_expr, _is_constant_term, _is_sympy_type, _is_zero
 
 
 class MalformedInputException(Exception):
@@ -42,17 +40,6 @@ class MalformedInputException(Exception):
     Thrown in case an error occurred while processing malformed input.
     """
     pass
-
-
-def is_constant_term(term, parameters: Mapping[sympy.Symbol, str] = None):
-    r"""
-    :return: :python:`True` if and only if this term contains only numerical values and parameters; :python:`False` otherwise.
-    """
-    if parameters is None:
-        parameters = {}
-    assert all([type(k) is sympy.Symbol for k in parameters.keys()])
-    return type(term) in [sympy.Float, sympy.Integer, SympyZero, SympyOne] \
-        or all([sym in parameters.keys() for sym in term.free_symbols])
 
 
 class Shape:
@@ -79,6 +66,7 @@ class Shape:
                       "Integer": sympy.Integer,
                       "Float": sympy.Float,
                       "Function": sympy.Function,
+                      "Mul": sympy.Mul,
                       "Pow": sympy.Pow,
                       "power": sympy.Pow,
                       "exp": sympy.exp,
@@ -326,6 +314,9 @@ class Shape:
                     raise MalformedInputException("In defintion of initial value for variable \"" + iv_symbol + "\": differential order (" + str(iv_order) + ") exceeds that of overall equation order (" + str(order) + ")")
                 if initial_val_specified[iv_order]:
                     raise MalformedInputException("Initial value for order " + str(iv_order) + " specified more than once")
+
+                _check_forbidden_name(iv_symbol)
+
                 initial_val_specified[iv_order] = True
                 initial_values[iv_symbol + iv_order * "'"] = iv_rhs
 
@@ -392,13 +383,13 @@ class Shape:
             terms = [expr]
 
         for term in terms:
-            if is_constant_term(term, parameters=parameters):
+            if _is_constant_term(term, parameters=parameters):
                 inhom_term += term
             else:
                 # check if the term is linear in any of the symbols in `x`
                 is_lin = False
                 for j, sym in enumerate(x):
-                    if is_constant_term(term / sym, parameters=parameters):
+                    if _is_constant_term(term / sym, parameters=parameters):
                         lin_factors[j] += term / sym
                         is_lin = True
                         break
@@ -584,7 +575,20 @@ class Shape:
         order: int = len(initial_values)
         all_variable_symbols_dict = {str(el): el for el in all_variable_symbols}
         definition = sympy.parsing.sympy_parser.parse_expr(definition.replace("'", Config().differential_order_symbol), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
+
+        # validate input for forbidden names
+        _initial_values = {k: sympy.parsing.sympy_parser.parse_expr(v, evaluate=False, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items()}
+        for iv_expr in _initial_values.values():
+            for var in iv_expr.atoms():
+                _check_forbidden_name(var)
+
+        # parse input
         initial_values = {k: sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items()}
+
+        # validate input for numerical issues
+        for iv_expr in initial_values.values():
+            for var in iv_expr.atoms():
+                _check_numerical_issue(var)
 
         local_symbols = [symbol + Config().differential_order_symbol * i for i in range(order)]
         local_symbols_sympy = [sympy.Symbol(sym_name) for sym_name in local_symbols]

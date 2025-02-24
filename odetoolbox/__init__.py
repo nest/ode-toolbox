@@ -24,10 +24,10 @@ import json
 import logging
 import sys
 import sympy
-from sympy.core.expr import Expr as SympyExpr   # works for both sympy 1.4 and 1.8
+from sympy.core.expr import Expr as SympyExpr
 
 from .config import Config
-from .sympy_helpers import _find_in_matrix, _is_zero, _is_sympy_type, SympyPrinter
+from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _find_in_matrix, _is_zero, _is_sympy_type, SympyPrinter
 from .system_of_shapes import SystemOfShapes
 from .shapes import MalformedInputException, Shape
 
@@ -109,7 +109,7 @@ def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sym
     """
 
     logging.info("Processing input shapes...")
-    shapes = []
+
     # first run for grabbing all the variable names. Coefficients might be incorrect.
     all_variable_symbols = []
     all_parameter_symbols = set()
@@ -124,6 +124,11 @@ def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sym
     assert all([_is_sympy_type(sym) for sym in all_variable_symbols])
     logging.info("All known variables: " + str(all_variable_symbols) + ", all parameters used in ODEs: " + str(all_parameter_symbols))
 
+    # validate input for forbidden names
+    for var in set(all_variable_symbols) | all_parameter_symbols:
+        _check_forbidden_name(var)
+
+    # validate parameters
     for param in all_parameter_symbols:
         if parameters is None:
             parameters = dict()
@@ -135,6 +140,7 @@ def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sym
             parameters[param] = None
 
     # second run with the now-known list of variable symbols
+    shapes = []
     for shape_json in indict["dynamics"]:
         shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, parameters=parameters, _debug=True)
         shapes.append(shape)
@@ -209,6 +215,9 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             else:
                 assert type(k) is sympy.Symbol
                 parameters[k] = v
+
+            _check_forbidden_name(k)
+
 
     #
     #   create Shapes and SystemOfShapes
@@ -292,8 +301,12 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             all_shape_symbols = [str(sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * i)) for i in range(shape.order)]
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
-                    solver_json["initial_values"][sym] = str(shape.get_initial_value(sym.replace(Config().differential_order_symbol, "'")))
+                    iv_expr = shape.get_initial_value(sym.replace(Config().differential_order_symbol, "'"))
+                    solver_json["initial_values"][sym] = str(iv_expr)
 
+                    # validate output for numerical problems
+                    for var in iv_expr.atoms():
+                        _check_numerical_issue(var)
 
     #
     #   copy the parameter values from the input to the output for convenience; convert into numeric values
@@ -318,7 +331,20 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
                             break
 
                 if symbol_appears_in_any_expr:
-                    solver_json["parameters"][param_name] = str(sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals).n())
+                    sympy_expr = sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals)
+
+                    # validate output for numerical problems
+                    for var in sympy_expr.atoms():
+                        _check_numerical_issue(var)
+
+                    # convert to numeric value
+                    sympy_expr = sympy_expr.n()
+
+                    # validate output for numerical problems
+                    for var in sympy_expr.atoms():
+                        _check_numerical_issue(var)
+
+                    solver_json["parameters"][param_name] = str(sympy_expr)
 
 
     #

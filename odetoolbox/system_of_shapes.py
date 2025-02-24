@@ -206,10 +206,10 @@ class SystemOfShapes:
 
 
     def _generate_propagator_matrix(self, A):
-        r"""Generate the propagator matrix by matrix exponentiation.
+        r"""Generate the propagator matrix by matrix exponentiation."""
 
-        XXX: the default custom simplification expression does not work well with sympy 1.4 here. Consider replacing sympy.simplify() with _custom_simplify_expr() if sympy 1.4 support is dropped.
-        """
+        # naive: calculate propagators in one step
+        # P_naive = _custom_simplify_expr(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
 
         # optimized: be explicit about block diagonal elements; much faster!
         try:
