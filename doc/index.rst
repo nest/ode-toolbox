@@ -67,7 +67,7 @@ To install, clone the repository, go to the root directory and then run the foll
 
 If you wish to install into your home directory, add the option :bash:`--user` to the above call.
 
-For further installation hints, please see `.travis.yml <https://github.com/nest/ode-toolbox/blob/master/.travis.yml>`__.
+For further installation hints, please see the `GitHub Actions CI workflow file <https://github.com/nest/ode-toolbox/blob/master/.github/workflows/ode-toolbox-build.yml>`__.
 
 Testing
 ~~~~~~~
