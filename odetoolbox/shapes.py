@@ -66,6 +66,7 @@ class Shape:
                       "Integer": sympy.Integer,
                       "Float": sympy.Float,
                       "Function": sympy.Function,
+                      "Add": sympy.Add,
                       "Mul": sympy.Mul,
                       "Pow": sympy.Pow,
                       "power": sympy.Pow,
