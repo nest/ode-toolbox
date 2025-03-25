@@ -636,6 +636,8 @@ This software was initially supported by the JARA-HPC Seed Fund *NESTML - A mode
 
 This software was developed in part or in whole in the Human Brain Project, funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation under Specific Grant Agreements No. 720270, 785907 and 945539 (Human Brain Project SGA1, SGA2 and SGA3, respectively).
 
+This project has received funding from the European Union's Horizon Europe Programme under the Specific Grant Agreement No. 101147319 (EBRAINS 2.0 Project).
+
 .. |Build status| image:: https://github.com/nest/ode-toolbox/actions/workflows/ode-toolbox-build.yml/badge.svg?branch=master
    :target: https://github.com/nest/ode-toolbox/actions
 .. |Testing coverage| image:: https://codecov.io/gh/nest/ode-toolbox/branch/master/graph/badge.svg
