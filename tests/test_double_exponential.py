@@ -151,3 +151,14 @@ class TestDoubleExponential:
             fig.savefig('double_exp_test.png')
 
         np.testing.assert_allclose(y_[:, 1], rec_I_interp, atol=1E-7)
+
+    def test_constant_factors_double_exponential(self):
+        r"""Test the computation of propagators for an alpha (double-exponential) kernel with constant coefficients; this tests the block-diagonal computation of propagators."""
+        indict = {"dynamics": [{"expression": "x'' = -2 * x' - x",
+                                "initial_values": {"x": "0",
+                                                   "x'": "0"}}]}
+        solver_dict = odetoolbox.analysis(indict, log_level="DEBUG", disable_stiffness_check=True)
+        assert len(solver_dict) == 1
+        solver_dict = solver_dict[0]
+        assert solver_dict["solver"] == "analytical"
+        assert len(solver_dict["propagators"]) == 4

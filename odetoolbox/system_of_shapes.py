@@ -45,9 +45,9 @@ class GetBlockDiagonalException(Exception):
 def get_block_diagonal_blocks(A):
     assert A.shape[0] == A.shape[1], "matrix A should be square"
 
-    A_mirrored = (A + A.T) != 0   # make the matrix symmetric so we only have to check one triangle
+    A_connectivity_undirected = (A != 0) | (A.T != 0)    # make symmetric (undirected) connectivity graph from the system matrix
 
-    graph_components = scipy.sparse.csgraph.connected_components(A_mirrored)[1]
+    graph_components = scipy.sparse.csgraph.connected_components(A_connectivity_undirected)[1]
 
     if not all(np.diff(graph_components) >= 0):
         # matrix is not ordered
