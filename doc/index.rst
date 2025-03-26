@@ -600,25 +600,29 @@ Citing ODE-toolbox
 
 If you use ODE-toolbox in your work, please cite it depending on the version you are using. (It is recommended to use the latest release version whenever possible.)
 
+For version 2.5.8:
+
+.. [1] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2025) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.15090637 <https://doi.org/10.5281/zenodo.15090637>`__.
+
 For version 2.5.7:
 
-.. [1] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2025) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.15075223 <https://doi.org/10.5281/zenodo.15075223>`__.
+.. [2] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2025) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.15075223 <https://doi.org/10.5281/zenodo.15075223>`__.
 
 For versions 2.5.1-2.5.6:
 
-.. [2] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2022) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.7193351 <https://doi.org/10.5281/zenodo.7193351>`__.
+.. [3] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2022) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.7193351 <https://doi.org/10.5281/zenodo.7193351>`__.
 
 For version 2.4:
 
-.. [3] Charl Linssen, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2021) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.5768597 <https://doi.org/10.5281/zenodo.5768597>`__.
+.. [4] Charl Linssen, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2021) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.5768597 <https://doi.org/10.5281/zenodo.5768597>`__.
 
 For versions 2.3, 2.2 and 2.1:
 
-.. [4] Charl Linssen, Shraddha Jain, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.4245012 <https://doi.org/10.5281/zenodo.4245012>`__.
+.. [5] Charl Linssen, Shraddha Jain, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.4245012 <https://doi.org/10.5281/zenodo.4245012>`__.
 
 For version 2.0:
 
-.. [5] Charl Linssen, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.3822082 <https://doi.org/10.5281/zenodo.3822082>`__.
+.. [6] Charl Linssen, Abigail Morrison and Jochen M. Eppler (2020) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.3822082 <https://doi.org/10.5281/zenodo.3822082>`__.
 
 
 References
