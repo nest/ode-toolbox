@@ -236,23 +236,8 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     if Config().use_exponential_euler_solver:
 
         # compute exponential Euler solver
-
-        # for the linear part, compute propagators
-        linear_propagator_matrix = shape_sys._generate_propagator_matrix(shape_sys.A_)
-        solver_json = shape_sys.generate_propagator_solver()
-
-        # for the inhomogeneous part, ???
-        assert all(shape_sys.b == 0)
-
-        # for the nonlinear part...
-        nonlin_propagators = np.dot(np.inv(shape_sys.A_), 1 - linear_propagator_matrix)
-
-        solver_json
-
-        solver_json["solver"] = "exponential_euler"
-
+        solver_json = shape_sys.generate_exponential_euler_solver()
         solvers_json.append(solver_json)
-
 
     else:
         _, node_is_analytically_solvable = _find_analytically_solvable_equations(shape_sys, shapes, parameters=parameters)
