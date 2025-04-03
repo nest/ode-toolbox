@@ -39,7 +39,7 @@ from odetoolbox.analytic_integrator import AnalyticIntegrator
 class TestExponentialEuler:
 
     def generate_reference_lotka_volterra_timeseries(self):
-        def lotka_volterra_ode(t, y, alpha, beta, delta, gamma):
+        def lotka_volterra_ode(t, y, alpha, beta, delta, gmma):
             """
             Defines the Lotka-Volterra differential equations.
 
@@ -49,23 +49,23 @@ class TestExponentialEuler:
                 alpha: Prey natural growth rate.
                 beta: Predation rate coefficient.
                 delta: Predator growth efficiency coefficient.
-                gamma: Predator natural death rate.
+                gmma: Predator natural death rate.
 
             Returns:
                 Array of the derivatives [dx/dt, dy/dt].
             """
             prey, predator = y
             dprey_dt = alpha * prey - beta * prey * predator
-            dpredator_dt = delta * prey * predator - gamma * predator
+            dpredator_dt = delta * prey * predator - gmma * predator
             return [dprey_dt, dpredator_dt]
 
         # 2. Set Parameters (Chosen to potentially exhibit stiffness)
-        #    A large gamma might make the predator population crash quickly,
+        #    A large gmma might make the predator population crash quickly,
         #    introducing a faster time scale compared to prey recovery.
         alpha = 1.0  # Prey growth rate
         beta = 1.0   # Predation rate
         delta = 1.0  # Predator efficiency
-        gamma = 3.0  # Predator death rate (relatively high)
+        gmma = 3.0  # Predator death rate (relatively high)
 
         # 3. Set Initial Conditions and Time Span
         y0 = [10.0, 5.0]  # Initial populations [prey, predator]
@@ -81,7 +81,7 @@ class TestExponentialEuler:
             t_span,
             y0,
             method='Radau',  # Solver choice for stiff systems
-            args=(alpha, beta, delta, gamma),
+            args=(alpha, beta, delta, gmma),
             t_eval=t_eval,  # Specify output times
             dense_output=True # Useful for smooth plotting if needed later
         )
@@ -102,7 +102,7 @@ class TestExponentialEuler:
         alpha = 1.0
         beta = 1.0
         delta = 1.0
-        gamma = 3.0
+        gmma = 3.0
 
         # Initial conditions from the previous example:
         x0 = 10.0
@@ -114,7 +114,7 @@ class TestExponentialEuler:
             "initial_value": str(x0)                      # Initial prey population as string
         },
         {
-            "expression": "y' = delta * x * y - gamma * y", # Predator equation
+            "expression": "y' = delta * x * y - gmma * y", # Predator equation
             "initial_value": str(y0)                      # Initial predator population as string
         }
         # Note: The third expression "V_m' = ..." from your example doesn't
@@ -124,7 +124,7 @@ class TestExponentialEuler:
         "alpha": str(alpha),    # Prey growth rate as string
         "beta": str(beta),      # Predation rate as string
         "delta": str(delta),    # Predator efficiency as string
-        "gamma": str(gamma)     # Predator death rate as string
+        "gmma": str(gmma)     # Predator death rate as string
         # Note: Parameters "tau" and "E_L" from your example don't belong
         # to the standard Lotka-Volterra model, so they are omitted here.
     }
@@ -170,7 +170,7 @@ class TestExponentialEuler:
         ax.set_xlabel('Time')
         ax.set_ylabel('Population')
         ax.set_title(f'Lotka-Volterra Predator-Prey Model (Stiff Solver: Radau)\n'
-                    f'α={alpha}, β={beta}, δ={delta}, γ={gamma}')
+                    f'α={alpha}, β={beta}, δ={delta}, γ={gmma}')
 
         # Add legend and grid
         ax.legend()

@@ -265,11 +265,11 @@ class SystemOfShapes:
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
         for row in range(P_sym.shape[0]):
             # assemble update expression for symbol ``self.x_[row]``
-            if not _is_zero(self.c_[row]):
-                raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": nonlinear part should be zero for propagators")
+            # if not _is_zero(self.c_[row]):
+            #     raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": nonlinear part should be zero for propagators")
 
-            if not _is_zero(self.b_[row]) and self.shape_order_from_system_matrix(row) > 1:
-                raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": higher-order inhomogeneous ODEs are not supported")
+            # if not _is_zero(self.b_[row]) and self.shape_order_from_system_matrix(row) > 1:
+            #     raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": higher-order inhomogeneous ODEs are not supported")
 
             update_expr_terms = []
             for col in range(P_sym.shape[1]):
@@ -311,6 +311,7 @@ class SystemOfShapes:
         return solver_dict
 
 
+
     def generate_numeric_solver(self, state_variables=None):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
@@ -328,7 +329,7 @@ class SystemOfShapes:
     def generate_update_expr_from_propagator_matrix(self, P, prop_prefix: str):
         r"""generate symbols for each nonzero entry of the nonlin_P matrix"""
 
-        P_sym = sympy.zeros(*nonlin_P.shape)   # each entry in the propagator matrix is assigned its own symbol
+        P_sym = sympy.zeros(*P.shape)   # each entry in the propagator matrix is assigned its own symbol
         P_expr = {}     # the expression corresponding to each propagator symbol
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
         for row in range(P_sym.shape[0]):
@@ -361,6 +362,26 @@ class SystemOfShapes:
 
         return update_expr
 
+
+
+
+
+    def generate_nonlin_propagators(self, P):
+        #
+        #   generate symbols for each nonzero entry of the propagator matrix
+        #
+
+        P_sym = sympy.zeros(*P.shape)   # each entry in the propagator matrix is assigned its own symbol
+        P_expr = {}     # the expression corresponding to each propagator symbol
+        for row in range(P_sym.shape[0]):
+            for col in range(P_sym.shape[1]):
+                if not _is_zero(P[row, col]):
+                    sym_str = "__NP__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
+                    P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
+                    P_expr[sym_str] = P[row, col]
+
+        return P_expr
+
     def generate_exponential_euler_solver(self):
         r"""
         """
@@ -369,24 +390,31 @@ class SystemOfShapes:
         linear_propagator_matrix = self._generate_propagator_matrix(self.A_)
         linear_solver_json = self.generate_propagator_solver()
 
-        # for the inhomogeneous part, ???
-        assert all(self.b == 0)
-
-        # for the nonlinear part...
-        nonlin_P = np.dot(np.inv(self.A_), 1 - linear_propagator_matrix)
+        # for the nonlinear part
+        nonlin_P = self.A_.inv() - self.A_.inv() * linear_propagator_matrix
         nonlin_update_expr = self.generate_update_expr_from_propagator_matrix(nonlin_P, prop_prefix="__NP")
+        nonlin_propagators = self.generate_nonlin_propagators(nonlin_P)
 
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
+
+        combined_update_expr = linear_solver_json["update_expressions"]
+        for sym in nonlin_update_expr.keys():
+            if sym in combined_update_expr.keys():
+                combined_update_expr[sym] += nonlin_update_expr[sym]
+            else:
+                combined_update_expr[sym] = nonlin_update_expr[sym]
 
         print("linear_solver_json = " + str(linear_solver_json))
         print("nonlin_update_expr = " + str(nonlin_update_expr))
 
         solver_dict = {"solver": "analytic",    # actually should be "exponential_euler"; but "analytic" fools NESTML into accepting the update equations and propagators with the existing software infrastructure (no need for a special case)
-                       "update_expressions": nonlin_update_expr,
+                       "update_expressions": combined_update_expr,
                        "state_variables": all_state_symbols,
-                       "initial_values": initial_values}
-
+                       "propagators": linear_solver_json["propagators"] | nonlin_propagators,
+                       "initial_values": initial_values }
+        print(solver_dict)
+        # logging.info(json.dumps(solver_dict, indent=4, sort_keys=True))
         return solver_dict
 
 

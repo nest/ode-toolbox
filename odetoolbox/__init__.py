@@ -234,10 +234,12 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
 
     if Config().use_exponential_euler_solver:
+        solvers_json = []
 
         # compute exponential Euler solver
         solver_json = shape_sys.generate_exponential_euler_solver()
         solvers_json.append(solver_json)
+        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in shape_sys.x_]))
 
     else:
         _, node_is_analytically_solvable = _find_analytically_solvable_equations(shape_sys, shapes, parameters=parameters)
