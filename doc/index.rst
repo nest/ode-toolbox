@@ -341,6 +341,10 @@ The following global options are defined. Note that all are typically formatted 
      - 999
      - float
      - Maximum step size during simulation (e.g. for stiffness testing solvers).
+   * - ``propagators_prefix``
+     - ``"__P"``
+     - string
+     - Generated propagator terms are given names of the form ``"<propagators_prefix>__<var_name_1>__<var_name_2>"``.
    * - ``differential_order_symbol``
      - :python:`"__d"`
      - string

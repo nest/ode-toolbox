@@ -268,7 +268,7 @@ class SystemOfShapes:
             update_expr_terms = []
             for col in range(P_sym.shape[1]):
                 if not _is_zero(P[row, col]):
-                    sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
+                    sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
                     if row != col and not _is_zero(self.b_[col]):
@@ -284,7 +284,7 @@ class SystemOfShapes:
                     update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[row]))
                 else:
                     particular_solution = -self.b_[row] / self.A_[row, row]
-                    sym_str = "__P__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
+                    sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
                     update_expr_terms.append("-" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
                     update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 

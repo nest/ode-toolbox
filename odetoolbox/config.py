@@ -31,6 +31,7 @@ class Config:
         "input_time_symbol": "t",
         "output_timestep_symbol": "__h",
         "differential_order_symbol": "__d",
+        "propagators_prefix": "__P",
         "sim_time": 100E-3,
         "max_step_size": 999.,
         "integration_accuracy_abs": 1E-6,
