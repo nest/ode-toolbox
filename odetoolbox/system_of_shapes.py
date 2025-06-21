@@ -276,6 +276,7 @@ class SystemOfShapes:
                         raise PropagatorGenerationException("the ODE for " + str(self.x_[row]) + " depends on the inhomogeneous ODE of " + str(self.x_[col]) + ". We can't solve this analytically in the general case (even though some specific cases might admit a solution)")
 
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
+                    print("!!!!!!! 1" + sym_str + " * " + str(self.x_[col]))
 
             if not _is_zero(self.b_[row]):
                 # this is an inhomogeneous ODE
@@ -284,14 +285,32 @@ class SystemOfShapes:
                     update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[row]))
                 else:
                     particular_solution = -self.b_[row] / self.A_[row, row]
+                    print("        self.A_[row, row] = " + str(self.A_[row, row]))
+                    print("        self.b_[row] = " + str(self.b_[row]))
+                    print("        particular_solution = " + str(particular_solution))
+
+                    cond = sympy.solve(particular_solution, particular_solution, dict=True)  # ``cond`` here is a list of all those conditions at which the denominator goes to zero
+                    print("        particular_solution goes to zero under conditions: " + str(cond))
+                    cond = sympy.solve(_custom_simplify_expr(particular_solution), _custom_simplify_expr(particular_solution), dict=True)  # ``cond`` here is a list of all those conditions at which the denominator goes to zero
+                    print("        simplified particular_solution goes to zero under conditions: " + str(cond))
+
+                    cond = sympy.solve(self.b_[row], self.b_[row], dict=True)  # ``cond`` here is a list of all those conditions at which the denominator goes to zero
+                    print("        self.b_[row] goes to zero under conditions: " + str(cond))
+                    cond = sympy.solve(_custom_simplify_expr(self.b_[row]), _custom_simplify_expr(self.b_[row]), dict=True)  # ``cond`` here is a list of all those conditions at which the denominator goes to zero
+                    print("        simplified self.b_[row] goes to zero under conditions: " + str(cond))
+
+
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
                     update_expr_terms.append("-" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
+                    print("!!!!!!! 2 -" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
                     update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
+                    print("!!!!!!! 3" + sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
+                print("!!!!!!!!! before simplify: " +str(update_expr[str(self.x_[row])]))
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
             logging.info("update_expr[" + str(self.x_[row]) + "] = " + str(update_expr[str(self.x_[row])]))
 
