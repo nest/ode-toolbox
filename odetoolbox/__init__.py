@@ -23,6 +23,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 import json
 import logging
 import sys
+import numpy as np
 import sympy
 from sympy.core.expr import Expr as SympyExpr
 
@@ -228,64 +229,74 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             sys.exit(1)
 
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
-    _, node_is_analytically_solvable = _find_analytically_solvable_equations(shape_sys, shapes, parameters=parameters)
 
+    if Config().use_exponential_euler_solver:
+        solvers_json = []
 
-    #
-    #   generate analytical solutions (propagators) where possible
-    #
-
-    solvers_json = []
-    if disable_analytic_solver:
-        analytic_syms = []
-    else:
-        analytic_syms = [node_sym for node_sym, _node_is_analytically_solvable in node_is_analytically_solvable.items() if _node_is_analytically_solvable]
-
-    analytic_solver_json = None
-    if analytic_syms:
-        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
-        sub_sys = shape_sys.get_sub_system(analytic_syms)
-        analytic_solver_json = sub_sys.generate_propagator_solver()
-        analytic_solver_json["solver"] = "analytical"
-        solvers_json.append(analytic_solver_json)
-
-
-    #
-    #   generate numerical solvers for the remainder
-    #
-
-    if len(analytic_syms) < len(shape_sys.x_):
-        numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
-        logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
-        sub_sys = shape_sys.get_sub_system(numeric_syms)
-        solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_)
-        solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
-        if not disable_stiffness_check:
-            if not PYGSL_AVAILABLE:
-                raise Exception("Stiffness test requested, but PyGSL not available")
-
-            logging.info("Performing stiffness test...")
-            kwargs = {}   # type: Dict[str, Any]
-            if "options" in indict.keys() and "random_seed" in indict["options"].keys():
-                random_seed = int(indict["options"]["random_seed"])
-                assert random_seed >= 0, "Random seed needs to be a non-negative integer"
-                kwargs["random_seed"] = random_seed
-            if "parameters" in indict.keys():
-                kwargs["parameters"] = indict["parameters"]
-            if "stimuli" in indict.keys():
-                kwargs["stimuli"] = indict["stimuli"]
-            for key in ["sim_time", "max_step_size", "integration_accuracy_abs", "integration_accuracy_rel"]:
-                if "options" in indict.keys() and key in Config().keys():
-                    kwargs[key] = float(Config()[key])
-            if not analytic_solver_json is None:
-                kwargs["analytic_solver_dict"] = analytic_solver_json
-            tester = StiffnessTester(sub_sys, shapes, **kwargs)
-            solver_type = tester.check_stiffness()
-            if not solver_type is None:
-                solver_json["solver"] += "-" + solver_type
-                logging.info(solver_type + " scheme")
-
+        # compute exponential Euler solver
+        solver_json = shape_sys.generate_exponential_euler_solver()
         solvers_json.append(solver_json)
+        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in shape_sys.x_]))
+
+    else:
+        _, node_is_analytically_solvable = _find_analytically_solvable_equations(shape_sys, shapes, parameters=parameters)
+
+
+        #
+        #   generate analytical solutions (propagators) where possible
+        #
+
+        solvers_json = []
+        if disable_analytic_solver:
+            analytic_syms = []
+        else:
+            analytic_syms = [node_sym for node_sym, _node_is_analytically_solvable in node_is_analytically_solvable.items() if _node_is_analytically_solvable]
+
+        analytic_solver_json = None
+        if analytic_syms:
+            logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
+            sub_sys = shape_sys.get_sub_system(analytic_syms)
+            analytic_solver_json = sub_sys.generate_propagator_solver()
+            analytic_solver_json["solver"] = "analytical"
+            solvers_json.append(analytic_solver_json)
+
+
+        #
+        #   generate numerical solvers for the remainder
+        #
+
+        if len(analytic_syms) < len(shape_sys.x_):
+            numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
+            logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
+            sub_sys = shape_sys.get_sub_system(numeric_syms)
+            solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_)
+            solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
+            if not disable_stiffness_check:
+                if not PYGSL_AVAILABLE:
+                    raise Exception("Stiffness test requested, but PyGSL not available")
+
+                logging.info("Performing stiffness test...")
+                kwargs = {}   # type: Dict[str, Any]
+                if "options" in indict.keys() and "random_seed" in indict["options"].keys():
+                    random_seed = int(indict["options"]["random_seed"])
+                    assert random_seed >= 0, "Random seed needs to be a non-negative integer"
+                    kwargs["random_seed"] = random_seed
+                if "parameters" in indict.keys():
+                    kwargs["parameters"] = indict["parameters"]
+                if "stimuli" in indict.keys():
+                    kwargs["stimuli"] = indict["stimuli"]
+                for key in ["sim_time", "max_step_size", "integration_accuracy_abs", "integration_accuracy_rel"]:
+                    if "options" in indict.keys() and key in Config().keys():
+                        kwargs[key] = float(Config()[key])
+                if not analytic_solver_json is None:
+                    kwargs["analytic_solver_dict"] = analytic_solver_json
+                tester = StiffnessTester(sub_sys, shapes, **kwargs)
+                solver_type = tester.check_stiffness()
+                if not solver_type is None:
+                    solver_json["solver"] += "-" + solver_type
+                    logging.info(solver_type + " scheme")
+
+            solvers_json.append(solver_json)
 
 
     #
