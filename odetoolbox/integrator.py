@@ -33,6 +33,12 @@ class Integrator:
 
     all_variable_symbols = []   # type: List[sympy.Symbol]
 
+    def __init__(self, spike_times: Optional[Dict[str, List[float]]] = None):
+        """
+        :param spike_times: For each variable, used as a key, the list of times at which a spike occurs.
+        """
+        self.set_spike_times(spike_times)
+
     def set_spike_times(self, spike_times: Optional[Dict[str, List[float]]]):
         r"""
         Internally converts to a global, sorted list of spike times.
