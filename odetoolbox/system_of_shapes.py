@@ -285,14 +285,10 @@ class SystemOfShapes:
                 else:
                     particular_solution = -self.b_[row] / self.A_[row, row]
 
-                    conds = sympy.solve(self.A_[row, row], self.A_[row, row], set=True)[0]  # find all conditions under which the denominator goes to zero. The zeroth element of the returned tuple contains the sympy condition expressions for which A[row, row] goes to zero
-                    simplified_conds = []
-                    for cond in conds:
-                        simplified_conds.append(_custom_simplify_expr(cond))
-                    conds = simplified_conds
+                    conds = sympy.solve(self.A_[row, row], self.A_[row, row], set=True)[0]  # find all conditions under which the denominator goes to zero. The zeroth element of the returned tuple contains the set of sympy condition expressions for which A[row, row] goes to zero
 
                     if conds:
-                        # if there is one or more condition under which the solution goes to infinity then that can only mean the inhomogeneous part is zero. In that case, the present solver is only valid when none of the conditions hold
+                        # if there is one or more condition under which the solution goes to infinity...
 
                         logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
                         logging.warning("List of all conditions that result in a division by zero:")
