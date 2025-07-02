@@ -19,24 +19,13 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sympy
-import sympy.parsing.sympy_parser
 import pytest
 
-from tests.test_utils import _open_json
+import numpy as np
+import matplotlib.pyplot as plt
 
 from .context import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
-from odetoolbox.shapes import Shape
-import numpy as np
-try:
-    import pygsl
-    PYGSL_AVAILABLE = True
-except ImportError:
-    PYGSL_AVAILABLE = False
-
-
-import matplotlib.pyplot as plt
 
 
 class TestInhomogeneousNumericallyZero:

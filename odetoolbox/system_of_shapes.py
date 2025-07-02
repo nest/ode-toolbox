@@ -248,9 +248,6 @@ class SystemOfShapes:
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
 
-        solver_dicts = []
-        solver_condition = None
-
         P = self._generate_propagator_matrix(self.A_)
 
         #
