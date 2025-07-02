@@ -41,11 +41,11 @@ except ImportError as ie:
 
 class StiffnessTester:
 
-    def __init__(self, system_of_shapes, shapes, analytic_solvers=None, parameters=None, stimuli=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=100., alias_spikes=False):
+    def __init__(self, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, stimuli=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=100., alias_spikes=False):
         r"""
         :param system_of_shapes: Dynamical system to solve.
         :param shapes: List of shapes in the dynamical system.
-        :param analytic_solvers: Analytic solver(s) from ODE-toolbox analysis result.
+        :param analytic_solver_dict: Analytic solver dictionary from ODE-toolbox analysis result.
         :param parameters: Dictionary mapping parameter name (as string) to value expression.
         :param stimuli: Dictionary containing spiking stimuli.
         :param random_seed: Random number generator seed.
@@ -76,14 +76,11 @@ class StiffnessTester:
             self._stimuli = stimuli
         self.random_seed = random_seed
 
-        self.analytic_solvers = analytic_solvers
-        if not self.analytic_solvers is None:
-            for analytic_solver_dict in self.analytic_solvers:
-                if not "parameters" in self.analytic_solver_dict.keys():
-                    analytic_solver_dict["parameters"] = {}
-
-                analytic_solver_dict["parameters"].update(self.parameters)
-
+        self.analytic_solver_dict = analytic_solver_dict
+        if not self.analytic_solver_dict is None:
+            if not "parameters" in self.analytic_solver_dict.keys():
+                self.analytic_solver_dict["parameters"] = {}
+            self.analytic_solver_dict["parameters"].update(self.parameters)
         self.analytic_integrator = None
 
 
@@ -152,7 +149,7 @@ class StiffnessTester:
         mixed_integrator = MixedIntegrator(integrator,
                                            self.system_of_shapes,
                                            self.shapes,
-                                           analytic_solvers=self.analytic_solvers,
+                                           analytic_solver_dict=self.analytic_solver_dict,
                                            parameters=self.parameters,
                                            spike_times=spike_times,
                                            random_seed=self.random_seed,

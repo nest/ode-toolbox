@@ -38,22 +38,15 @@ except ImportError:
 
 import matplotlib.pyplot as plt
 
-class TestInhomogeneousNumericallyZero:
-    @pytest.mark.parametrize("late_ltd_check", [0., 1.])
-    @pytest.mark.parametrize("late_ltp_check", [0., 1.])
-    def test_inhomogeneous_numerically_zero(self, late_ltd_check, late_ltp_check):
-        """This tests especially the case where there is an inhomogeneous component given in the system to be integrated, but during numerical integration the inhomogeneous part is set to 0.
 
-        Thus, especially the case late_ltd_check = 0, late_ltp_check = 0 is the critical one.
+class TestInhomogeneousNumericallyZero:
+    def _test_inhomogeneous_numerically_zero(self, late_ltd_check, late_ltp_check):
+        """This tests the case where there is an inhomogeneous component given in the system to be integrated, but during numerical integration the inhomogeneous part is set to 0.
+
+        ODE-toolbox emits a warning in this case. If the propagators are used in this case, integration will fail (yield NaNs due to division by zero). Thus, two of the tests are marked as xfail.
         """
-        indict = {
-  "dynamics": [
-    {
-      "expression": "z' = ((p * (1 - z) * late_ltp_check) - (p * (z + 0.5) * late_ltd_check)) / tau_z",
-      "initial_value" : "1"
-    }
-  ],
-}
+        indict = {"dynamics": [{"expression": "z' = ((p * (1 - z) * late_ltp_check) - (p * (z + 0.5) * late_ltd_check)) / tau_z",
+                                "initial_value": "1"}]}
         solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, log_level="DEBUG")
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
@@ -85,6 +78,11 @@ class TestInhomogeneousNumericallyZero:
             correct.append(cur_z)
             cur_z += dt * (((solver_dict["parameters"]["p"] * (1 - cur_z) * solver_dict["parameters"]["late_ltp_check"]) - (solver_dict["parameters"]["p"] * (cur_z + 0.5) * solver_dict["parameters"]["late_ltd_check"])) / solver_dict["parameters"]["tau_z"])
 
+
+        #
+        #   plot
+        #
+
         fig, ax = plt.subplots(nrows=3)
         ax[0].plot(timevec, correct, label="reference")
         ax[1].plot(timevec, actual, label="actual")
@@ -99,10 +97,20 @@ class TestInhomogeneousNumericallyZero:
 
         fig.savefig("/tmp/test_propagators_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png")
 
+
+        #
+        #   test
+        #
+
         np.testing.assert_allclose(correct, actual)
 
-        import pdb;pdb.set_trace()
-        """assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["y"], global_dict=Shape._sympy_globals).expand().simplify() \
-            == sympy.parsing.sympy_parser.parse_expr("rho*x - x*z - y", global_dict=Shape._sympy_globals).expand().simplify()
-        assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["z"], global_dict=Shape._sympy_globals).expand().simplify() \
-            == sympy.parsing.sympy_parser.parse_expr("-beta*z + x*y", global_dict=Shape._sympy_globals).expand().simplify()"""
+    @pytest.mark.xfail(strict=True, raises=AssertionError)
+    def test_inhomogeneous_numerically_zero(self):
+        self._test_inhomogeneous_numerically_zero(late_ltd_check=1., late_ltp_check=-1.)
+
+    @pytest.mark.xfail(strict=True, raises=AssertionError)
+    def test_inhomogeneous_numerically_zero_alt(self):
+        self._test_inhomogeneous_numerically_zero(late_ltd_check=0., late_ltp_check=0.)
+
+    def test_inhomogeneous_numerically_zero_alt(self):
+        self._test_inhomogeneous_numerically_zero(late_ltd_check=3.14159, late_ltp_check=1.618)

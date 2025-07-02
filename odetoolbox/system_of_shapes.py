@@ -243,7 +243,7 @@ class SystemOfShapes:
         return P
 
 
-    def generate_propagator_solver(self, assume_inhomogeneous_part_is_zero: bool = False):
+    def generate_propagator_solver(self):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
@@ -279,18 +279,14 @@ class SystemOfShapes:
                         raise PropagatorGenerationException("the ODE for " + str(self.x_[row]) + " depends on the inhomogeneous ODE of " + str(self.x_[col]) + ". We can't solve this analytically in the general case (even though some specific cases might admit a solution)")
 
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
-                    print("!!!!!!! 1" + sym_str + " * " + str(self.x_[col]))
 
-            if not _is_zero(self.b_[row]) and not assume_inhomogeneous_part_is_zero:
-                # this is an inhomogeneous ODE, and, we're not choosing ignoring to ignore the inhomogeneous part
+            if not _is_zero(self.b_[row]):
+                # this is an inhomogeneous ODE
                 if _is_zero(self.A_[row, row]):
                     # of the form x' = const
                     update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[row]))
                 else:
                     particular_solution = -self.b_[row] / self.A_[row, row]
-                    print("        self.A_[row, row] = " + str(self.A_[row, row]))
-                    print("        self.b_[row] = " + str(self.b_[row]))
-                    print("        particular_solution = " + str(particular_solution))
 
                     conds = sympy.solve(self.A_[row, row], self.A_[row, row], set=True)[0]  # find all conditions under which the denominator goes to zero. The zeroth element of the returned tuple contains the sympy condition expressions for which A[row, row] goes to zero
                     simplified_conds = []
@@ -298,42 +294,22 @@ class SystemOfShapes:
                         simplified_conds.append(_custom_simplify_expr(cond))
                     conds = simplified_conds
 
-                    # print("        particular_solution goes to inf under conditions: " + str(conds))
-                    # conds = sympy.solve(_custom_simplify_expr(self.A_[row, row]), _custom_simplify_expr(self.A_[row, row]), set=True)  # ``cond`` here is a list of all those conditions at which the denominator goes to zero
-                    # print("        \tsimplified: " + str(conds))
-
                     if conds:
                         # if there is one or more condition under which the solution goes to infinity then that can only mean the inhomogeneous part is zero. In that case, the present solver is only valid when none of the conditions hold
 
-                        solver_dicts_ = self.generate_propagator_solver(assume_inhomogeneous_part_is_zero=True)
-                        assert len(solver_dicts_) == 1, "There should only be a single propagator solver with no conditions"
-                        solver_dict = solver_dicts_[0]
-                        solver_dict["conditions"] = [str(cond) for cond in conds]
-                        solver_dicts.append(solver_dict)
-                        import pdb;pdb.set_trace()
-
-                        # always generate the default/"otherwise" solver, in case none of the conditions hold, but only mark it as "otherwise" if any conditions are necessary at all
-                        solver_condition = "otherwise"
-
-                        # the log message can be at "info" level (not "warning") because we actually take care that the right thing happens under these conditions
-                        logging.info("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
-                        logging.info("List of all conditions that result in a division by zero:")
-                        logging.info("\t" + r" ∧ ".join([str(expr) + " = 0" for expr in conds]))
-                        logging.info("A separate integrator will be generated for the case that this condition holds; the inhomogeneous term will then be assumed to be equal to zero.")
+                        logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
+                        logging.warning("List of all conditions that result in a division by zero:")
+                        logging.warning("\t" + r" ∧ ".join([str(expr) + " = 0" for expr in conds]))
 
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
                     update_expr_terms.append("-" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
-                    print("!!!!!!! 2 -" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
                     update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
-                    print("!!!!!!! 3" + sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
             update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
-                # print("!!!!!!!!! before simplify: " +str(update_expr[str(self.x_[row])]))
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
-            # logging.info("update_expr[" + str(self.x_[row]) + "] = " + str(update_expr[str(self.x_[row])]))
 
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
@@ -343,12 +319,7 @@ class SystemOfShapes:
                        "state_variables": all_state_symbols,
                        "initial_values": initial_values}
 
-        if solver_condition:
-            solver_dict["conditions"] = "otherwise"
-
-        solver_dicts.append(solver_dict)
-
-        return solver_dicts
+        return solver_dict
 
 
     def generate_numeric_solver(self, state_variables=None):

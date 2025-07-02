@@ -93,7 +93,7 @@ def _run_simulation(indict, alias_spikes, integrator, params=None, **kwargs):
     mixed_integrator = MixedIntegrator(integrator,
                                        shape_sys,
                                        shapes,
-                                       analytic_solvers=None,
+                                       analytic_solver_dict=None,
                                        parameters=_params,
                                        spike_times=spike_times,
                                        random_seed=123,

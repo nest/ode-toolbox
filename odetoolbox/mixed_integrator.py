@@ -59,12 +59,12 @@ class MixedIntegrator(Integrator):
     Mixed numeric+analytic integrator. Supply with a result from ODE-toolbox analysis; calculates numeric approximation of the solution.
     """
 
-    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solvers=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False, debug_plot_dir: Optional[str] = None):
+    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False, debug_plot_dir: Optional[str] = None):
         r"""
         :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. :python:`odeiv.step_rk4`
         :param system_of_shapes: Dynamical system to solve.
         :param shapes: List of shapes in the dynamical system.
-        :param analytic_solvers: Analytic solver(s) from ODE-toolbox analysis result.
+        :param analytic_solver_dict: Analytic solver dictionary from ODE-toolbox analysis result.
         :param parameters: Dictionary mapping parameter name (as string) to value expression.
         :param spike_times: For each variable, used as a key, the list of times at which a spike occurs.
         :param random_seed: Random number generator seed.
@@ -75,7 +75,7 @@ class MixedIntegrator(Integrator):
         :param alias_spikes: Whether to alias spike times to the numerical integration grid. :python:`False` means that precise integration will be used for spike times whenever possible. :python:`True` means that after taking a timestep :math:`dt` and arriving at :math:`t`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
         :param debug_plot_dir: If given, enable debug plotting to this directory. If enabled, matplotlib is imported and used for plotting.
         """
-        super(MixedIntegrator, self).__init__(spike_times)
+        super(MixedIntegrator, self).__init__()
 
         assert PYGSL_AVAILABLE
 
@@ -97,22 +97,18 @@ class MixedIntegrator(Integrator):
         self._locals = self._parameters.copy()
         self.random_seed = random_seed
 
-        self.analytic_solvers = analytic_solvers
-        if not self.analytic_solvers is None:
-            for analytic_solver_dict in self.analytic_solvers:
-                if not "parameters" in self.analytic_solver_dict.keys():
-                    analytic_solver_dict["parameters"] = {}
-
-                analytic_solver_dict["parameters"].update(self.parameters)
-
+        self.analytic_solver_dict = analytic_solver_dict
+        if not self.analytic_solver_dict is None:
+            if not "parameters" in self.analytic_solver_dict.keys():
+                self.analytic_solver_dict["parameters"] = {}
+            self.analytic_solver_dict["parameters"].update(self._parameters)
         self.analytic_integrator = None
-        self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy() # XXX: why not from the method parameter ``numeric_integrator``?
+        self._update_expr = self._system_of_shapes.generate_numeric_solver()["update_expressions"].copy()
         self._update_expr_wrapped = {}
 
         self.all_variable_symbols = list(self._system_of_shapes.x_)
-        if not self.analytic_solvers is None:
-            for analytic_solver_dict in self.analytic_solvers:
-                self.all_variable_symbols += analytic_solver_dict["state_variables"]
+        if not self.analytic_solver_dict is None:
+            self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
         self.all_variable_symbols = [sympy.Symbol(str(sym).replace("'", Config().differential_order_symbol)) for sym in self.all_variable_symbols]
 
         for sym, expr in self._update_expr.items():
@@ -130,6 +126,13 @@ class MixedIntegrator(Integrator):
                                                                                          args=self.all_variable_symbols,
                                                                                          backend="cython",
                                                                                          helpers=Shape._sympy_autowrap_helpers)
+
+
+        #
+        #   make a sorted list of all spike times for all symbols
+        #
+
+        self.set_spike_times(spike_times)
 
 
     def integrate_ode(self, initial_values=None, h_min_lower_bound=5E-9, raise_errors=True, debug=False):
@@ -159,13 +162,9 @@ class MixedIntegrator(Integrator):
         #  initialise analytic integrator
         #
 
-        if not self.analytic_solvers is None:
-            all_analytic_solver_state_variables = []
-            for analytic_solver_dict in self.analytic_solvers:
-                all_analytic_solver_state_variables += analytic_solver_dict["state_variables"]
-
-            analytic_integrator_spike_times = {sym: st for sym, st in self.get_spike_times().items() if str(sym) in all_analytic_solver_state_variables}
-            self.analytic_integrator = AnalyticIntegrator(self.analytic_solvers, analytic_integrator_spike_times)
+        if not self.analytic_solver_dict is None:
+            analytic_integrator_spike_times = {sym: st for sym, st in self.get_spike_times().items() if str(sym) in self.analytic_solver_dict["state_variables"]}
+            self.analytic_integrator = AnalyticIntegrator(self.analytic_solver_dict, analytic_integrator_spike_times)
             analytic_integrator_initial_values = {sym: iv for sym, iv in initial_values.items() if sym in self.analytic_integrator.get_all_variable_symbols()}
             self.analytic_integrator.set_initial_values(analytic_integrator_initial_values)
 
