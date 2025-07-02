@@ -22,7 +22,14 @@
 import pytest
 
 import numpy as np
-import matplotlib.pyplot as plt
+
+try:
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import matplotlib.pyplot as plt
+    DEBUG_PLOTS = True
+except ImportError:
+    DEBUG_PLOTS = False
 
 from .context import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
@@ -72,19 +79,20 @@ class TestInhomogeneousNumericallyZero:
         #   plot
         #
 
-        fig, ax = plt.subplots(nrows=3)
-        ax[0].plot(timevec, correct, label="reference")
-        ax[1].plot(timevec, actual, label="actual")
-        ax[2].semilogy(timevec, np.abs(np.array(correct) - np.array(actual)))
-        ax[-1].set_xlabel("Time")
-        for _ax in ax:
-            _ax.set_xlim(0, T)
-            _ax.legend()
-            _ax.grid()
-            if not _ax == ax[-1]:
-                _ax.set_xticklabels([])
+        if DEBUG_PLOTS:
+            fig, ax = plt.subplots(nrows=3)
+            ax[0].plot(timevec, correct, label="reference")
+            ax[1].plot(timevec, actual, label="actual")
+            ax[2].semilogy(timevec, np.abs(np.array(correct) - np.array(actual)))
+            ax[-1].set_xlabel("Time")
+            for _ax in ax:
+                _ax.set_xlim(0, T)
+                _ax.legend()
+                _ax.grid()
+                if not _ax == ax[-1]:
+                    _ax.set_xticklabels([])
 
-        fig.savefig("/tmp/test_propagators_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png")
+            fig.savefig("/tmp/test_propagators_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png")
 
 
         #
