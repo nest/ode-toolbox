@@ -22,6 +22,7 @@
 import pytest
 
 import numpy as np
+import scipy.integrate
 
 try:
     import matplotlib as mpl
@@ -55,24 +56,43 @@ class TestInhomogeneousNumericallyZero:
         solver_dict["parameters"]["late_ltd_check"] = late_ltd_check
         solver_dict["parameters"]["late_ltp_check"] = late_ltp_check
 
+        dt = .1
+        T = 100.
+        timevec = np.arange(0., T, dt)
+
+        #
+        #    integration using the ODE-toolbox analytic integrator
+        #
+
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"z": 0.})
         analytic_integrator.reset()
+        actual = [analytic_integrator.get_value(t)["z"] for t in timevec]
 
-        dt = .1
-        T = 100.
 
-        actual = []
-        correct = []
-        cur_z = 0.
-        timevec = np.arange(0., T, dt)
-        # XXX: TODO: do the integration using scipy runge-kutta
-        for step, t in enumerate(timevec):
-            state_ = analytic_integrator.get_value(t)["z"]
-            actual.append(state_)
+        #
+        #    integration using scipy.integrate.odeint
+        #
 
-            correct.append(cur_z)
-            cur_z += dt * (((solver_dict["parameters"]["p"] * (1 - cur_z) * solver_dict["parameters"]["late_ltp_check"]) - (solver_dict["parameters"]["p"] * (cur_z + 0.5) * solver_dict["parameters"]["late_ltd_check"])) / solver_dict["parameters"]["tau_z"])
+        def ode_model(z, t, p, late_ltp_check, late_ltd_check, tau_z):
+            """
+            Defines the differential equation for z.
+            dz/dt = f(z, t)
+            """
+            dzdt = (((p * (1.0 - z) * late_ltp_check) - (p * (z + 0.5) * late_ltd_check))) / tau_z
+            return dzdt
+
+        z0 = 0.0      # set the initial condition
+        params = solver_dict["parameters"]
+        ode_args = (
+            params["p"],
+            params["late_ltp_check"],
+            params["late_ltd_check"],
+            params["tau_z"]
+        )
+
+        solution = scipy.integrate.odeint(ode_model, z0, timevec, args=ode_args, rtol=1E-12, atol=1E-12)
+        correct = solution.flatten().tolist()
 
 
         #
