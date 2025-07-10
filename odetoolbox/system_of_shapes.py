@@ -224,31 +224,30 @@ class SystemOfShapes:
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
-        try:
-            condition = SingularityDetection.find_singularities(P, A)
-            if condition:
-                logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-                logging.warning("List of all conditions that result in a singular propagator:")
-                for cond in condition:
-                    logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
-        except SingularityDetectionException:
-            logging.warning("Could not check the propagator matrix for singularities.")
-
-        logging.debug("System of equations:")
-        logging.debug("x = " + str(self.x_))
-        logging.debug("A = " + repr(self.A_))
-        logging.debug("b = " + str(self.b_))
-        logging.debug("c = " + str(self.c_))
-
         return P
 
 
-    def generate_propagator_solver(self):
+    def generate_propagator_solver(self, disable_singularity_detection: bool = False):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
 
         P = self._generate_propagator_matrix(self.A_)
+
+        #
+        #    singularity detection
+        #
+
+        if not disable_singularity_detection:
+            try:
+                condition = SingularityDetection.find_singularities(P, self.A_)
+                if condition:
+                    logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
+                    logging.warning("List of all conditions that result in a singular propagator:")
+                    for cond in condition:
+                        logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
+            except SingularityDetectionException:
+                logging.warning("Could not check the propagator matrix for singularities.")
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -285,14 +284,23 @@ class SystemOfShapes:
                 else:
                     particular_solution = -self.b_[row] / self.A_[row, row]
 
-                    conds = sympy.solve(self.A_[row, row], self.A_[row, row], set=True)[0]  # find all conditions under which the denominator goes to zero. The zeroth element of the returned tuple contains the set of sympy condition expressions for which A[row, row] goes to zero
+                    #
+                    #    singularity detection on inhomogeneous part
+                    #
 
-                    if conds:
-                        # if there is one or more condition under which the solution goes to infinity...
+                    if not disable_singularity_detection:
+                        conds = sympy.solve(self.A_[row, row], self.A_[row, row], set=True)[0]  # find all conditions under which the denominator goes to zero. The zeroth element of the returned tuple contains the set of sympy condition expressions for which A[row, row] goes to zero
 
-                        logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
-                        logging.warning("List of all conditions that result in a division by zero:")
-                        logging.warning("\t" + r" ∧ ".join([str(expr) + " = 0" for expr in conds]))
+                        if conds:
+                            # if there is one or more condition under which the solution goes to infinity...
+
+                            logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
+                            logging.warning("List of all conditions that result in a division by zero:")
+                            logging.warning("\t" + r" ∧ ".join([str(expr) + " = 0" for expr in conds]))
+
+                    #
+                    #    generate update expressions
+                    #
 
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
                     update_expr_terms.append("-" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above

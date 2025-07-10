@@ -65,7 +65,7 @@ class TestLinConstCoeffAndHomogeneous(unittest.TestCase):
         self.assertTrue(shape.is_lin_const_coeff_in([sympy.Symbol("q")], parameters=self._parameters))
 
 
-    def test_from_homogeneous_ode(self):
+    def test_from_homogeneous_ode_alternate(self):
         shape = Shape.from_ode("q", "(a - q) / b", initial_values={"q": "0."}, parameters=self._parameters)
         self.assertFalse(shape.is_homogeneous())
         self.assertTrue(shape.is_lin_const_coeff())

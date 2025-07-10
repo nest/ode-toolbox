@@ -19,7 +19,6 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import numpy as np
 import sympy
 import pytest
 

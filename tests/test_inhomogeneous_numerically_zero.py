@@ -130,5 +130,5 @@ class TestInhomogeneousNumericallyZero:
     def test_inhomogeneous_numerically_zero_alt(self):
         self._test_inhomogeneous_numerically_zero(late_ltd_check=0., late_ltp_check=0.)
 
-    def test_inhomogeneous_numerically_zero_alt(self):
+    def test_inhomogeneous_numerically_zero_alt_nonzero(self):
         self._test_inhomogeneous_numerically_zero(late_ltd_check=3.14159, late_ltp_check=1.618)
