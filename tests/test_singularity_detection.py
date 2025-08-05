@@ -19,9 +19,13 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import io
+import logging
 import sympy
 import pytest
 
+from .context import odetoolbox
+from tests.test_utils import _open_json
 from odetoolbox.singularity_detection import SingularityDetection
 
 
@@ -65,3 +69,34 @@ class TestSingularityDetection:
             assert sympy.Symbol("tau_s") in cond.keys()
         assert cond[sympy.Symbol("tau_s")] == sympy.parsing.sympy_parser.parse_expr("3/2 + sqrt(177)/2") \
                or cond[sympy.Symbol("tau_s")] == sympy.parsing.sympy_parser.parse_expr("3/2 - sqrt(177)/2")
+
+
+class TestPropagatorSolverHomogeneous:
+    r"""Test ODE-toolbox ability to ignore imaginary roots of the dynamical equations.
+
+    This dynamical system is difficult for sympy to solve and it needs to do quite some number crunching.
+
+    Test that no singularity conditions are found for this system after analysis.
+    """
+
+    def test_propagator_solver_homogeneous(self):
+        indict = {"dynamics": [{"expression": "V_m' = (1.0E+03 * ((V_m * 1.0E+03) / ((tau_m * 1.0E+15) * (1 + exp(alpha_exp * (V_m_init * 1.0E+03))))))",
+                                "initial_values": {"V_m": "(1.0E+03 * (-70.0 * 1.0E-03))"}}],
+                  "options": {"output_timestep_symbol": "__h",
+                              "simplify_expression": "sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"},
+                  "parameters": {"V_m_init": "(1.0E+03 * (-65.0 * 1.0E-03))",
+                                 "alpha_exp": "2 / ((3.0 * 1.0E+06))",
+                                 "tau_m": "(1.0E+15 * (2.0 * 1.0E-03))"}}
+
+        logger = logging.getLogger()
+
+        log_stream = io.StringIO()
+        log_handler = logging.StreamHandler(log_stream)
+        logger.addHandler(log_handler)
+
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, log_level="DEBUG")
+
+        log_contents = log_stream.getvalue()
+
+        # test that no singularity conditions were found for this system
+        assert not "Under certain conditions" in log_contents

@@ -282,26 +282,29 @@ class SystemOfShapes:
                     # of the form x' = const
                     update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[row]))
                 else:
-                    particular_solution = -self.b_[row] / self.A_[row, row]
 
                     #
                     #    singularity detection on inhomogeneous part
                     #
 
                     if not disable_singularity_detection:
-                        conds = sympy.solve(self.A_[row, row], self.A_[row, row], set=True)[0]  # find all conditions under which the denominator goes to zero. The zeroth element of the returned tuple contains the set of sympy condition expressions for which A[row, row] goes to zero
+                        logging.debug("Checking for singularities (divisions by zero) in the inhomogeneous part of the update equations...")
+
+                        conds = sympy.solve(self.A_[row, row], self.A_[row, row], dict=True, domain=sympy.S.Reals)  # find all conditions under which the denominator goes to zero. The zeroth element of the returned tuple contains the set of sympy condition expressions for which A[row, row] goes to zero
+                        conds = [{k: v for k, v in cond.items() if not sympy.I in sympy.preorder_traversal(v)} for cond in conds]    # remove solutions that contain the imaginary number -- ``domain=sympy.S.Reals`` does not seem to work perfectly, and sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
 
                         if conds:
                             # if there is one or more condition under which the solution goes to infinity...
 
                             logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
                             logging.warning("List of all conditions that result in a division by zero:")
-                            logging.warning("\t" + r" ∧ ".join([str(expr) + " = 0" for expr in conds]))
+                            logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
 
                     #
                     #    generate update expressions
                     #
 
+                    particular_solution = -self.b_[row] / self.A_[row, row]
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
                     update_expr_terms.append("-" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
                     update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")

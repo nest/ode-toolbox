@@ -132,6 +132,9 @@ The following flags exist:
    * - ``disable_stiffness_check``
      - False
      - Set to True to disable stiffness check.
+   * - ``disable_singularity_detection``
+     - False
+     - Set to True to disable detection of conditions under which numerical singularities (division by zero) could occur.
    * - ``preserve_expressions``
      - False
      - Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.

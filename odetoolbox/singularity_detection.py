@@ -18,8 +18,9 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
-from typing import Mapping
+from typing import Dict, List, Mapping
 
+import logging
 import sympy
 import sympy.parsing.sympy_parser
 
@@ -126,20 +127,23 @@ class SingularityDetection:
         return filt_cond
 
     @staticmethod
-    def _generate_singularity_conditions(A: sympy.Matrix):
+    def _generate_singularity_conditions(A: sympy.Matrix) -> List[Dict[sympy.core.expr.Expr, sympy.core.expr.Expr]]:
         r"""
-        The function solve returns a list where each element is a dictionary. And each dictionary entry (condition: expression) corresponds to a condition at which that expression goes to zero.
-        If the expression is quadratic, like let's say "x**2-1" then the function 'solve() returns two dictionaries in a list. each dictionary corresponds to one solution.
-        We are then collecting these lists in our own list called 'condition'.
+        The function solve returns a list where each element is a dictionary. And each dictionary entry (condition: expression) corresponds to a condition at which that expression goes to zero. If the expression is quadratic, like let's say "x**2-1" then the function 'solve() returns two dictionaries in a list. Each dictionary corresponds to one solution. We are then collecting these lists in our own list called ``conditions`` and return it.
         """
         conditions = []
         for expr in sympy.flatten(A):
             for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
                 if isinstance(subexpr, sympy.Pow) and subexpr.args[1] < 0:  # find expressions of the form 1/x, which is encoded in sympy as x^-1
                     denom = subexpr.args[0]  # extracting the denominator
-                    cond = sympy.solve(denom, denom.free_symbols, dict=True)  # ``cond`` here is a list of all those conditions at which the denominator goes to zero
-                    if cond not in conditions:
-                        conditions.extend(cond)
+                    symbols = list(denom.free_symbols)
+
+                    conds = sympy.solve(denom, symbols, dict=True, domain=sympy.S.Reals)    # ``cond`` here is a list of all those conditions under which the denominator goes to zero
+                    conds = [{k: v for k, v in cond.items() if not sympy.I in sympy.preorder_traversal(v)} for cond in conds]    # remove solutions that contain the imaginary number -- ``domain=sympy.S.Reals`` does not seem to work perfectly, and sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
+
+                    for cond in conds:
+                        if cond:
+                            conditions.append(cond)
 
         return conditions
 
@@ -154,11 +158,13 @@ class SingularityDetection:
         A : sympy.Matrix
             system matrix
         """
+        logging.debug("Checking for singularities (divisions by zero) in the propagator matrix...")
         try:
             conditions = SingularityDetection._generate_singularity_conditions(P)
             conditions = SingularityDetection._flatten_conditions(conditions)  # makes a list of conditions with each condition in the form of a dict
             conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
         except Exception as e:
+            print(e)
             raise SingularityDetectionException()
 
         return conditions
