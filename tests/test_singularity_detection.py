@@ -50,11 +50,9 @@ class TestSingularityDetection:
             A = sympy.Matrix([[-1 / tau_d, 0, 0], [1, -1 / tau_r, 0], [0, 1 / C, -1 / tau_m]])
 
         P = sympy.simplify(sympy.exp(A * h))  # Propagator matrix
-        print("----------- " + kernel_to_use + "----------")
         condition = SingularityDetection._generate_singularity_conditions(P)
         print(condition)
         condition = SingularityDetection._filter_valid_conditions(condition, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
-        print("----------------------------------")
 
         if kernel_to_use == "alpha":
             assert len(condition) == 1
