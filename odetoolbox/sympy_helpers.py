@@ -131,6 +131,28 @@ def _find_in_matrix(A, el):
     return None
 
 
+def symbol_in_expression(list_of_symbols, expr) -> bool:
+    for symbol in list_of_symbols:
+        if symbol in sympy.preorder_traversal(expr):
+            return True
+
+    return False
+
+
+class SymmetricEq(sympy.Eq):
+    r"""The sympy Eq class is by default not symmetric. This subclasses makes Eqs equivalent under symmetry. This helps prevent duplications when they are added to a set."""
+    def __eq__(self, other) -> bool:
+        if isinstance(other, SymmetricEq):
+            return (self.lhs == other.lhs and self.rhs == other.rhs) or (self.lhs == other.rhs and self.rhs == other.lhs)
+
+        return False
+
+    def __hash__(self):
+        # Create a hash based on the left and right sides of the equation
+        return hash((min(hash(self.lhs), hash(self.rhs)),
+                     max(hash(self.lhs), hash(self.rhs))))
+
+
 class SympyPrinter(sympy.printing.StrPrinter):
 
     def _print_Exp1(self, expr):

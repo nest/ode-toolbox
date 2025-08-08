@@ -226,6 +226,38 @@ class SystemOfShapes:
 
         return P
 
+    def inhomogeneous_singularity_detection_(self, expr) -> None:
+        logging.debug("Checking for singularities (divisions by zero) in the inhomogeneous part of the update equations...")
+
+        symbols = list(expr.free_symbols)
+        if symbols:
+            # find all conditions under which the denominator goes to zero. Each element of the returned list contains a particular combination of conditions for which A[row, row] goes to zero. For instance: ``solve([x - 3, y**2 - 1])`` returns ``[{x: 3, y: -1}, {x: 3, y: 1}]``
+            conditions = sympy.solve(expr, symbols, dict=True, domain=sympy.S.Reals)
+
+            # remove solutions that contain the imaginary number. ``domain=sympy.S.Reals`` does not seem to work perfectly as an argument to sympy.solve(), while sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
+            accepted_conditions = []
+            for cond_set in conditions:
+                i_in_expr = any([sympy.I in sympy.preorder_traversal(v) for v in cond_set.values()])
+                if not i_in_expr:
+                    accepted_conditions.append(cond_set)
+
+            conditions = accepted_conditions
+
+            # convert dictionaries to sympy equations
+            converted_conditions = set()
+            for cond_set in conditions:
+                cond_eqs_set = set([sympy.Eq(k, v) for k, v in cond_set.items()])    # convert to actual equations
+                converted_conditions.add(frozenset(cond_eqs_set))
+
+            conditions = converted_conditions
+
+            if conditions:
+                # if there is one or more condition under which the solution goes to infinity...
+
+                logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
+                logging.warning("List of all conditions that result in a division by zero:")
+                for cond_set in conditions:
+                    logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
 
     def generate_propagator_solver(self, disable_singularity_detection: bool = False):
         r"""
@@ -240,12 +272,15 @@ class SystemOfShapes:
 
         if not disable_singularity_detection:
             try:
-                condition = SingularityDetection.find_singularities(P, self.A_)
-                if condition:
+                conditions = SingularityDetection.find_singularities(P, self.A_)
+
+                if conditions:
+                    # if there is one or more condition under which the solution goes to infinity...
+
                     logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-                    logging.warning("List of all conditions that result in a singular propagator:")
-                    for cond in condition:
-                        logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
+                    logging.warning("List of all conditions that result in a division by zero:")
+                    for cond_set in conditions:
+                        logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
             except SingularityDetectionException:
                 logging.warning("Could not check the propagator matrix for singularities.")
 
@@ -288,28 +323,8 @@ class SystemOfShapes:
                     #
 
                     if not disable_singularity_detection:
-                        logging.debug("Checking for singularities (divisions by zero) in the inhomogeneous part of the update equations...")
+                        self.inhomogeneous_singularity_detection_(expr=self.A_[row, row])
 
-                        conditions = []
-
-
-
-                        symbols = list(self.A_[row, row].free_symbols)
-                        if symbols:
-                            conds = sympy.solve(self.A_[row, row], symbols, dict=True, domain=sympy.S.Reals)  # find all conditions under which the denominator goes to zero. The zeroth element of the returned tuple contains the set of sympy condition expressions for which A[row, row] goes to zero
-                            conds = [{k: v for k, v in cond.items() if not sympy.I in sympy.preorder_traversal(v)} for cond in conds]    # remove solutions that contain the imaginary number -- ``domain=sympy.S.Reals`` does not seem to work perfectly, and sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
-
-                            for cond in conds:
-                                if cond:
-                                    conditions.append(cond)
-
-                            if conditions:
-                                # if there is one or more condition under which the solution goes to infinity...
-
-                                logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
-                                logging.warning("List of all conditions that result in a division by zero:")
-                                for cond in conditions:
-                                    logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
 
                     #
                     #    generate update expressions
