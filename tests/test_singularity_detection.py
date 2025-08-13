@@ -27,6 +27,7 @@ import pytest
 from .context import odetoolbox
 from tests.test_utils import _open_json
 from odetoolbox.singularity_detection import SingularityDetection
+from odetoolbox.sympy_helpers import SymmetricEq
 
 
 class TestSingularityDetection:
@@ -36,8 +37,8 @@ class TestSingularityDetection:
         tau_m, tau_r, C, h = sympy.symbols("tau_m, tau_r, C, h")
         P = sympy.Matrix([[-1 / tau_r, 0, 0], [1, -1 / tau_r, 0], [0, 1 / C, -1 / tau_m]])
         assert SingularityDetection._is_matrix_defined_under_substitution(P, set())
-        assert SingularityDetection._is_matrix_defined_under_substitution(P, set([sympy.Eq(tau_r, 1)]))
-        assert not SingularityDetection._is_matrix_defined_under_substitution(P, set([sympy.Eq(tau_r, 0)]))
+        assert SingularityDetection._is_matrix_defined_under_substitution(P, set([SymmetricEq(tau_r, 1)]))
+        assert not SingularityDetection._is_matrix_defined_under_substitution(P, set([SymmetricEq(tau_r, 0)]))
 
     @pytest.mark.parametrize("kernel_to_use", ["alpha", "beta"])
     def test_alpha_beta_kernels(self, kernel_to_use: str):
@@ -100,3 +101,4 @@ class TestPropagatorSolverHomogeneous:
 
         # test that no singularity conditions were found for this system
         assert not "Under certain conditions" in log_contents
+        assert not "division by zero" in log_contents
