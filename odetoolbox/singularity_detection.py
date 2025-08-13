@@ -152,7 +152,7 @@ class SingularityDetection:
         # convert dictionaries to sympy equations
         converted_conditions = set()
         for cond_set in conditions:
-            cond_eqs_set = set([sympy.Eq(k, v) for k, v in cond_set.items()])    # convert to actual equations
+            cond_eqs_set = set([SymmetricEq(k, v) for k, v in cond_set.items()])    # convert to actual equations
             converted_conditions.add(frozenset(cond_eqs_set))
 
         conditions = converted_conditions
