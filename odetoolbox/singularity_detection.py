@@ -133,7 +133,6 @@ class SingularityDetection:
 
                     # find all conditions under which the denominator goes to zero. Each element of the returned list contains a particular combination of conditions for which A[row, row] goes to zero. For instance: ``solve([x - 3, y**2 - 1])`` returns ``[{x: 3, y: -1}, {x: 3, y: 1}]``
                     conds = sympy.solve(denom, symbols, dict=True, domain=sympy.S.Reals)
-                    print("Detected sing conds: " + str(conds))
 
                     # remove solutions that contain the imaginary number. ``domain=sympy.S.Reals`` does not seem to work perfectly as an argument to sympy.solve(), while sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
                     accepted_conds = []
@@ -143,7 +142,6 @@ class SingularityDetection:
                             accepted_conds.append(cond_set)
 
                     conds = accepted_conds
-                    print("accepted sing conds: " + str(accepted_conds))
 
                     # convert dictionaries to sympy equations
                     converted_conds = set()
