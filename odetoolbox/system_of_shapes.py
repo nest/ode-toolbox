@@ -226,39 +226,6 @@ class SystemOfShapes:
 
         return P
 
-    def inhomogeneous_singularity_detection_(self, expr) -> None:
-        logging.debug("Checking for singularities (divisions by zero) in the inhomogeneous part of the update equations...")
-
-        symbols = list(expr.free_symbols)
-        if symbols:
-            # find all conditions under which the denominator goes to zero. Each element of the returned list contains a particular combination of conditions for which A[row, row] goes to zero. For instance: ``solve([x - 3, y**2 - 1])`` returns ``[{x: 3, y: -1}, {x: 3, y: 1}]``
-            conditions = sympy.solve(expr, symbols, dict=True, domain=sympy.S.Reals)
-
-            # remove solutions that contain the imaginary number. ``domain=sympy.S.Reals`` does not seem to work perfectly as an argument to sympy.solve(), while sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
-            accepted_conditions = []
-            for cond_set in conditions:
-                i_in_expr = any([sympy.I in sympy.preorder_traversal(v) for v in cond_set.values()])
-                if not i_in_expr:
-                    accepted_conditions.append(cond_set)
-
-            conditions = accepted_conditions
-
-            # convert dictionaries to sympy equations
-            converted_conditions = set()
-            for cond_set in conditions:
-                cond_eqs_set = set([sympy.Eq(k, v) for k, v in cond_set.items()])    # convert to actual equations
-                converted_conditions.add(frozenset(cond_eqs_set))
-
-            conditions = converted_conditions
-
-            if conditions:
-                # if there is one or more condition under which the solution goes to infinity...
-
-                logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
-                logging.warning("List of all conditions that result in a division by zero:")
-                for cond_set in conditions:
-                    logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
-
     def generate_propagator_solver(self, disable_singularity_detection: bool = False):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
@@ -272,7 +239,7 @@ class SystemOfShapes:
 
         if not disable_singularity_detection:
             try:
-                conditions = SingularityDetection.find_singularities(P, self.A_)
+                conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
 
                 if conditions:
                     # if there is one or more condition under which the solution goes to infinity...
@@ -323,7 +290,7 @@ class SystemOfShapes:
                     #
 
                     if not disable_singularity_detection:
-                        self.inhomogeneous_singularity_detection_(expr=self.A_[row, row])
+                        SingularityDetection.find_inhomogeneous_singularities(expr=self.A_[row, row])
 
 
                     #
