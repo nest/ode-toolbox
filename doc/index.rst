@@ -132,6 +132,9 @@ The following flags exist:
    * - ``disable_stiffness_check``
      - False
      - Set to True to disable stiffness check.
+   * - ``disable_singularity_detection``
+     - False
+     - Set to True to disable detection of conditions under which numerical singularities (division by zero) could occur.
    * - ``preserve_expressions``
      - False
      - Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
@@ -530,7 +533,9 @@ the update equation is:
 
 .. math::
 
-   x \leftarrow P (x - 1.618)+ 1.618
+   x \leftarrow P (x - 1.618) + 1.618
+
+In some cases, elements of :math:`\mathbf{A}` may contain terms that involve a parameter of the system to be integrated. If at a later stage, the numerical value of these parameters is chosen equal to zero, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to invoke ODE-toolbox separately to generate an analytic solver for the special case that the value of :math:`\mathbf{A}` becomes equal to zero for inhomogeneous equations. ODE-toolbox will detect the conditions (for instance, :python:`param1 - param2 = 0`) under which these singularities occur. If any conditions were found, log warning messages will be emitted during the computation of the analytic solver.
 
 
 Working with large expressions

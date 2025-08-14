@@ -19,7 +19,8 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import unittest
+import pytest
+
 import odetoolbox
 from tests.test_utils import _open_json
 
@@ -30,10 +31,8 @@ except ImportError:
     PYGSL_AVAILABLE = False
 
 
-
-@unittest.skipIf(not PYGSL_AVAILABLE,
-                 "Stiffness tests not supported on this system")
-class TestStiffnessChecker(unittest.TestCase):
+@pytest.mark.skipif(not PYGSL_AVAILABLE, reason="Cannot run stiffness test if GSL is not installed.")
+class TestStiffnessChecker:
 
     def test_canonical_stiff_system(self):
         indict = _open_json("stiff_system.json")

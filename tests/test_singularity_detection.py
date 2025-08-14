@@ -19,11 +19,15 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import numpy as np
+import io
+import logging
 import sympy
 import pytest
 
+from .context import odetoolbox
+from tests.test_utils import _open_json
 from odetoolbox.singularity_detection import SingularityDetection
+from odetoolbox.sympy_helpers import SymmetricEq
 
 
 class TestSingularityDetection:
@@ -32,9 +36,9 @@ class TestSingularityDetection:
     def test_is_matrix_defined_under_substitution(self):
         tau_m, tau_r, C, h = sympy.symbols("tau_m, tau_r, C, h")
         P = sympy.Matrix([[-1 / tau_r, 0, 0], [1, -1 / tau_r, 0], [0, 1 / C, -1 / tau_m]])
-        assert SingularityDetection._is_matrix_defined_under_substitution(P, {})
-        assert SingularityDetection._is_matrix_defined_under_substitution(P, {tau_r: 1})
-        assert not SingularityDetection._is_matrix_defined_under_substitution(P, {tau_r: 0})
+        assert SingularityDetection._is_matrix_defined_under_substitution(P, set())
+        assert SingularityDetection._is_matrix_defined_under_substitution(P, set([SymmetricEq(tau_r, 1)]))
+        assert not SingularityDetection._is_matrix_defined_under_substitution(P, set([SymmetricEq(tau_r, 0)]))
 
     @pytest.mark.parametrize("kernel_to_use", ["alpha", "beta"])
     def test_alpha_beta_kernels(self, kernel_to_use: str):
@@ -47,9 +51,8 @@ class TestSingularityDetection:
             A = sympy.Matrix([[-1 / tau_d, 0, 0], [1, -1 / tau_r, 0], [0, 1 / C, -1 / tau_m]])
 
         P = sympy.simplify(sympy.exp(A * h))  # Propagator matrix
-
         condition = SingularityDetection._generate_singularity_conditions(P)
-        condition = SingularityDetection._flatten_conditions(condition)  # makes a list of conditions with each condition in the form of a dict
+        print(condition)
         condition = SingularityDetection._filter_valid_conditions(condition, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
 
         if kernel_to_use == "alpha":
@@ -60,9 +63,42 @@ class TestSingularityDetection:
     def test_more_than_one_solution(self):
         r"""Test the case where there is more than one element returned in a solution to an equation; in this example, for a quadratic input equation"""
         A = sympy.Matrix([[sympy.parsing.sympy_parser.parse_expr("-1/(tau_s**2 - 3*tau_s - 42)")]])
-        condition = SingularityDetection._generate_singularity_conditions(A)
-        assert len(condition) == 2
-        for cond in condition:
-            assert sympy.Symbol("tau_s") in cond.keys()
-        assert cond[sympy.Symbol("tau_s")] == sympy.parsing.sympy_parser.parse_expr("3/2 + sqrt(177)/2") \
-               or cond[sympy.Symbol("tau_s")] == sympy.parsing.sympy_parser.parse_expr("3/2 - sqrt(177)/2")
+        conditions = SingularityDetection._generate_singularity_conditions(A)
+        assert len(conditions) == 2
+        for cond_set in conditions:
+            for cond in cond_set:
+                assert sympy.Symbol("tau_s") == cond.lhs
+                assert cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 + sqrt(177)/2") \
+                    or cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 - sqrt(177)/2")
+
+
+class TestPropagatorSolverHomogeneous:
+    r"""Test ODE-toolbox ability to ignore imaginary roots of the dynamical equations.
+
+    This dynamical system is difficult for sympy to solve and it needs to do quite some number crunching.
+
+    Test that no singularity conditions are found for this system after analysis.
+    """
+
+    def test_propagator_solver_homogeneous(self):
+        indict = {"dynamics": [{"expression": "V_m' = (1.0E+03 * ((V_m * 1.0E+03) / ((tau_m * 1.0E+15) * (1 + exp(alpha_exp * (V_m_init * 1.0E+03))))))",
+                                "initial_values": {"V_m": "(1.0E+03 * (-70.0 * 1.0E-03))"}}],
+                  "options": {"output_timestep_symbol": "__h",
+                              "simplify_expression": "sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"},
+                  "parameters": {"V_m_init": "(1.0E+03 * (-65.0 * 1.0E-03))",
+                                 "alpha_exp": "2 / ((3.0 * 1.0E+06))",
+                                 "tau_m": "(1.0E+15 * (2.0 * 1.0E-03))"}}
+
+        logger = logging.getLogger()
+
+        log_stream = io.StringIO()
+        log_handler = logging.StreamHandler(log_stream)
+        logger.addHandler(log_handler)
+
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, log_level="DEBUG")
+
+        log_contents = log_stream.getvalue()
+
+        # test that no singularity conditions were found for this system
+        assert not "Under certain conditions" in log_contents
+        assert not "division by zero" in log_contents

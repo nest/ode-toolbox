@@ -224,31 +224,32 @@ class SystemOfShapes:
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
-        try:
-            condition = SingularityDetection.find_singularities(P, A)
-            if condition:
-                logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-                logging.warning("List of all conditions that result in a singular propagator:")
-                for cond in condition:
-                    logging.warning("\t" + r" ∧ ".join([str(k) + " = " + str(v) for k, v in cond.items()]))
-        except SingularityDetectionException:
-            logging.warning("Could not check the propagator matrix for singularities.")
-
-        logging.debug("System of equations:")
-        logging.debug("x = " + str(self.x_))
-        logging.debug("A = " + repr(self.A_))
-        logging.debug("b = " + str(self.b_))
-        logging.debug("c = " + str(self.c_))
-
         return P
 
-
-    def generate_propagator_solver(self):
+    def generate_propagator_solver(self, disable_singularity_detection: bool = False):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
 
         P = self._generate_propagator_matrix(self.A_)
+
+        #
+        #    singularity detection
+        #
+
+        if not disable_singularity_detection:
+            try:
+                conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
+
+                if conditions:
+                    # if there is one or more condition under which the solution goes to infinity...
+
+                    logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
+                    logging.warning("List of all conditions that result in a division by zero:")
+                    for cond_set in conditions:
+                        logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+            except SingularityDetectionException:
+                logging.warning("Could not check the propagator matrix for singularities.")
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -283,6 +284,19 @@ class SystemOfShapes:
                     # of the form x' = const
                     update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[row]))
                 else:
+
+                    #
+                    #    singularity detection on inhomogeneous part
+                    #
+
+                    if not disable_singularity_detection:
+                        SingularityDetection.find_inhomogeneous_singularities(expr=self.A_[row, row])
+
+
+                    #
+                    #    generate update expressions
+                    #
+
                     particular_solution = -self.b_[row] / self.A_[row, row]
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
                     update_expr_terms.append("-" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
@@ -293,11 +307,11 @@ class SystemOfShapes:
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
-            logging.info("update_expr[" + str(self.x_[row]) + "] = " + str(update_expr[str(self.x_[row])]))
 
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
-        solver_dict = {"propagators": P_expr,
+        solver_dict = {"solver": "analytical",
+                       "propagators": P_expr,
                        "update_expressions": update_expr,
                        "state_variables": all_state_symbols,
                        "initial_values": initial_values}
@@ -313,7 +327,8 @@ class SystemOfShapes:
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
 
-        solver_dict = {"update_expressions": update_expr,
+        solver_dict = {"solver": "numeric",   # will be appended to if stiffness testing is used
+                       "update_expressions": update_expr,
                        "state_variables": all_state_symbols,
                        "initial_values": initial_values}
 

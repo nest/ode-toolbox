@@ -182,7 +182,7 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
-def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_solver: bool = False, preserve_expressions: Union[bool, Iterable[str]] = False, log_level: Union[str, int] = logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
+def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_solver: bool = False, disable_singularity_detection: bool = False, preserve_expressions: Union[bool, Iterable[str]] = False, log_level: Union[str, int] = logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
 
@@ -230,6 +230,12 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
     _, node_is_analytically_solvable = _find_analytically_solvable_equations(shape_sys, shapes, parameters=parameters)
 
+    logging.debug("System of equations:")
+    logging.debug("x = " + str(shape_sys.x_))
+    logging.debug("A = " + repr(shape_sys.A_))
+    logging.debug("b = " + str(shape_sys.b_))
+    logging.debug("c = " + str(shape_sys.c_))
+
 
     #
     #   generate analytical solutions (propagators) where possible
@@ -245,7 +251,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     if analytic_syms:
         logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
-        analytic_solver_json = sub_sys.generate_propagator_solver()
+        analytic_solver_json = sub_sys.generate_propagator_solver(disable_singularity_detection=disable_singularity_detection)
         analytic_solver_json["solver"] = "analytical"
         solvers_json.append(analytic_solver_json)
 
@@ -399,7 +405,7 @@ def _init_logging(log_level: Union[str, int] = logging.WARNING):
     logging.getLogger().setLevel(log_level)
 
 
-def analysis(indict, disable_stiffness_check: bool = False, disable_analytic_solver: bool = False, preserve_expressions: Union[bool, Iterable[str]] = False, log_level: Union[str, int] = logging.WARNING) -> List[Dict]:
+def analysis(indict, disable_stiffness_check: bool = False, disable_analytic_solver: bool = False, disable_singularity_detection: bool = False, preserve_expressions: Union[bool, Iterable[str]] = False, log_level: Union[str, int] = logging.WARNING) -> List[Dict]:
     r"""
     The main entry point of the ODE-toolbox API.
 
@@ -414,6 +420,7 @@ def analysis(indict, disable_stiffness_check: bool = False, disable_analytic_sol
     d, _, _ = _analysis(indict,
                         disable_stiffness_check=disable_stiffness_check,
                         disable_analytic_solver=disable_analytic_solver,
+                        disable_singularity_detection=disable_singularity_detection,
                         preserve_expressions=preserve_expressions,
                         log_level=log_level)
     return d
