@@ -346,7 +346,7 @@ class Shape:
         derivative_symbols = self.get_state_variables(derivative_symbol=Config().differential_order_symbol)
         for derivative_factor, derivative_symbol in zip(self.derivative_factors, derivative_symbols):
             expr += derivative_factor * derivative_symbol
-        logging.info("Shape " + str(self.symbol) + ": reconstituting expression " + str(expr))
+        logging.debug("Shape " + str(self.symbol) + ": reconstituting expression " + str(expr))
         return expr
 
 
@@ -434,7 +434,7 @@ class Shape:
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, Config().input_time_symbol)]
 
-        logging.info("\nProcessing function-of-time shape \"" + symbol + "\" with defining expression = \"" + str(definition) + "\"")
+        logging.debug("Processing function-of-time shape \"" + symbol + "\" with defining expression = \"" + str(definition) + "\"")
 
 
         #
@@ -568,7 +568,7 @@ class Shape:
         assert type(definition) is str
         assert type(initial_values) is dict
 
-        logging.info("\nProcessing differential-equation form shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
+        logging.debug("\nProcessing differential-equation form shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
 
         if all_variable_symbols is None:
             all_variable_symbols = []
@@ -605,6 +605,6 @@ class Shape:
             nonlin_term = nonlin_term + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 
         shape = cls(sympy.Symbol(symbol), order, initial_values, local_derivative_factors, inhom_term, nonlin_term, lower_bound, upper_bound)
-        logging.info("\tReturning shape: " + str(shape))
+        logging.debug("\tReturning shape: " + str(shape))
 
         return shape
