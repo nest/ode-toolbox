@@ -42,6 +42,7 @@ if __name__ == "__main__":
     argparser.add_argument("infile", metavar='PATH', type=str, help="JSON input file path")
     argparser.add_argument("--disable-stiffness-check", action="store_true", help="If provided, disable stiffness check")
     argparser.add_argument("--disable-analytic-solver", action="store_true", help="If provided, disable generation of propagators")
+    argparser.add_argument("--disable-singularity-detection", action="store_true", help="If provided, disable detection of conditions under which numerical singularities (division by zero) could occur")
     argparser.add_argument("--preserve-expressions", action="store", nargs="*", default=False, help="Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Can only apply to variables specified as first-order differential equations.")
     argparser.add_argument("--log-level", action="store", default="WARN", help="Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example \"INFO\" (more messages) or \"WARN\" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels")
     parsed_args = argparser.parse_args()
@@ -67,6 +68,7 @@ if __name__ == "__main__":
         result = odetoolbox.analysis(indict,
                                      disable_stiffness_check=parsed_args.disable_stiffness_check,
                                      disable_analytic_solver=parsed_args.disable_analytic_solver,
+                                     disable_singularity_detection=parsed_args.disable_singularity_detection,
                                      preserve_expressions=parsed_args.preserve_expressions,
                                      log_level=parsed_args.log_level)
     except MalformedInputException as e:
