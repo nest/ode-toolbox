@@ -307,6 +307,7 @@ class SystemOfShapes:
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
+            logging.debug("update_expr[" + str(self.x_[row]) + "] = " + str(update_expr[str(self.x_[row])]))
 
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
