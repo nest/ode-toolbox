@@ -33,6 +33,11 @@ from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
 from .sympy_helpers import _custom_simplify_expr, _is_zero
+from odetoolbox.singularity_analysis_mitigation import (
+    build_transition_branches_numeric as _build_branches_numeric, 
+    BranchResult as _BR,
+)
+
 
 
 class GetBlockDiagonalException(Exception):
@@ -233,9 +238,8 @@ class SystemOfShapes:
 
         P = self._generate_propagator_matrix(self.A_)
 
-        #
-        #    singularity detection
-        #
+
+
 
         if not disable_singularity_detection:
             try:
@@ -315,6 +319,87 @@ class SystemOfShapes:
                        "update_expressions": update_expr,
                        "state_variables": all_state_symbols,
                        "initial_values": initial_values}
+
+#------
+        try:
+            # 1) Re-run singularity detection
+            _conds_pairs = []
+            try:
+                _conds = SingularityDetection.find_propagator_singularities(P, self.A_)
+                # Flatten sets like {a=b, c=d} into a list of tuples: [("a","b"), ("c","d"), ...]
+                for _set in _conds or []:
+                    for _eq in _set:
+                        _L, _R = getattr(_eq, "lhs", None), getattr(_eq, "rhs", None)
+                        if isinstance(_L, sympy.Symbol) and isinstance(_R, sympy.Symbol):
+                            _conds_pairs.append((str(_L), str(_R)))
+            except Exception:
+                _conds_pairs = []
+
+            # If no detectable parameter equality conditions are found, skip branching
+            if _conds_pairs:
+                # 2) Collect parameter symbols 
+                _Hsym = sympy.Symbol(Config().output_timestep_symbol, real=True)
+                _xset = set(self.x_) if hasattr(self, "x_") else set()
+                _A_syms = sorted(
+                    [s for s in self.A_.free_symbols if s not in _xset and s != _Hsym],
+                    key=lambda s: str(s)
+                )
+                _param_names = [str(s) for s in _A_syms]
+
+                # 3) Retrieve base parameter values 
+                def _get_param_val(_s: sympy.Symbol) -> float:
+                    _k = str(_s)
+                    if hasattr(self, "parameter_values") and _k in getattr(self, "parameter_values"):
+                        return float(self.parameter_values[_k])
+                    if hasattr(self, "_params") and _k in getattr(self, "_params"):
+                        return float(self._params[_k])
+                    # Missing parameter: raise an error to skip mitigation
+                    raise KeyError(f"Missing numeric value for parameter: {_k}")
+
+                _base_params = {str(s): _get_param_val(s) for s in _A_syms}
+
+                # 4) Construct numerical function A
+                _A_lmb = sympy.lambdify(_A_syms, self.A_, modules="numpy")
+
+                def _A_fn(_params_dict):
+                    _vals = [_params_dict[name] for name in _param_names]
+                    return np.array(_A_lmb(*_vals), dtype=float)
+
+                # 5) Determine timestep h: prefer self.h / self.dt; otherwise use H symbol or fallback to 1.0
+                if hasattr(self, "h"):
+                    _h_val = float(self.h)
+                elif hasattr(self, "dt"):
+                    _h_val = float(self.dt)
+                else:
+                    _h_val = float(_base_params.get(str(_Hsym), 1.0))
+
+                # 6) Build numeric transition branches
+                _pack = _build_branches_numeric(
+                    A_fn=_A_fn,
+                    h=_h_val,
+                    base_params=_base_params,
+                    param_names=_param_names,
+                    conditions=[tuple(sorted(p)) for p in _conds_pairs],
+                    tie_mode="left",   # Can also be "right" or "avg"
+                )
+
+                # 7) Insert branch results into solver_dict
+                def _to_list(_P):
+                    # Convert NumPy array to list for JSON serialization
+                    return _P.tolist()
+
+                def _pack_branch(_br: _BR):
+                    _cond = None if _br.condition is None else {"eq": [_br.condition[0], _br.condition[1]]}
+                    return {"condition": _cond, "P": _to_list(_br.P)}
+
+                solver_dict["branching"] = {
+                    "default": _pack_branch(_pack.default),
+                    "branches": [_pack_branch(_b) for _b in _pack.branches],
+                    "tie_mode": "left",
+                }
+        except Exception as _mit_err:
+            # Mitigation failure does not affect the original return
+            logging.debug(f"[mitigation] numeric branching skipped: {_mit_err}")
 
         return solver_dict
 
