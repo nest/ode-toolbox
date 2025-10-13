@@ -34,8 +34,8 @@ from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
 from .sympy_helpers import _custom_simplify_expr, _is_zero
 from odetoolbox.singularity_analysis_mitigation import (
-    build_transition_branches_numeric as _build_branches_numeric, 
-    BranchResult as _BR,
+    build_transition_cases as _build_cases, 
+    CaseResult as _CR,
 )
 
 
@@ -246,7 +246,7 @@ class SystemOfShapes:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
 
                 if conditions:
-                    # if there is one or more condition under which the solution goes to infinity...
+                    # if there is one or more condition under which the solution goes to infinity
 
                     logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
                     logging.warning("List of all conditions that result in a division by zero:")
@@ -277,7 +277,7 @@ class SystemOfShapes:
                     P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
                     if row != col and not _is_zero(self.b_[col]):
-                        # the ODE for x_[row] depends on the inhomogeneous ODE of x_[col]. We can't solve this analytically in the general case (even though some specific cases might admit a solution)
+                        # the ODE for x_[row] depends on the inhomogeneous ODE of x_[col]. We can't solve this analytically in the general case 
                         raise PropagatorGenerationException("the ODE for " + str(self.x_[row]) + " depends on the inhomogeneous ODE of " + str(self.x_[col]) + ". We can't solve this analytically in the general case (even though some specific cases might admit a solution)")
 
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
@@ -320,88 +320,114 @@ class SystemOfShapes:
                        "state_variables": all_state_symbols,
                        "initial_values": initial_values}
 
-#------
+#------numeric case expansion without sympy ------
         try:
-            # 1) Re-run singularity detection
-            _conds_pairs = []
+            # 1) Re-run singularity detection and extract parameter equalities
+            cond_pairs: List[Tuple[str, str]] = []
             try:
                 _conds = SingularityDetection.find_propagator_singularities(P, self.A_)
-                # Flatten sets like {a=b, c=d} into a list of tuples: [("a","b"), ("c","d"), ...]
+                # _conds may be a list of sets, each containing equality objects like "a=b"
                 for _set in _conds or []:
                     for _eq in _set:
-                        _L, _R = getattr(_eq, "lhs", None), getattr(_eq, "rhs", None)
-                        if isinstance(_L, sympy.Symbol) and isinstance(_R, sympy.Symbol):
-                            _conds_pairs.append((str(_L), str(_R)))
+                        L, R = getattr(_eq, "lhs", None), getattr(_eq, "rhs", None)
+                        # Convert to strings, do not rely on sympy types
+                        if L is not None and R is not None:
+                            a, b = str(L), str(R)
+                            if a != b:
+                                cond_pairs.append(tuple(sorted((a, b))))  
             except Exception:
-                _conds_pairs = []
+                cond_pairs = []
 
-            # If no detectable parameter equality conditions are found, skip branching
-            if _conds_pairs:
-                # 2) Collect parameter symbols 
-                _Hsym = sympy.Symbol(Config().output_timestep_symbol, real=True)
-                _xset = set(self.x_) if hasattr(self, "x_") else set()
-                _A_syms = sorted(
-                    [s for s in self.A_.free_symbols if s not in _xset and s != _Hsym],
-                    key=lambda s: str(s)
-                )
-                _param_names = [str(s) for s in _A_syms]
+            # 2) Skip if no parameter equalities are found
+            if cond_pairs:
+                # 2.1 Collect parameter names and values 
 
-                # 3) Retrieve base parameter values 
-                def _get_param_val(_s: sympy.Symbol) -> float:
-                    _k = str(_s)
-                    if hasattr(self, "parameter_values") and _k in getattr(self, "parameter_values"):
-                        return float(self.parameter_values[_k])
-                    if hasattr(self, "_params") and _k in getattr(self, "_params"):
-                        return float(self._params[_k])
-                    # Missing parameter: raise an error to skip mitigation
-                    raise KeyError(f"Missing numeric value for parameter: {_k}")
+                H_name = Config().output_timestep_symbol
+                state_names = set(str(s) for s in getattr(self, "x_", []))
+                base_param_src = getattr(self, "parameter_values", {}) or {}
+                base_params = {}
+                for k, v in base_param_src.items():
+                    if k in state_names or k == H_name:
+                        continue
+                    try:
+                        base_params[k] = float(v)
+                    except Exception:
+                        # Ignore non-numeric values for numeric preview
+                        pass
 
-                _base_params = {str(s): _get_param_val(s) for s in _A_syms}
+                param_names = sorted(base_params.keys())
 
-                # 4) Construct numerical function A
-                _A_lmb = sympy.lambdify(_A_syms, self.A_, modules="numpy")
-
-                def _A_fn(_params_dict):
-                    _vals = [_params_dict[name] for name in _param_names]
-                    return np.array(_A_lmb(*_vals), dtype=float)
-
-                # 5) Determine timestep h: prefer self.h / self.dt; otherwise use H symbol or fallback to 1.0
-                if hasattr(self, "h"):
-                    _h_val = float(self.h)
-                elif hasattr(self, "dt"):
-                    _h_val = float(self.dt)
+                # 2.2 Get timestep value
+                if H_name in base_param_src:
+                    try:
+                        h_val = float(base_param_src[H_name])
+                    except Exception as e:
+                        raise KeyError(f"Invalid numeric timestep '{H_name}': {base_param_src[H_name]}") from e
                 else:
-                    _h_val = float(_base_params.get(str(_Hsym), 1.0))
+                    # If no timestep is provided, we will only output conditions/metadata
+                    h_val = None
 
-                # 6) Build numeric transition branches
-                _pack = _build_branches_numeric(
-                    A_fn=_A_fn,
-                    h=_h_val,
-                    base_params=_base_params,
-                    param_names=_param_names,
-                    conditions=[tuple(sorted(p)) for p in _conds_pairs],
-                    tie_mode="left",   # Can also be "right" or "avg"
+                # 2.3 Define A_fn for numeric preview if available
+                def _missing_A_fn(_):
+                    raise NotImplementedError("Numeric A(params) is not available.")
+
+                A_fn = None
+                for cand in ("A_numeric_fn", "build_A_numeric", "A_fn_numeric"):
+                    if hasattr(self, cand) and callable(getattr(self, cand)):
+                        A_fn = getattr(self, cand)
+                        break
+
+                numeric_preview_enabled = (A_fn is not None and h_val is not None)
+
+                # 2.4 Use unified truth-table expansion 
+                from odetoolbox.singularity_analysis_mitigation import (
+                    build_transition_cases,
                 )
 
-                # 7) Insert branch results into solver_dict
-                def _to_list(_P):
-                    # Convert NumPy array to list for JSON serialization
-                    return _P.tolist()
+                case_set = build_transition_cases(
+                    A_fn=A_fn if numeric_preview_enabled else (lambda _: np.zeros_like(P, dtype=float)),
+                    h=h_val if numeric_preview_enabled else 0.0,
+                    base_params=base_params,
+                    conditions=[tuple(sorted(p)) for p in cond_pairs],
+                    param_names=param_names,
+                    expand_truth_table=True,
+                    max_cases=4096,
+                    numeric_preview=bool(numeric_preview_enabled),
+                    tie_mode="left",
+                    timestep_symbol=H_name,
+                    symbolic_renderer=None,
+                )
 
-                def _pack_branch(_br: _BR):
-                    _cond = None if _br.condition is None else {"eq": [_br.condition[0], _br.condition[1]]}
-                    return {"condition": _cond, "P": _to_list(_br.P)}
+                # 2.5 Pack results into solver_dict
+                def _pack_case(cr):
+                    return {
+                        "active_equalities": sorted(list(cr.active_equalities)),
+                        "P": (None if cr.P is None else cr.P.tolist()),
+                    }
 
-                solver_dict["branching"] = {
-                    "default": _pack_branch(_pack.default),
-                    "branches": [_pack_branch(_b) for _b in _pack.branches],
-                    "tie_mode": "left",
+                solver_dict.setdefault("meta", {})
+                solver_dict["meta"]["timestep_symbol"] = H_name
+                if h_val is not None:
+                    solver_dict["meta"]["timestep_value"] = h_val
+
+                solver_dict["condition_cases"] = {
+                    "default_case": _pack_case(case_set.default),
+                    "cases":       [_pack_case(cr) for cr in case_set.cases],
+                    "meta": {
+                        "evaluation": "numeric" if numeric_preview_enabled else "structure-only",
+                        "tie_mode": "left",
+                        "expanded": case_set.expanded,
+                        "truncated": case_set.truncated,
+                        "max_cases": case_set.max_cases,
+                        "truth_table_size": len(case_set.cases),
+                    }
                 }
+
         except Exception as _mit_err:
-            # Mitigation failure does not affect the original return
-            logging.debug(f"[mitigation] numeric branching skipped: {_mit_err}")
+            logging.debug(f"[mitigation] case expansion skipped: {_mit_err}")
 
         return solver_dict
+
 
 
     def generate_numeric_solver(self, state_variables=None):
