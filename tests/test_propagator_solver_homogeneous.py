@@ -32,5 +32,8 @@ class TestPropagatorSolverHomogeneous:
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
-        assert float(solver_dict["propagators"]["__P__refr_t__refr_t"]) == 1.
-        assert solver_dict["propagators"]["__P__V_m__V_m"] == "1.0*exp(-__h/tau_m)"
+
+        for cond_solver_dict in solver_dict["conditions"].values():
+            assert float(cond_solver_dict["propagators"]["__P__refr_t__refr_t"]) == 1.
+
+        assert solver_dict["conditions"]["default"]["propagators"]["__P__V_m__V_m"] == "1.0*exp(-__h/tau_m)"

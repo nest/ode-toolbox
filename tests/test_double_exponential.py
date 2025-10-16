@@ -20,6 +20,7 @@
 #
 
 import numpy as np
+import pytest
 from scipy.integrate import odeint
 
 import odetoolbox
@@ -29,7 +30,7 @@ from odetoolbox.spike_generator import SpikeGenerator
 
 try:
     import matplotlib as mpl
-    mpl.use('Agg')
+    mpl.use("Agg")
     import matplotlib.pyplot as plt
     INTEGRATION_TEST_DEBUG_PLOTS = True
 except ImportError:
@@ -39,23 +40,32 @@ except ImportError:
 class TestDoubleExponential:
     r"""Test propagators generation for double exponential"""
 
-    def test_double_exponential(self):
-        r"""Test propagators generation for double exponential"""
+    @pytest.mark.parametrize("tau_1, tau_2", [(10., 2.), (10., 10.)])
+    def test_double_exponential(self, tau_1, tau_2):
+        r"""Test propagators generation for double exponential
+
+        Test for a case where tau_1 != tau_2 and where tau_1 == tau_2; this tests handling of numerical singularities.
+
+        tau_1: decay time constant (ms)
+        tau_2: rise time constant (ms)
+        """
 
         def time_to_max(tau_1, tau_2):
             r"""
             Time of maximum.
             """
-            tmax = (np.log(tau_1) - np.log(tau_2)) / (1. / tau_2 - 1. / tau_1)
-            return tmax
+            if tau_1 == tau_2:
+                return tau_1
+
+            return (np.log(tau_1) - np.log(tau_2)) / (1. / tau_2 - 1. / tau_1)
 
         def unit_amplitude(tau_1, tau_2):
             r"""
             Scaling factor ensuring that amplitude of solution is one.
             """
             tmax = time_to_max(tau_1, tau_2)
-            alpha = 1. / (np.exp(-tmax / tau_1) - np.exp(-tmax / tau_2))
-            return alpha
+
+            return 1. / (np.exp(-tmax / tau_1) - np.exp(-tmax / tau_2))
 
         def flow(y, t, tau_1, tau_2, alpha, dt):
             r"""
@@ -66,25 +76,26 @@ class TestDoubleExponential:
 
             return np.array([dy1dt, dy2dt])
 
+        if tau_1 == tau_2:
+            alpha = 1.
+        else:
+            alpha = unit_amplitude(tau_1=tau_1, tau_2=tau_2)
+
         indict = {"dynamics": [{"expression": "I_aux' = -I_aux / tau_1",
                                 "initial_values": {"I_aux": "0."}},
                                {"expression": "I' = I_aux - I / tau_2",
                                 "initial_values": {"I": "0"}}],
                   "options": {"output_timestep_symbol": "__h"},
-                  "parameters": {"tau_1": "10",
-                                 "tau_2": "2",
+                  "parameters": {"tau_1": str(tau_1),
+                                 "tau_2": str(tau_2),
                                  "w": "3.14",
-                                 "alpha": str(unit_amplitude(tau_1=10., tau_2=2.)),
+                                 "alpha": str(alpha),
                                  "weighted_input_spikes": "0."}}
 
         w = 3.14                              # weight (amplitude; pA)
-        tau_1 = 10.                           # decay time constant (ms)
-        tau_2 = 2.                            # rise time constant (ms)
         dt = .125                             # time resolution (ms)
         T = 500.                              # simulation time (ms)
         input_spike_times = np.array([100., 300.])  # array of input spike times (ms)
-
-        alpha = unit_amplitude(tau_1, tau_2)
 
         stimuli = [{"type": "list",
                     "list": " ".join([str(el) for el in input_spike_times]),
@@ -103,7 +114,7 @@ class TestDoubleExponential:
         N = int(np.ceil(T / dt) + 1)
         timevec = np.linspace(0., T, N)
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times)
-        analytic_integrator.shape_starting_values["I_aux"] = w * alpha * (1. / tau_2 - 1. / tau_1)
+        analytic_integrator.shape_starting_values["I_aux"] = w * alpha
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
         analytic_integrator.reset()
         state = {"timevec": [], "I": [], "I_aux": []}
@@ -119,24 +130,24 @@ class TestDoubleExponential:
         ts2 = np.arange(input_spike_times[1], T + dt, dt)
 
         y_ = odeint(flow, [0., 0.], ts0, args=(tau_1, tau_2, alpha, dt))
-        y_ = np.vstack([y_, odeint(flow, [y_[-1, 0] + w * alpha * (1. / tau_2 - 1. / tau_1), y_[-1, 1]], ts1, args=(tau_1, tau_2, alpha, dt))])
-        y_ = np.vstack([y_, odeint(flow, [y_[-1, 0] + w * alpha * (1. / tau_2 - 1. / tau_1), y_[-1, 1]], ts2, args=(tau_1, tau_2, alpha, dt))])
+        y_ = np.vstack([y_, odeint(flow, [y_[-1, 0] + w * alpha, y_[-1, 1]], ts1, args=(tau_1, tau_2, alpha, dt))])
+        y_ = np.vstack([y_, odeint(flow, [y_[-1, 0] + w * alpha, y_[-1, 1]], ts2, args=(tau_1, tau_2, alpha, dt))])
 
-        rec_I_interp = np.interp(np.hstack([ts0, ts1, ts2]), timevec, state['I'])
-        rec_I_aux_interp = np.interp(np.hstack([ts0, ts1, ts2]), timevec, state['I_aux'])
+        rec_I_interp = np.interp(np.hstack([ts0, ts1, ts2]), timevec, state["I"])
+        rec_I_aux_interp = np.interp(np.hstack([ts0, ts1, ts2]), timevec, state["I_aux"])
 
         if INTEGRATION_TEST_DEBUG_PLOTS:
             tmax = time_to_max(tau_1, tau_2)
-            mpl.rcParams['text.usetex'] = True
+            mpl.rcParams["text.usetex"] = True
 
             fig, ax = plt.subplots(nrows=2, figsize=(5, 4), dpi=300)
-            ax[0].plot(timevec, state['I_aux'], '--', lw=3, color='k', label=r'$I_\mathsf{aux}(t)$ (NEST)')
-            ax[0].plot(timevec, state['I'], '-', lw=3, color='k', label=r'$I(t)$ (NEST)')
-            ax[0].plot(np.hstack([ts0, ts1, ts2]), y_[:, 0], '--', lw=2, color='r', label=r'$I_\mathsf{aux}(t)$ (odeint)')
-            ax[0].plot(np.hstack([ts0, ts1, ts2]), y_[:, 1], '-', lw=2, color='r', label=r'$I(t)$ (odeint)')
+            ax[0].plot(timevec, state["I_aux"], "--", lw=3, color="k", label=r"$I_\mathsf{aux}(t)$ (ODEtb)")
+            ax[0].plot(timevec, state["I"], "-", lw=3, color="k", label=r"$I(t)$ (ODEtb)")
+            ax[0].plot(np.hstack([ts0, ts1, ts2]), y_[:, 0], "--", lw=2, color="r", label=r"$I_\mathsf{aux}(t)$ (odeint)")
+            ax[0].plot(np.hstack([ts0, ts1, ts2]), y_[:, 1], "-", lw=2, color="r", label=r"$I(t)$ (odeint)")
 
             for tin in input_spike_times:
-                ax[0].vlines(tin + tmax, ax[0].get_ylim()[0], ax[0].get_ylim()[1], colors='k', linestyles=':')
+                ax[0].vlines(tin + tmax, ax[0].get_ylim()[0], ax[0].get_ylim()[1], colors="k", linestyles=":")
 
             ax[1].semilogy(np.hstack([ts0, ts1, ts2]), np.abs(y_[:, 1] - rec_I_interp), label="I")
             ax[1].semilogy(np.hstack([ts0, ts1, ts2]), np.abs(y_[:, 0] - rec_I_aux_interp), linestyle="--", label="I_aux")
@@ -146,9 +157,9 @@ class TestDoubleExponential:
                 _ax.set_xlim(0., T + dt)
                 _ax.legend()
 
-            ax[-1].set_xlabel(r'time (ms)')
+            ax[-1].set_xlabel(r"time (ms)")
 
-            fig.savefig('double_exp_test.png')
+            fig.savefig("double_exp_test_[tau_1=" + str(tau_1) + "]_[tau_2=" + str(tau_2) + "].png")
 
         np.testing.assert_allclose(y_[:, 1], rec_I_interp, atol=1E-7)
 

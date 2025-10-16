@@ -253,13 +253,17 @@ class SystemOfShapes:
                     solver_dict = {"solver": "analytical",
                                    "state_variables": default_solver["state_variables"],
                                    "initial_values": default_solver["initial_values"],
-                                   "conditions": {"default" : {"propagators": default_solver["propagators"],
-                                                               "update_expressions": default_solver["update_expressions"]}}}
+                                   "conditions": {"default": {"propagators": default_solver["propagators"],
+                                                              "update_expressions": default_solver["update_expressions"]}}}
 
                     # XXX: TODO: generate/loop over all combinations of conditions!!!
 
                     for cond_set in conditions:
-                        condition_str: str = " && ".join(["(" + str(eq.lhs) + " == " + str(eq.rhs) + ")" for eq in cond_set])
+                        if len(cond_set) == 1:
+                            eq = list(cond_set)[0]
+                            condition_str: str = str(eq.lhs) + " == " + str(eq.rhs)
+                        else:
+                            condition_str: str = " && ".join(["(" + str(eq.lhs) + " == " + str(eq.rhs) + ")" for eq in cond_set])
                         conditional_A = self.A_.copy()
                         conditional_b = self.b_.copy()
                         conditional_c = self.c_.copy()
@@ -297,7 +301,7 @@ class SystemOfShapes:
             for col in range(P.shape[1]):
                 if not _is_zero(P[row, col]):
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
-                    P_expr[sym_str] = str(P[row, col])
+                    P_expr[sym_str] = P[row, col]
                     if row != col and not _is_zero(self.b_[col]):
                         # the ODE for x_[row] depends on the inhomogeneous ODE of x_[col]. We can't solve this analytically in the general case (even though some specific cases might admit a solution)
                         raise PropagatorGenerationException("the ODE for " + str(self.x_[row]) + " depends on the inhomogeneous ODE of " + str(self.x_[col]) + ". We can't solve this analytically in the general case (even though some specific cases might admit a solution)")

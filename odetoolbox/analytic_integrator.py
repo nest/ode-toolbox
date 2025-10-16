@@ -19,6 +19,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 from typing import Dict, List, Optional
 
 import sympy
@@ -59,7 +60,6 @@ class AnalyticIntegrator(Integrator):
         #
         #   define the necessary numerical state variables
         #
-
         self.dim = len(self.all_variable_symbols)
         self.initial_values = self.solver_dict["initial_values"].copy()
         self.set_initial_values(self.initial_values)
@@ -72,11 +72,16 @@ class AnalyticIntegrator(Integrator):
                     subs_dict[k_] = v_
             self.shape_starting_values[k] = float(expr.evalf(subs=subs_dict))
 
-        self.update_expressions = self.solver_dict["update_expressions"].copy()
-        for k, v in self.update_expressions.items():
-            if type(self.update_expressions[k]) is str:
-                self.update_expressions[k] = sympy.parsing.sympy_parser.parse_expr(self.update_expressions[k], global_dict=Shape._sympy_globals)
 
+        #
+        #   initialise update expressions depending on whether conditional solver or not
+        #
+
+        if "update_expressions" in self.solver_dict.keys():
+            self._pick_unconditional_solver()
+        else:
+            assert "conditions" in self.solver_dict.keys()
+            self._pick_solver_based_on_condition()
 
         #
         #  reset the system to t = 0
@@ -85,24 +90,65 @@ class AnalyticIntegrator(Integrator):
         self.reset()
 
 
+    def _condition_holds(self, condition_string) -> bool:
+        parts = condition_string.strip('()').split('==')
+        lhs_str = parts[0].strip()
+        rhs_str = parts[1].strip()
+
+        # Sympify each side individually and create the Eq
+        equation = sympy.Eq(sympy.sympify(lhs_str), sympy.sympify(rhs_str))
+
+        return equation.subs(self.solver_dict["parameters"])
+
+
+    def _pick_unconditional_solver(self):
+        self.update_expressions = self.solver_dict["update_expressions"].copy()
+        self.propagators = self.solver_dict["propagators"].copy()
+        self._process_update_expressions_from_solver_dict()
+
+    def _pick_solver_based_on_condition(self):
+        r"""In case of a conditional propagator solver: pick a solver depending on the conditions that hold (depending on parameter values)"""
+        self.update_expressions = self.solver_dict["conditions"]["default"]["update_expressions"]
+        self.propagators = self.solver_dict["conditions"]["default"]["propagators"]
+
+        for condition, conditional_solver in self.solver_dict["conditions"].items():
+            print("Checking condition " + str(condition) + ", params = " + str(self.solver_dict["parameters"]))
+            if condition != "default" and self._condition_holds(condition):
+                self.update_expressions = conditional_solver["update_expressions"]
+                self.propagators = conditional_solver["propagators"]
+                print("Picking solver based on condition: " + str(condition))
+
+                break
+
+        self._process_update_expressions_from_solver_dict()
+
+
+    def _process_update_expressions_from_solver_dict(self):
         #
-        #   in the update expression, replace symbolic variables with their numerical values
+        #   create substitution dictionary to replace symbolic variables with their numerical values
         #
 
-        self.subs_dict = {}
-        for prop_symbol, prop_expr in self.solver_dict["propagators"].items():
-            self.subs_dict[prop_symbol] = prop_expr
+        subs_dict = {}
+        for prop_symbol, prop_expr in self.propagators.items():
+            subs_dict[prop_symbol] = prop_expr
         if "parameters" in self.solver_dict.keys():
             for param_symbol, param_expr in self.solver_dict["parameters"].items():
-                self.subs_dict[param_symbol] = param_expr
+                subs_dict[param_symbol] = param_expr
 
+        #
+        #   parse the expressions from JSON if necessary
+        #
+
+        for k, v in self.update_expressions.items():
+            if type(self.update_expressions[k]) is str:
+                self.update_expressions[k] = sympy.parsing.sympy_parser.parse_expr(self.update_expressions[k], global_dict=Shape._sympy_globals)
 
         #
         #   perform substitution in update expressions ahead of time to save time later
         #
 
         for k, v in self.update_expressions.items():
-            self.update_expressions[k] = self.update_expressions[k].subs(self.subs_dict).subs(self.subs_dict)
+            self.update_expressions[k] = self.update_expressions[k].subs(subs_dict).subs(subs_dict)
 
         #
         #    autowrap

@@ -182,6 +182,32 @@ def _get_all_first_order_variables(indict) -> Iterable[str]:
     return variable_names
 
 
+def symbol_appears_in_any_expr(param_name, solver_json) -> bool:
+    if "update_expressions" in solver_json.keys():
+        for sym, expr in solver_json["update_expressions"].items():
+            if param_name in [str(sym) for sym in list(expr.atoms())]:
+                return True
+
+    if "propagators" in solver_json.keys():
+        for sym, expr in solver_json["propagators"].items():
+            if param_name in [str(sym) for sym in list(expr.atoms())]:
+                return True
+
+    if "conditions" in solver_json.keys():
+        for conditional_solver_json in solver_json["conditions"].values():
+            if "update_expressions" in conditional_solver_json.keys():
+                for sym, expr in conditional_solver_json["update_expressions"].items():
+                    if param_name in [str(sym) for sym in list(expr.atoms())]:
+                        return True
+
+            if "propagators" in conditional_solver_json.keys():
+                for sym, expr in solver_json["propagators"].items():
+                    if param_name in [str(sym) for sym in list(expr.atoms())]:
+                        return True
+
+    return False
+
+
 def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_solver: bool = False, disable_singularity_detection: bool = False, preserve_expressions: Union[bool, Iterable[str]] = False, log_level: Union[str, int] = logging.WARNING) -> Tuple[List[Dict], SystemOfShapes, List[Shape]]:
     r"""
     Like analysis(), but additionally returns ``shape_sys`` and ``shapes``.
@@ -320,20 +346,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             solver_json["parameters"] = {}
             for param_name, param_expr in indict["parameters"].items():
                 # only make parameters appear in a solver if they are actually used there
-                symbol_appears_in_any_expr = False
-                if "update_expressions" in solver_json.keys():
-                    for sym, expr in solver_json["update_expressions"].items():
-                        if param_name in [str(sym) for sym in list(expr.atoms())]:
-                            symbol_appears_in_any_expr = True
-                            break
-
-                if "propagators" in solver_json.keys():
-                    for sym, expr in solver_json["propagators"].items():
-                        if param_name in [str(sym) for sym in list(expr.atoms())]:
-                            symbol_appears_in_any_expr = True
-                            break
-
-                if symbol_appears_in_any_expr:
+                if symbol_appears_in_any_expr(sym, solver_json):
                     sympy_expr = sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals)
 
                     # validate output for numerical problems
@@ -387,6 +400,26 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
         if "propagators" in solver_json.keys():
             for sym, expr in solver_json["propagators"].items():
                 solver_json["propagators"][sym] = str(expr)
+
+        if "conditions" in solver_json.keys():
+            for cond, cond_solver in solver_json["conditions"].items():
+                if "update_expressions" in cond_solver:
+                    for sym, expr in cond_solver["update_expressions"].items():
+                        cond_solver["update_expressions"][sym] = str(expr)
+
+                        if preserve_expressions and sym in preserve_expressions:
+                            if "analytic" in solver_json["solver"]:
+                                logging.warning("Not preserving expression for variable \"" + sym + "\" as it is solved by propagator solver")
+                                continue
+
+                            logging.info("Preserving expression for variable \"" + sym + "\"")
+                            var_def_str = _find_variable_definition(indict, sym, order=1)
+                            assert var_def_str is not None
+                            cond_solver["update_expressions"][sym] = var_def_str.replace("'", Config().differential_order_symbol)
+
+                if "propagators" in cond_solver:
+                    for sym, expr in cond_solver["propagators"].items():
+                        cond_solver["propagators"][sym] = str(expr)
 
     logging.info("In ode-toolbox: returning outdict = ")
     logging.info(json.dumps(solvers_json, indent=4, sort_keys=True))
