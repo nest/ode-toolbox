@@ -255,10 +255,9 @@ class SystemOfShapes:
         #   generate symbols for each nonzero entry of the propagator matrix
         #
 
-        P_sym = sympy.zeros(*P.shape)   # each entry in the propagator matrix is assigned its own symbol
         P_expr = {}     # the expression corresponding to each propagator symbol
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
-        for row in range(P_sym.shape[0]):
+        for row in range(P.shape[0]):
             # assemble update expression for symbol ``self.x_[row]``
             if not _is_zero(self.c_[row]):
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": nonlinear part should be zero for propagators")
@@ -267,10 +266,9 @@ class SystemOfShapes:
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": higher-order inhomogeneous ODEs are not supported")
 
             update_expr_terms = []
-            for col in range(P_sym.shape[1]):
+            for col in range(P.shape[1]):
                 if not _is_zero(P[row, col]):
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
-                    P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
                     if row != col and not _is_zero(self.b_[col]):
                         # the ODE for x_[row] depends on the inhomogeneous ODE of x_[col]. We can't solve this analytically in the general case (even though some specific cases might admit a solution)
