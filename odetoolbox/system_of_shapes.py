@@ -208,17 +208,14 @@ class SystemOfShapes:
     def _generate_propagator_matrix(self, A):
         r"""Generate the propagator matrix by matrix exponentiation."""
 
-        # naive: calculate propagators in one step
-        # P_naive = _custom_simplify_expr(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
-
-        # optimized: be explicit about block diagonal elements; much faster!
         try:
+            # optimized: be explicit about block diagonal elements; much faster!
             blocks = get_block_diagonal_blocks(np.array(A))
             propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
             P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
         except GetBlockDiagonalException:
             # naive: calculate propagators in one step
-            P = sympy.simplify(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
+            P = _custom_simplify_expr(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
 
         # check the result
         if sympy.I in sympy.preorder_traversal(P):
@@ -238,27 +235,57 @@ class SystemOfShapes:
         #
 
         if not disable_singularity_detection:
-            try:
+            # try:
+            if 1:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
 
                 if conditions:
                     # if there is one or more condition under which the solution goes to infinity...
-
-                    logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-                    logging.warning("List of all conditions that result in a division by zero:")
+                    logging.info("Under certain conditions, the propagator matrix is singular (contains infinities).")
+                    logging.info("List of all conditions that result in a division by zero:")
                     for cond_set in conditions:
-                        logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
-            except SingularityDetectionException:
-                logging.warning("Could not check the propagator matrix for singularities.")
+                        logging.info("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+
+                    # generate solver for the base case (with singularity conditions that are not met)
+                    default_solver = self.generate_propagator_solver(disable_singularity_detection=True)
+
+                    # change the returned solver dictionary to include conditions
+                    solver_dict = {"solver": "analytical",
+                                   "state_variables": default_solver["state_variables"],
+                                   "initial_values": default_solver["initial_values"],
+                                   "conditions": {"default" : {"propagators": default_solver["propagators"],
+                                                               "update_expressions": default_solver["update_expressions"]}}}
+
+                    # XXX: TODO: generate/loop over all combinations of conditions!!!
+
+                    for cond_set in conditions:
+                        condition_str: str = " && ".join(["(" + str(eq.lhs) + " == " + str(eq.rhs) + ")" for eq in cond_set])
+                        conditional_A = self.A_.copy()
+                        conditional_b = self.b_.copy()
+                        conditional_c = self.c_.copy()
+
+                        for eq in cond_set:
+                            conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
+
+                        conditional_dynamics = SystemOfShapes(self.x_, conditional_A, conditional_b, conditional_c, self.shapes_)
+                        solver_dict_conditional = conditional_dynamics.generate_propagator_solver(disable_singularity_detection=True)
+                        solver_dict["conditions"][condition_str] = {"propagators": solver_dict_conditional["propagators"],
+                                                                    "update_expressions": solver_dict_conditional["update_expressions"]}
+
+                    # XXX: TODO: merge together conditions (a OR b OR c OR...) if the propagators and update_expressions are the same
+
+                    return solver_dict
+
+            # except SingularityDetectionException:
+                # logging.warning("Could not check the propagator matrix for singularities.")
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
         #
 
-        P_sym = sympy.zeros(*P.shape)   # each entry in the propagator matrix is assigned its own symbol
         P_expr = {}     # the expression corresponding to each propagator symbol
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
-        for row in range(P_sym.shape[0]):
+        for row in range(P.shape[0]):
             # assemble update expression for symbol ``self.x_[row]``
             if not _is_zero(self.c_[row]):
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": nonlinear part should be zero for propagators")
@@ -267,11 +294,10 @@ class SystemOfShapes:
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": higher-order inhomogeneous ODEs are not supported")
 
             update_expr_terms = []
-            for col in range(P_sym.shape[1]):
+            for col in range(P.shape[1]):
                 if not _is_zero(P[row, col]):
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
-                    P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
-                    P_expr[sym_str] = P[row, col]
+                    P_expr[sym_str] = str(P[row, col])
                     if row != col and not _is_zero(self.b_[col]):
                         # the ODE for x_[row] depends on the inhomogeneous ODE of x_[col]. We can't solve this analytically in the general case (even though some specific cases might admit a solution)
                         raise PropagatorGenerationException("the ODE for " + str(self.x_[row]) + " depends on the inhomogeneous ODE of " + str(self.x_[col]) + ". We can't solve this analytically in the general case (even though some specific cases might admit a solution)")
