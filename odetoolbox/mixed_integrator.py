@@ -75,7 +75,7 @@ class MixedIntegrator(Integrator):
         :param alias_spikes: Whether to alias spike times to the numerical integration grid. :python:`False` means that precise integration will be used for spike times whenever possible. :python:`True` means that after taking a timestep :math:`dt` and arriving at :math:`t`, spikes from :math:`\langle t - dt, t]` will only be processed at time :math:`t`.
         :param debug_plot_dir: If given, enable debug plotting to this directory. If enabled, matplotlib is imported and used for plotting.
         """
-        super(MixedIntegrator, self).__init__(spike_times)
+        super(MixedIntegrator, self).__init__()
 
         assert PYGSL_AVAILABLE
 
@@ -126,6 +126,13 @@ class MixedIntegrator(Integrator):
                                                                                          args=self.all_variable_symbols,
                                                                                          backend="cython",
                                                                                          helpers=Shape._sympy_autowrap_helpers)
+
+
+        #
+        #   make a sorted list of all spike times for all symbols
+        #
+
+        self.set_spike_times(spike_times)
 
 
     def integrate_ode(self, initial_values=None, h_min_lower_bound=5E-9, raise_errors=True, debug=False):

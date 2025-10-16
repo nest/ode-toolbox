@@ -42,10 +42,14 @@ class AnalyticIntegrator(Integrator):
         :param enable_caching: Allow caching of results between requested times.
         """
 
+        super(AnalyticIntegrator, self).__init__()
+
         self.solver_dict = solver_dict
 
         self.all_variable_symbols = self.solver_dict["state_variables"]
         self.all_variable_symbols = [sympy.Symbol(s) for s in self.all_variable_symbols]
+
+        self.set_spike_times(spike_times)
 
         self.enable_caching = enable_caching
         self.enable_cache_update_ = True
@@ -111,11 +115,6 @@ class AnalyticIntegrator(Integrator):
                                                                                    backend="cython",
                                                                                    helpers=Shape._sympy_autowrap_helpers)
 
-        #
-        #    set spike times
-        #
-
-        self.set_spike_times(spike_times)
 
     def get_all_variable_symbols(self):
         return self.all_variable_symbols
