@@ -44,17 +44,26 @@ Installation
 
 .. Attention:: To perform solver benchmarking, ODE-toolbox relies on GSL and PyGSL. Currently, the latest PyGSL release is not compatible with GSL. We recommend to use GSL 2.7 for now. This issue is being tracked at https://github.com/pygsl/pygsl/issues/62.
 
+.. Attention:: Versions of sympy before 1.14.0 can introduce numerical precision errors and very long processing times. It is recommended to use the latest sympy version available.
+
 
 Prerequisites
 ~~~~~~~~~~~~~
 
 Only Python 3 is supported. ODE-toolbox depends on the Python packages SymPy, Cython, SciPy and NumPy (required), matplotlib and graphviz for visualisation (optional), and pytest for self-tests (also optional). The stiffness tester additionally depends on an installation of `PyGSL <http://pygsl.sourceforge.net/>`__. If PyGSL is not installed, the test for stiffness is skipped during the analysis of the equations.
 
-All required and optional packages can be installed by running
+All required packages can be installed by running
 
 .. code:: bash
 
     pip install -r requirements.txt
+
+Optional packages for testing can be installed by running
+
+.. code:: bash
+
+    pip install -r requirements-testing.txt
+
 
 Installing ODE-toolbox
 ~~~~~~~~~~~~~~~~~~~~~~

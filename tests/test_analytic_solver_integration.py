@@ -22,6 +22,8 @@
 import math
 import numpy as np
 import os
+import pytest
+import semver
 import sympy
 import sympy.parsing.sympy_parser
 import scipy
@@ -44,6 +46,11 @@ from odetoolbox.analytic_integrator import AnalyticIntegrator
 from tests.test_utils import _open_json
 
 
+sympy_version = semver.parse(sympy.__version__)
+SYMPY_VERSION_TOO_OLD = (sympy_version["major"] < 1) or (sympy_version["major"] == 1 and sympy_version["minor"] < 12)
+
+
+@pytest.mark.skipif(SYMPY_VERSION_TOO_OLD, reason="Older versions of sympy hang on this test")
 class TestAnalyticSolverIntegration:
     r"""
     Numerical comparison between ode-toolbox calculated propagators, hand-calculated propagators expressed in Python, and numerical integration, for the iaf_cond_alpha neuron.

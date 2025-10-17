@@ -207,12 +207,11 @@ class SingularityDetection:
             a set with equations, where the left-hand side of each equation is the variable that is to be subsituted, and the right-hand side is the expression to put in its place
         """
         logging.debug("Checking for singularities (divisions by zero) in the propagator matrix...")
-        # try:
-        if True:
+        try:
             conditions = SingularityDetection._generate_singularity_conditions(P)
             conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
-        # except Exception as e:
-        #     print(e)
-        #     raise SingularityDetectionException()
+        except Exception as e:
+            print(e)
+            raise SingularityDetectionException()
 
         return conditions

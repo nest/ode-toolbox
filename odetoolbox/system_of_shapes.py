@@ -210,11 +210,13 @@ class SystemOfShapes:
 
         try:
             # optimized: be explicit about block diagonal elements; much faster!
+            logging.debug("Computing propagator matrix (block-diagonal optimisation)...")
             blocks = get_block_diagonal_blocks(np.array(A))
             propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
             P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
         except GetBlockDiagonalException:
             # naive: calculate propagators in one step
+            logging.debug("Computing propagator matrix...")
             P = _custom_simplify_expr(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
 
         # check the result
