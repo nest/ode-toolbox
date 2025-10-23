@@ -226,6 +226,25 @@ class SystemOfShapes:
 
         return P
 
+    def _merge_conditions(self, solver_dict):
+        r"""merge together conditions (a OR b OR c OR...) if the propagators and update_expressions are the same"""
+
+        for condition, sub_solver_dict in solver_dict["conditions"].items():
+            for condition2, sub_solver_dict2 in solver_dict["conditions"].items():
+                if condition == condition2:
+                    # don't check a condition against itself
+                    continue
+
+                if sub_solver_dict["propagators"] == sub_solver_dict2["propagators"] and sub_solver_dict["update_expressions"] == sub_solver_dict2["update_expressions"]:
+                    # ``condition`` and ``condition2`` can be merged
+                    solver_dict["conditions"]["(" + condition + ") || (" + condition2 + ")"] = sub_solver_dict
+                    solver_dict["conditions"].pop(condition)
+                    solver_dict["conditions"].pop(condition2)
+                    print("\n\n\n\n\n\nwqweeeeeeeeeeeeeeeeeeeeeeeeeeeeeeen\n\n\n\n\n")
+                    return self._merge_conditions(solver_dict)
+
+        return solver_dict
+
     def generate_propagator_solver(self, disable_singularity_detection: bool = False):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
@@ -303,7 +322,7 @@ class SystemOfShapes:
                         solver_dict["conditions"][condition_str] = {"propagators": solver_dict_conditional["propagators"],
                                                                     "update_expressions": solver_dict_conditional["update_expressions"]}
 
-                    # XXX: TODO: merge together conditions (a OR b OR c OR...) if the propagators and update_expressions are the same
+                    solver_dict = self._merge_conditions(solver_dict)
 
                     return solver_dict
 

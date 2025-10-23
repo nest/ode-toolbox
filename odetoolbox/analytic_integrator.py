@@ -91,6 +91,29 @@ class AnalyticIntegrator(Integrator):
 
 
     def _condition_holds(self, condition_string) -> bool:
+        r"""Check boolean conditions of the form:
+
+        ::
+
+           (p_1 && p_2 .. && p_k) || (q_1 && q_2 .. && q_j) || ...
+
+        """
+        for sub_condition_string in condition_string.split("||"):
+            # if any of the subterms hold, the whole expression holds (OR-ed together)
+            if self._and_condition_holds(sub_condition_string):
+                return True
+
+        return False
+
+
+    def _and_condition_holds(self, condition_string) -> bool:
+        r"""Check boolean conditions of the form:
+
+        ::
+
+           p_1 && p_2 .. && p_k
+
+        """
         sub_conditions = condition_string.split("&&")
         for sub_condition_string in sub_conditions:
             sub_condition_string = sub_condition_string.strip().strip("()")
@@ -110,6 +133,7 @@ class AnalyticIntegrator(Integrator):
             sub_condition_holds = equation.subs(self.solver_dict["parameters"])
 
             if not sub_condition_holds:
+                # if any of the subterms do not hold, the whole expression does not hold (AND-ed together)
                 return False
 
         return True
