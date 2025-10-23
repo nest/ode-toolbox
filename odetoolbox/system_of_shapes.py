@@ -295,6 +295,8 @@ class SystemOfShapes:
                             if isinstance(eq, sympy.Eq):
                                 # replace equalities (not inequalities)
                                 conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
+                                conditional_b = conditional_b.subs(eq.lhs, eq.rhs)
+                                conditional_c = conditional_c.subs(eq.lhs, eq.rhs)
 
                         conditional_dynamics = SystemOfShapes(self.x_, conditional_A, conditional_b, conditional_c, self.shapes_)
                         solver_dict_conditional = conditional_dynamics.generate_propagator_solver(disable_singularity_detection=True)

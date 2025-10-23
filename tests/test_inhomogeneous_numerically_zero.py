@@ -56,16 +56,18 @@ class TestInhomogeneousNumericallyZero:
         solver_dict["parameters"]["late_ltd_check"] = late_ltd_check
         solver_dict["parameters"]["late_ltp_check"] = late_ltp_check
 
+        z0 = 0.0      # set the initial condition
         dt = .1
         T = 100.
-        timevec = np.arange(0., T, dt)
+
 
         #
         #    integration using the ODE-toolbox analytic integrator
         #
 
+        timevec = np.arange(0., T, dt)
         analytic_integrator = AnalyticIntegrator(solver_dict)
-        analytic_integrator.set_initial_values({"z": 0.})
+        analytic_integrator.set_initial_values({"z": z0})
         analytic_integrator.reset()
         actual = [analytic_integrator.get_value(t)["z"] for t in timevec]
 
@@ -83,7 +85,6 @@ class TestInhomogeneousNumericallyZero:
             dzdt = (((p * (1.0 - z) * late_ltp_check) - (p * (z + 0.5) * late_ltd_check))) / tau_z
             return dzdt
 
-        z0 = 0.0      # set the initial condition
         params = solver_dict["parameters"]
         ode_args = (
             params["p"],
@@ -122,11 +123,9 @@ class TestInhomogeneousNumericallyZero:
 
         np.testing.assert_allclose(correct, actual)
 
-    @pytest.mark.xfail(strict=True, raises=AssertionError)
     def test_inhomogeneous_numerically_zero(self):
         self._test_inhomogeneous_numerically_zero(late_ltd_check=1., late_ltp_check=-1.)
 
-    @pytest.mark.xfail(strict=True, raises=AssertionError)
     def test_inhomogeneous_numerically_zero_alt(self):
         self._test_inhomogeneous_numerically_zero(late_ltd_check=0., late_ltp_check=0.)
 
