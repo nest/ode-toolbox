@@ -21,13 +21,26 @@
 
 import io
 import logging
+import numpy as np
+import scipy
 import sympy
 import pytest
+
+from odetoolbox.analytic_integrator import AnalyticIntegrator
+from odetoolbox.spike_generator import SpikeGenerator
 
 from .context import odetoolbox
 from tests.test_utils import _open_json
 from odetoolbox.singularity_detection import SingularityDetection
 from odetoolbox.sympy_helpers import SymmetricEq
+
+try:
+    import matplotlib as mpl
+    mpl.use("Agg")
+    import matplotlib.pyplot as plt
+    INTEGRATION_TEST_DEBUG_PLOTS = True
+except ImportError:
+    INTEGRATION_TEST_DEBUG_PLOTS = False
 
 
 class TestSingularityDetection:
@@ -70,6 +83,181 @@ class TestSingularityDetection:
                 assert sympy.Symbol("tau_s") == cond.lhs
                 assert cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 + sqrt(177)/2") \
                     or cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 - sqrt(177)/2")
+
+
+class TestSingularityInBothPropagatorAndInhomogeneous:
+    r"""
+    Test singularity mitigations when there is simultaneously a potential singularity in the propagator matrix as well as in the inhomogeneous terms.
+    """
+
+    @pytest.mark.parametrize("tau_1, tau_2", [(10., 2.), (10., 10.)])
+    @pytest.mark.parametrize("late_ltd_check, late_ltp_check", [(3.14, 2.71), (0., 0.)])
+    def test_singularity_in_both_propagator_and_inhomogeneous(self, tau_1, tau_2, late_ltd_check, late_ltp_check):
+
+        def time_to_max(tau_1, tau_2):
+            r"""
+            Time of maximum.
+            """
+            if tau_1 == tau_2:
+                return tau_1
+
+            return (np.log(tau_1) - np.log(tau_2)) / (1. / tau_2 - 1. / tau_1)
+
+        def unit_amplitude(tau_1, tau_2):
+            r"""
+            Scaling factor ensuring that amplitude of solution is one.
+            """
+            tmax = time_to_max(tau_1, tau_2)
+
+            return 1. / (np.exp(-tmax / tau_1) - np.exp(-tmax / tau_2))
+
+        def double_exponential_ode_flow(y, t, tau_1, tau_2, alpha, dt):
+            r"""
+            Rhs of ODE system to be solved.
+            """
+            dy1dt = -y[0] / tau_1
+            dy2dt = y[0] - y[1] / tau_2
+
+            return np.array([dy1dt, dy2dt])
+
+        def inhomogeneous_ode_flow(z, t, late_ltp_check, late_ltd_check, tau_z):
+            """
+            Defines the differential equation for z.
+            dz/dt = f(z, t)
+            """
+            dzdt = (((1.0 - z) * late_ltp_check - (z + 0.5) * late_ltd_check)) / tau_z
+            return dzdt
+
+        dt = .125                             # time resolution (ms)
+        T = 48.    # simulation time (ms)
+
+        w = 3.14                              # weight (amplitude; pA)
+        alpha = 1.
+        input_spike_times = np.array([10., 32.])  # array of input spike times (ms)
+        stimuli = [{"type": "list",
+                    "list": " ".join([str(el) for el in input_spike_times]),
+                    "variables": ["I_aux"]}]
+
+        spike_times = SpikeGenerator.spike_times_from_json(stimuli, T)
+
+
+        indict = {"dynamics": [{"expression": "I_aux' = -I_aux / tau_1",    # double exponential
+                                "initial_values": {"I_aux": "0."}},
+                               {"expression": "I' = I_aux - I / tau_2",    # double exponential
+                                "initial_values": {"I": "0"}},
+                               {"expression": "z' = (((1 - z) * late_ltp_check) - (z + 0.5) * late_ltd_check) / tau_z",
+                                "initial_value": "1"}],    # ODE with inhomogeneous term
+                  "options": {"output_timestep_symbol": "__h"},
+                  "parameters": {"tau_1": str(tau_1),
+                                 "tau_2": str(tau_2),
+                                 "w": str(w),
+                                 "alpha": str(alpha)}}
+
+
+        #
+        #    integration using the ODE-toolbox analytic integrator
+        #
+
+        timevec = np.arange(0., T, dt)
+
+        solver_dict = odetoolbox.analysis(indict, log_level="DEBUG", disable_stiffness_check=True)
+        assert len(solver_dict) == 1
+        solver_dict = solver_dict[0]
+        assert solver_dict["solver"] == "analytical"
+
+        # solver_dict["parameters"] = {}
+        solver_dict["parameters"]["tau_z"] = 20.
+        solver_dict["parameters"]["late_ltd_check"] = late_ltd_check
+        solver_dict["parameters"]["late_ltp_check"] = late_ltp_check
+
+        N = int(np.ceil(T / dt) + 1)
+        timevec = np.linspace(0., T, N)
+        analytic_integrator = AnalyticIntegrator(solver_dict, spike_times)
+        analytic_integrator.shape_starting_values["I_aux"] = w * alpha
+        ODE_INITIAL_VALUES = {"I": 0., "I_aux": 0., "z": 0.}
+        analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
+        analytic_integrator.reset()
+        state = {"timevec": [], "I": [], "I_aux": [], "z": []}
+        for step, t in enumerate(timevec):
+            state_ = analytic_integrator.get_value(t)
+            state["timevec"].append(t)
+            for sym, val in state_.items():
+                state[sym].append(val)
+
+        actual = [analytic_integrator.get_value(t)["z"] for t in timevec]
+
+
+        #
+        #    integration using scipy.integrate.odeint
+        #
+
+        z0 = 0.0      # set the initial condition
+        params = solver_dict["parameters"]
+        ode_args = (
+            params["late_ltp_check"],
+            params["late_ltd_check"],
+            params["tau_z"]
+        )
+
+        solution = scipy.integrate.odeint(inhomogeneous_ode_flow, z0, timevec, args=ode_args, rtol=1E-12, atol=1E-12)
+        correct = solution.flatten().tolist()
+
+        ts0 = np.arange(0., input_spike_times[0] + dt / 2, dt)
+        ts1 = np.arange(input_spike_times[0], input_spike_times[1] + dt / 2, dt)
+        ts2 = np.arange(input_spike_times[1], T + dt, dt)
+
+        y_ = scipy.integrate.odeint(double_exponential_ode_flow, [0., 0.], ts0, args=(tau_1, tau_2, alpha, dt), rtol=1E-12, atol=1E-12)
+        y_ = np.vstack([y_[:-1, :], scipy.integrate.odeint(double_exponential_ode_flow, [y_[-1, 0] + w * alpha, y_[-1, 1]], ts1, args=(tau_1, tau_2, alpha, dt), rtol=1E-12, atol=1E-12)])
+        y_ = np.vstack([y_[:-1, :], scipy.integrate.odeint(double_exponential_ode_flow, [y_[-1, 0] + w * alpha, y_[-1, 1]], ts2, args=(tau_1, tau_2, alpha, dt), rtol=1E-12, atol=1E-12)])
+
+        ts0 = ts0[:-1]
+        ts1 = ts1[:-1]
+
+        if INTEGRATION_TEST_DEBUG_PLOTS:
+
+            #
+            #   plot the double exponential ODE
+            #
+
+            tmax = time_to_max(tau_1, tau_2)
+            mpl.rcParams["text.usetex"] = True
+
+            fig, ax = plt.subplots(nrows=6, figsize=(5, 4), dpi=600)
+            ax[0].plot(timevec, state["I"], "-", lw=3, color="k", label=r"$I(t)$ (ODEtb)")
+            ax[0].plot(np.hstack([ts0, ts1, ts2]), y_[:, 1], "-", lw=2, color="r", label=r"$I(t)$ (odeint)")
+            ax[1].plot(timevec, state["I_aux"], "--", lw=3, color="k", label=r"$I_\mathsf{aux}(t)$ (ODEtb)")
+            ax[1].plot(np.hstack([ts0, ts1, ts2]), y_[:, 0], "--", lw=2, color="r", label=r"$I_\mathsf{aux}(t)$ (odeint)")
+
+            for tin in input_spike_times:
+                ax[0].vlines(tin + tmax, ax[0].get_ylim()[0], ax[0].get_ylim()[1], colors="k", linestyles=":")
+                ax[1].vlines(tin, ax[0].get_ylim()[0], ax[0].get_ylim()[1], colors="k", linestyles=":")
+
+            ax[2].semilogy(np.hstack([ts0, ts1, ts2]), np.abs(y_[:, 1] - state["I"]), label="I")
+            ax[2].semilogy(np.hstack([ts0, ts1, ts2]), np.abs(y_[:, 0] - state["I_aux"]), linestyle="--", label="I_aux")
+            ax[2].set_ylabel("Error")
+
+            ax[3].plot(timevec, correct, label="z (odeint)")
+            ax[4].plot(timevec, actual, label="z (ODEtb)")
+            ax[5].semilogy(timevec, np.abs(np.array(correct) - np.array(actual)), label="z")
+            ax[5].set_ylabel("Error")
+            ax[-1].set_xlabel("Time")
+            for _ax in ax:
+                _ax.set_xlim(0., T + dt)
+                _ax.legend()
+                _ax.grid()
+                if not _ax == ax[-1]:
+                    _ax.set_xticklabels([])
+
+            fig.savefig("/tmp/test_singularity_simultaneous_[tau_1=" + str(tau_1) + "]_[tau_2=" + str(tau_2) + "]_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png")
+
+
+        #
+        #   test
+        #
+
+        np.testing.assert_allclose(correct, actual)
+        np.testing.assert_allclose(y_[:, 1], state["I"], atol=1E-7)
+        np.testing.assert_allclose(y_[:, 0], state["I_aux"], atol=1E-7)
 
 
 class TestPropagatorSolverHomogeneous:

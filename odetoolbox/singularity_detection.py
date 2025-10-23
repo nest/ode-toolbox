@@ -163,7 +163,7 @@ class SingularityDetection:
         return conditions
 
     @staticmethod
-    def find_inhomogeneous_singularities(expr) -> Set[SymmetricEq]:
+    def find_inhomogeneous_singularities(A: sympy.Matrix) -> Set[SymmetricEq]:
         r"""Find singularities in the inhomogeneous part of the update equations.
 
         Returns
@@ -172,19 +172,16 @@ class SingularityDetection:
         conditions
             a set with equations, where the left-hand side of each equation is the variable that is to be subsituted, and the right-hand side is the expression to put in its place
         """
-        logging.debug("Checking for singularities (divisions by zero) in the inhomogeneous part of the update equations...")
+        logging.debug("Checking for singularities due to inhomogeneous terms in the system of ODEs...")
 
-        symbols = list(expr.free_symbols)
-        conditions = set()
-        if symbols:
-            conditions = SingularityDetection.find_singularity_conditions_in_expression_(expr, symbols)
-            if conditions:
-                # if there is one or more condition under which the solution goes to infinity...
+        for row in range(A.shape[0]):
+            expr = A[row, row]
+            symbols = list(expr.free_symbols)
+            conditions = set()
+            if symbols:
+                conditions = SingularityDetection.find_singularity_conditions_in_expression_(expr, symbols)
 
-                logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
-                logging.warning("List of all conditions that result in a division by zero:")
-                for cond_set in conditions:
-                    logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+        conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
 
         return conditions
 
@@ -206,7 +203,7 @@ class SingularityDetection:
         conditions
             a set with equations, where the left-hand side of each equation is the variable that is to be subsituted, and the right-hand side is the expression to put in its place
         """
-        logging.debug("Checking for singularities (divisions by zero) in the propagator matrix...")
+        logging.debug("Checking for singularities in the propagator matrix...")
         try:
             conditions = SingularityDetection._generate_singularity_conditions(P)
             conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)

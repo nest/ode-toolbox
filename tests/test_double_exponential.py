@@ -89,8 +89,7 @@ class TestDoubleExponential:
                   "parameters": {"tau_1": str(tau_1),
                                  "tau_2": str(tau_2),
                                  "w": "3.14",
-                                 "alpha": str(alpha),
-                                 "weighted_input_spikes": "0."}}
+                                 "alpha": str(alpha)}}
 
         w = 3.14                              # weight (amplitude; pA)
         dt = .125                             # time resolution (ms)

@@ -19,6 +19,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import itertools
 from typing import List, Optional
 
 import logging
@@ -205,7 +206,7 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def _generate_propagator_matrix(self, A):
+    def _generate_propagator_matrix(self, A) -> sympy.Matrix:
         r"""Generate the propagator matrix by matrix exponentiation."""
 
         try:
@@ -240,16 +241,18 @@ class SystemOfShapes:
             # try:
             if 1:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
+                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_))
 
                 if conditions:
                     # if there is one or more condition under which the solution goes to infinity...
-                    logging.info("Under certain conditions, the propagator matrix is singular (contains infinities).")
+                    logging.info("Under certain conditions, the default analytic solver contains singularities due to division by zero.")
                     logging.info("List of all conditions that result in a division by zero:")
                     for cond_set in conditions:
                         logging.info("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+                    logging.info("Alternate solvers will be generated for each of these conditions (and combinations thereof).")
 
                     # generate solver for the base case (with singularity conditions that are not met)
-                    default_solver = self.generate_propagator_solver(disable_singularity_detection=True)
+                    default_solver = self.generate_solver_dict_based_on_propagator_matrix_(P)
 
                     # change the returned solver dictionary to include conditions
                     solver_dict = {"solver": "analytical",
@@ -258,20 +261,40 @@ class SystemOfShapes:
                                    "conditions": {"default": {"propagators": default_solver["propagators"],
                                                               "update_expressions": default_solver["update_expressions"]}}}
 
-                    # XXX: TODO: generate/loop over all combinations of conditions!!!
+                    #
+                    #    generate all combinations of conditions
+                    #
 
-                    for cond_set in conditions:
-                        if len(cond_set) == 1:
-                            eq = list(cond_set)[0]
-                            condition_str: str = str(eq.lhs) + " == " + str(eq.rhs)
-                        else:
-                            condition_str: str = " && ".join(["(" + str(eq.lhs) + " == " + str(eq.rhs) + ")" for eq in cond_set])
+                    num_conditions = len(conditions)
+                    condition_permutations = list(itertools.product([False, True], repeat=num_conditions))
+                    for condition_permutation in condition_permutations:
+                        # each ``condition_permutation[i]`` is True/False corresponding to condition i
+
+                        cond_set = set()    # cond_set is the set of conditions that have to hold
+                        for i, cond in enumerate(condition_permutation):
+                            if cond:
+                                # all conditions in the set ``conditions[i]`` need to hold for this propagator
+                                cond_set = cond_set.union(list(conditions)[i])
+                            else:
+                                # none of the conditions in the set ``conditions[i]`` are allowed to hold for this propagator
+                                cond_set = cond_set.union(([sympy.Ne(eq.lhs, eq.rhs) for eq in list(conditions)[i]]))
+
+                        condition_str: str = " && ".join(["(" + str(eq.lhs) + (" == " if isinstance(eq, sympy.Eq) else "!=") + str(eq.rhs) + ")" for eq in cond_set])
+
+                        logging.debug("Generating solver for condition: " + str(condition_str))
+
+                        if not any([isinstance(eq, sympy.Eq) for eq in cond_set]):
+                            # this is the default condition, only containing inequalities
+                            continue
+
                         conditional_A = self.A_.copy()
                         conditional_b = self.b_.copy()
                         conditional_c = self.c_.copy()
 
                         for eq in cond_set:
-                            conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
+                            if isinstance(eq, sympy.Eq):
+                                # replace equalities (not inequalities)
+                                conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
 
                         conditional_dynamics = SystemOfShapes(self.x_, conditional_A, conditional_b, conditional_c, self.shapes_)
                         solver_dict_conditional = conditional_dynamics.generate_propagator_solver(disable_singularity_detection=True)
@@ -284,6 +307,10 @@ class SystemOfShapes:
 
             # except SingularityDetectionException:
                 # logging.warning("Could not check the propagator matrix for singularities.")
+
+        return self.generate_solver_dict_based_on_propagator_matrix_(P)
+
+    def generate_solver_dict_based_on_propagator_matrix_(self, P: sympy.Matrix):
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -316,14 +343,6 @@ class SystemOfShapes:
                     # of the form x' = const
                     update_expr_terms.append(Config().output_timestep_symbol + " * " + str(self.b_[row]))
                 else:
-
-                    #
-                    #    singularity detection on inhomogeneous part
-                    #
-
-                    if not disable_singularity_detection:
-                        SingularityDetection.find_inhomogeneous_singularities(expr=self.A_[row, row])
-
 
                     #
                     #    generate update expressions

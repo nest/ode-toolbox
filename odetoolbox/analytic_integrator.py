@@ -91,14 +91,28 @@ class AnalyticIntegrator(Integrator):
 
 
     def _condition_holds(self, condition_string) -> bool:
-        parts = condition_string.strip('()').split('==')
-        lhs_str = parts[0].strip()
-        rhs_str = parts[1].strip()
+        sub_conditions = condition_string.split("&&")
+        for sub_condition_string in sub_conditions:
+            sub_condition_string = sub_condition_string.strip().strip("()")
+            if "==" in sub_condition_string:
+                parts = sub_condition_string.split("==")
+            else:
+                parts = sub_condition_string.split("!=")
 
-        # Sympify each side individually and create the Eq
-        equation = sympy.Eq(sympy.sympify(lhs_str), sympy.sympify(rhs_str))
+            lhs_str = parts[0].strip()
+            rhs_str = parts[1].strip()
 
-        return equation.subs(self.solver_dict["parameters"])
+            if "==" in sub_condition_string:
+                equation = sympy.Eq(sympy.sympify(lhs_str), sympy.sympify(rhs_str))
+            else:
+                equation = sympy.Ne(sympy.sympify(lhs_str), sympy.sympify(rhs_str))
+
+            sub_condition_holds = equation.subs(self.solver_dict["parameters"])
+
+            if not sub_condition_holds:
+                return False
+
+        return True
 
 
     def _pick_unconditional_solver(self):
@@ -106,17 +120,17 @@ class AnalyticIntegrator(Integrator):
         self.propagators = self.solver_dict["propagators"].copy()
         self._process_update_expressions_from_solver_dict()
 
+
     def _pick_solver_based_on_condition(self):
         r"""In case of a conditional propagator solver: pick a solver depending on the conditions that hold (depending on parameter values)"""
         self.update_expressions = self.solver_dict["conditions"]["default"]["update_expressions"]
         self.propagators = self.solver_dict["conditions"]["default"]["propagators"]
 
         for condition, conditional_solver in self.solver_dict["conditions"].items():
-            print("Checking condition " + str(condition) + ", params = " + str(self.solver_dict["parameters"]))
             if condition != "default" and self._condition_holds(condition):
                 self.update_expressions = conditional_solver["update_expressions"]
                 self.propagators = conditional_solver["propagators"]
-                print("Picking solver based on condition: " + str(condition))
+                logging.debug("Picking solver based on condition: " + str(condition))
 
                 break
 
@@ -237,7 +251,7 @@ class AnalyticIntegrator(Integrator):
         return new_state
 
 
-    def get_value(self, t):
+    def get_value(self, t: float):
         r"""
         Get numerical solution of the dynamical system at time :python:`t`.
 
