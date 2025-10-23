@@ -240,7 +240,6 @@ class SystemOfShapes:
                     solver_dict["conditions"]["(" + condition + ") || (" + condition2 + ")"] = sub_solver_dict
                     solver_dict["conditions"].pop(condition)
                     solver_dict["conditions"].pop(condition2)
-                    print("\n\n\n\n\n\nwqweeeeeeeeeeeeeeeeeeeeeeeeeeeeeeen\n\n\n\n\n")
                     return self._merge_conditions(solver_dict)
 
         return solver_dict
