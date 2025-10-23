@@ -400,32 +400,32 @@ In some cases, parameter choices of the input can lead to numerical singularitie
 
 - :python:`"conditions"`\ : a dictionary that maps conditional expressions (as strings) to a nested dictionary containing the keys :python:`"update_expressions"` and :python:`"propagators"` as described in the previous paragraph. The default solver (in case none of the other conditions hold) is indicated by the key :python:`"default"`\ .
 
-  For example, if the condition :math:`\tau=0` will cause a singularity in the propagator matrix entry :python:`__P__x__x`, two separate solvers are returned, one for the condition :math:`\tau=0`, and another for the default ("otherwise") condition:
+  For example, if the condition :math:`d=-p` will cause a singularity in the update expression for the state variable :python:`z`, two separate solvers are returned, one for the condition :math:`\d=-p`, and another for the default ("otherwise") condition:
 
   .. code:: python
 
-     {"conditions": {
-         "tau==0": {
-            "propagators": {
-               "__P__x__x": "0",
-               "__P__y__y": "1"
-            },
-            "update_expressions": {
-               "x": "__P__x__x*x"
-               "y": "__P__y__y*y"
-            }
-         },
-         "default": {
-            "propagators": {
-               "__P__x__x": "exp(-__h/tau)",
-               "__P__y__y": "1"
-            },
-            "update_expressions": {
-               "x": "__P__x__x*x"
-               "y": "__P__y__y*y"
-            }
+     {
+         "conditions": {
+             "(d == -p)": {
+                 "propagators": {
+                     "__P__z__z": "1"
+                 },
+                 "update_expressions": {
+                     "z": "__P__z__z*z + 1.5*__h*p/tau_z"
+                 }
+             },
+             "default": {
+                 "propagators": {
+                     "__P__z__z": "exp(-__h*(d + p)/tau_z)"
+                 },
+                 "update_expressions": {
+                     "z": "(__P__z__z*(0.5*d - p + z*(d + p)) - 0.5*d + p)/(d + p)"
+                 }
+             }
          }
-      }
+     }
+
+  In general, there can be from 2 to any number of conditions. Conditions can involve boolean logic through the ``"&&"`` symbol for logical AND, ``"||"`` for logical OR, and the use of parentheses. The equality symbol, separating the left- and right-hand sides of the comparison, is written as ``"=="``.
 
 
 Analytic solver generation

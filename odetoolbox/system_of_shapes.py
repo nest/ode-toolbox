@@ -259,7 +259,7 @@ class SystemOfShapes:
             # try:
             if 1:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
-                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_))
+                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_))
 
                 if conditions:
                     # if there is one or more condition under which the solution goes to infinity...

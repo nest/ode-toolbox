@@ -24,7 +24,7 @@ import logging
 import sympy
 import sympy.parsing.sympy_parser
 
-from odetoolbox.sympy_helpers import SymmetricEq, symbol_in_expression
+from .sympy_helpers import SymmetricEq, _custom_simplify_expr, symbol_in_expression, _is_zero
 
 
 class SingularityDetectionException(Exception):
@@ -123,23 +123,39 @@ class SingularityDetection:
         return filt_cond
 
     @staticmethod
-    def _generate_singularity_conditions(A: sympy.Matrix) -> List[Dict[sympy.core.expr.Expr, sympy.core.expr.Expr]]:
+    def _generate_singularity_conditions(P: sympy.Matrix) -> List[Dict[sympy.core.expr.Expr, sympy.core.expr.Expr]]:
         r"""
         The function solve returns a list where each element is a dictionary. And each dictionary entry (condition: expression) corresponds to a condition at which that expression goes to zero. If the expression is quadratic, like let's say "x**2-1" then the function 'solve() returns two dictionaries in a list. Each dictionary corresponds to one solution. We are then collecting these lists in our own list called ``conditions`` and return it.
         """
         conditions = set()
-        for expr in sympy.flatten(A):
-            for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
-                if isinstance(subexpr, sympy.Pow) and subexpr.args[1] < 0:  # find expressions of the form 1/x, which is encoded in sympy as x^-1
-                    denom = subexpr.args[0]  # extracting the denominator
-                    symbols = list(denom.free_symbols)
-                    conds = SingularityDetection.find_singularity_conditions_in_expression_(denom, symbols)
-                    conditions = conditions.union(conds)
+        for expr in sympy.flatten(P):
+            conds = SingularityDetection.find_singularity_conditions_in_expression_(expr)
+            conditions = conditions.union(conds)
+
+        return conditions
+
+
+    @staticmethod
+    def find_singularity_conditions_in_expression_(expr) -> Set[SymmetricEq]:
+        r"""Find conditions under which subterms of ``expr`` of the form ``a / b`` equal infinity. The assumption is that ``expr`` is the denominator in an expression."""
+        conditions = set()
+
+        for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
+            if isinstance(subexpr, sympy.Pow) and subexpr.args[1] < 0:  # find expressions of the form 1/x, which is encoded in sympy as x^-1
+                denom = subexpr.args[0]  # extracting the denominator
+                symbols = list(denom.free_symbols)
+                if len(symbols) == 0:
+                    continue
+
+                sub_expr_conds = SingularityDetection.find_singularity_conditions_in_denominator_expression_(denom, symbols)
+                conditions = conditions.union(sub_expr_conds)
 
         return conditions
 
     @staticmethod
-    def find_singularity_conditions_in_expression_(expr, symbols) -> Set[SymmetricEq]:
+    def find_singularity_conditions_in_denominator_expression_(expr, symbols) -> Set[SymmetricEq]:
+        r"""Find conditions under which expr == 0. The assumption is that ``expr`` is the denominator in an expression."""
+
         # find all conditions under which the denominator goes to zero. Each element of the returned list contains a particular combination of conditions for which A[row, row] goes to zero. For instance: ``solve([x - 3, y**2 - 1])`` returns ``[{x: 3, y: -1}, {x: 3, y: 1}]``
         conditions = sympy.solve(expr, symbols, dict=True, domain=sympy.S.Reals)
 
@@ -163,7 +179,7 @@ class SingularityDetection:
         return conditions
 
     @staticmethod
-    def find_inhomogeneous_singularities(A: sympy.Matrix) -> Set[SymmetricEq]:
+    def find_inhomogeneous_singularities(A: sympy.Matrix, b: sympy.Matrix) -> Set[SymmetricEq]:
         r"""Find singularities in the inhomogeneous part of the update equations.
 
         Returns
@@ -174,12 +190,16 @@ class SingularityDetection:
         """
         logging.debug("Checking for singularities due to inhomogeneous terms in the system of ODEs...")
 
+        conditions = set()
         for row in range(A.shape[0]):
-            expr = A[row, row]
-            symbols = list(expr.free_symbols)
-            conditions = set()
-            if symbols:
-                conditions = SingularityDetection.find_singularity_conditions_in_expression_(expr, symbols)
+            if _is_zero(b[row]):
+                # this is not an inhomogeneous ODE
+                continue
+
+            particular_solution = -b[row] / A[row, row]
+            particular_solution = _custom_simplify_expr(particular_solution)
+
+            conditions = conditions.union(SingularityDetection.find_singularity_conditions_in_expression_(particular_solution))
 
         conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
 

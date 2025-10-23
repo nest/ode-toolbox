@@ -48,6 +48,7 @@ class TestInhomogeneousNumericallyZero:
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"].startswith("analytic")
+        assert len(solver_dict["conditions"].keys()) == 2, "There should be exactly two conditions: default, and late_ltp_check == -late_ltd_check"
         print(solver_dict)
 
         solver_dict["parameters"] = {}
