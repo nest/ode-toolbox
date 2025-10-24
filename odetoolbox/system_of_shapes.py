@@ -20,7 +20,7 @@
 #
 
 import itertools
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import logging
 import numpy as np
@@ -33,7 +33,7 @@ import sympy.matrices
 from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
-from .sympy_helpers import _custom_simplify_expr, _is_zero
+from .sympy_helpers import SymmetricEq, _custom_simplify_expr, _is_zero
 
 
 class GetBlockDiagonalException(Exception):
@@ -244,6 +244,18 @@ class SystemOfShapes:
 
         return solver_dict
 
+
+    def _remove_duplicate_conditions(self, conditions: Set[SymmetricEq]):
+        for cond in conditions:
+            inverted_eq = SymmetricEq(-cond.lhs, -cond.rhs)
+            if inverted_eq in conditions:
+                conditions.discard(cond)
+                return self._remove_duplicate_conditions(conditions)
+
+        # nothing was removed
+        return conditions
+
+
     def generate_propagator_solver(self, disable_singularity_detection: bool = False):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
@@ -260,13 +272,14 @@ class SystemOfShapes:
             if 1:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
                 conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_))
+                conditions = self._remove_duplicate_conditions(conditions)
 
                 if conditions:
                     # if there is one or more condition under which the solution goes to infinity...
                     logging.info("Under certain conditions, the default analytic solver contains singularities due to division by zero.")
                     logging.info("List of all conditions that result in a division by zero:")
-                    for cond_set in conditions:
-                        logging.info("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+                    for cond in conditions:
+                        logging.info("\t" + str(cond.lhs) + " = " + str(cond.rhs))
                     logging.info("Alternate solvers will be generated for each of these conditions (and combinations thereof).")
 
                     # generate solver for the base case (with singularity conditions that are not met)
@@ -289,19 +302,20 @@ class SystemOfShapes:
                         # each ``condition_permutation[i]`` is True/False corresponding to condition i
 
                         cond_set = set()    # cond_set is the set of conditions that have to hold
-                        for i, cond in enumerate(condition_permutation):
-                            if cond:
-                                # all conditions in the set ``conditions[i]`` need to hold for this propagator
-                                cond_set = cond_set.union(list(conditions)[i])
+                        for i, cond_holds in enumerate(condition_permutation):
+                            cond = list(conditions)[i]
+                            if cond_holds:
+                                # ``cond`` needs to hold for this propagator
+                                cond_set.add(cond)
                             else:
-                                # none of the conditions in the set ``conditions[i]`` are allowed to hold for this propagator
-                                cond_set = cond_set.union(([sympy.Ne(eq.lhs, eq.rhs) for eq in list(conditions)[i]]))
+                                # ``cond`` needs to **not** hold for this propagator
+                                cond_set.add(sympy.Ne(cond.lhs, cond.rhs))
 
-                        condition_str: str = " && ".join(["(" + str(eq.lhs) + (" == " if isinstance(eq, sympy.Eq) else "!=") + str(eq.rhs) + ")" for eq in cond_set])
+                        condition_str: str = " && ".join(["(" + str(eq.lhs) + (" == " if isinstance(eq, SymmetricEq) else "!=") + str(eq.rhs) + ")" for eq in cond_set])
 
                         logging.debug("Generating solver for condition: " + str(condition_str))
 
-                        if not any([isinstance(eq, sympy.Eq) for eq in cond_set]):
+                        if not any([isinstance(eq, SymmetricEq) for eq in cond_set]):
                             # this is the default condition, only containing inequalities
                             continue
 
@@ -310,7 +324,7 @@ class SystemOfShapes:
                         conditional_c = self.c_.copy()
 
                         for eq in cond_set:
-                            if isinstance(eq, sympy.Eq):
+                            if isinstance(eq, SymmetricEq):
                                 # replace equalities (not inequalities)
                                 conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
                                 conditional_b = conditional_b.subs(eq.lhs, eq.rhs)

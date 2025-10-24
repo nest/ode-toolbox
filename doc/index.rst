@@ -400,7 +400,7 @@ In some cases, parameter choices of the input can lead to numerical singularitie
 
 - :python:`"conditions"`\ : a dictionary that maps conditional expressions (as strings) to a nested dictionary containing the keys :python:`"update_expressions"` and :python:`"propagators"` as described in the previous paragraph. The default solver (in case none of the other conditions hold) is indicated by the key :python:`"default"`\ .
 
-  For example, if the condition :math:`d=-p` will cause a singularity in the update expression for the state variable :python:`z`, two separate solvers are returned, one for the condition :math:`\d=-p`, and another for the default ("otherwise") condition:
+  For example, if the condition :math:`d=-p` will cause a singularity in the update expression for the state variable :python:`z`, two separate solvers are returned, one for the condition :math:`d=-p`, and another for the default ("otherwise") condition:
 
   .. code:: python
 
@@ -522,7 +522,7 @@ The propagator matrix :math:`\mathbf{P}` is derived from the system matrix by ma
 
 If the imaginary unit :math:`i` is found in any of the entries in :math:`\mathbf{P}`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
 
-In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated. ODE-toolbox will detect conditions (in this example, :python:`param1 = param2`) under which these singularities can occur. In case a potential division by zero is detected, separate, conditional solvers are generated, so that a valid solver can be selected (for the given choice of parameter values) during numerical integration.
+In some cases, elements of :math:`\mathbf{P}` may contain fractions that have a factor of the form :python:`param1 - param2` in their denominator. If at a later stage, the numerical value of :python:`param1` is chosen equal to that of :python:`param2`, a numerical singularity (division by zero) occurs. To avoid this issue, it is necessary to eliminate either :python:`param1` or :python:`param2` in the input, before the propagator matrix is generated. ODE-toolbox will detect conditions (in this example, :python:`param1 = param2`) under which these singularities can occur. In case a potential division by zero is detected, separate, conditional solvers are generated, so that a valid solver can be selected (for the given choice of parameter values) during numerical integration. Internally, conditions are generated based on `sympy.calculus.singularities.singularities <https://docs.sympy.org/latest/modules/calculus/index.html#sympy.calculus.singularities.singularities>`_.
 
 To speed up processing, the final system matrix :math:`\mathbf{A}` is rewritten as a block-diagonal matrix :math:`\mathbf{A} = \text{diag}(\mathbf{A}_1, \mathbf{A}_2, \dots, \mathbf{A}_k)`, where each of :math:`\mathbf{A}_1, \mathbf{A}_2, \dots, \mathbf{A}_k` is square. Then, the propagator matrix is computed for each individual block separately, making use of the following identity:
 

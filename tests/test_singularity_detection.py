@@ -78,11 +78,10 @@ class TestSingularityDetection:
         A = sympy.Matrix([[sympy.parsing.sympy_parser.parse_expr("-1/(tau_s**2 - 3*tau_s - 42)")]])
         conditions = SingularityDetection._generate_singularity_conditions(A)
         assert len(conditions) == 2
-        for cond_set in conditions:
-            for cond in cond_set:
-                assert sympy.Symbol("tau_s") == cond.lhs
-                assert cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 + sqrt(177)/2") \
-                    or cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 - sqrt(177)/2")
+        for cond in conditions:
+            assert sympy.Symbol("tau_s") == cond.lhs
+            assert cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 + sqrt(177)/2") \
+                or cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 - sqrt(177)/2")
 
 
 class TestSingularityInBothPropagatorAndInhomogeneous:

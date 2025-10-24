@@ -27,6 +27,8 @@ import sympy.matrices
 import sympy.utilities
 import sympy.utilities.autowrap
 
+from odetoolbox.sympy_helpers import SymmetricEq
+
 from .shapes import Shape
 from .integrator import Integrator
 
@@ -126,7 +128,7 @@ class AnalyticIntegrator(Integrator):
             rhs_str = parts[1].strip()
 
             if "==" in sub_condition_string:
-                equation = sympy.Eq(sympy.sympify(lhs_str), sympy.sympify(rhs_str))
+                equation = SymmetricEq(sympy.sympify(lhs_str), sympy.sympify(rhs_str))
             else:
                 equation = sympy.Ne(sympy.sympify(lhs_str), sympy.sympify(rhs_str))
 

@@ -89,7 +89,7 @@ class SingularityDetection:
     """
 
     @staticmethod
-    def _is_matrix_defined_under_substitution(A: sympy.Matrix, cond_set: Set[SymmetricEq]) -> bool:
+    def _is_matrix_defined_under_substitution(A: sympy.Matrix, cond: SymmetricEq) -> bool:
         r"""
         Function to check if a matrix is defined (i.e. does not contain NaN or infinity) after we perform a given set of subsitutions.
 
@@ -105,8 +105,7 @@ class SingularityDetection:
                 continue
 
             expr_sub = val.copy()
-            for eq in cond_set:
-                expr_sub = expr_sub.subs(eq.lhs, eq.rhs)
+            expr_sub = expr_sub.subs(cond.lhs, cond.rhs)
 
             if symbol_in_expression([sympy.nan, sympy.zoo, sympy.oo], sympy.simplify(expr_sub)):
                 return False
@@ -114,11 +113,11 @@ class SingularityDetection:
         return True
 
     @staticmethod
-    def _filter_valid_conditions(conds, A: sympy.Matrix):
+    def _filter_valid_conditions(conds: Set[Set[SymmetricEq]], A: sympy.Matrix):
         filt_cond = set()
-        for cond_set in conds:  # looping over condition sets
-            if SingularityDetection._is_matrix_defined_under_substitution(A, cond_set):
-                filt_cond.add(cond_set)
+        for cond in conds:  # looping over condition sets
+            if SingularityDetection._is_matrix_defined_under_substitution(A, cond):
+                filt_cond.add(cond)
 
         return filt_cond
 
@@ -137,7 +136,7 @@ class SingularityDetection:
 
     @staticmethod
     def find_singularity_conditions_in_expression_(expr) -> Set[SymmetricEq]:
-        r"""Find conditions under which subterms of ``expr`` of the form ``a / b`` equal infinity. The assumption is that ``expr`` is the denominator in an expression."""
+        r"""Find conditions under which subterms of ``expr`` of the form ``a / b`` equal infinity (in general, when b = 0)."""
         conditions = set()
 
         for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
@@ -147,36 +146,44 @@ class SingularityDetection:
                 if len(symbols) == 0:
                     continue
 
-                sub_expr_conds = SingularityDetection.find_singularity_conditions_in_denominator_expression_(denom, symbols)
+                # sub_expr_conds = SingularityDetection.find_singularity_conditions_in_denominator_expression_(denom, symbols)
+
+                sub_expr_conds = set()
+                for symbol in symbols:
+                    singularity_set = sympy.calculus.singularities(expr, symbol=symbol)
+                    for singular_value in singularity_set:
+                        singular_condition = SymmetricEq(symbol, singular_value)
+                        sub_expr_conds.add(singular_condition)
+
                 conditions = conditions.union(sub_expr_conds)
 
         return conditions
 
-    @staticmethod
-    def find_singularity_conditions_in_denominator_expression_(expr, symbols) -> Set[SymmetricEq]:
-        r"""Find conditions under which expr == 0. The assumption is that ``expr`` is the denominator in an expression."""
+    # @staticmethod
+    # def find_singularity_conditions_in_denominator_expression_(expr, symbols) -> Set[SymmetricEq]:
+    #     r"""Find conditions under which expr == 0. The assumption is that ``expr`` is the denominator in an expression."""
 
-        # find all conditions under which the denominator goes to zero. Each element of the returned list contains a particular combination of conditions for which A[row, row] goes to zero. For instance: ``solve([x - 3, y**2 - 1])`` returns ``[{x: 3, y: -1}, {x: 3, y: 1}]``
-        conditions = sympy.solve(expr, symbols, dict=True, domain=sympy.S.Reals)
+    #     # find all conditions under which the denominator goes to zero. Each element of the returned list contains a particular combination of conditions for which A[row, row] goes to zero. For instance: ``solve([x - 3, y**2 - 1])`` returns ``[{x: 3, y: -1}, {x: 3, y: 1}]``
+    #     conditions = sympy.solve(expr, symbols, dict=True, domain=sympy.S.Reals)
 
-        # remove solutions that contain the imaginary number. ``domain=sympy.S.Reals`` does not seem to work perfectly as an argument to sympy.solve(), while sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
-        accepted_conditions = []
-        for cond_set in conditions:
-            i_in_expr = any([sympy.I in sympy.preorder_traversal(v) for v in cond_set.values()])
-            if not i_in_expr:
-                accepted_conditions.append(cond_set)
+    #     # remove solutions that contain the imaginary number. ``domain=sympy.S.Reals`` does not seem to work perfectly as an argument to sympy.solve(), while sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
+    #     accepted_conditions = []
+    #     for cond_set in conditions:
+    #         i_in_expr = any([sympy.I in sympy.preorder_traversal(v) for v in cond_set.values()])
+    #         if not i_in_expr:
+    #             accepted_conditions.append(cond_set)
 
-        conditions = accepted_conditions
+    #     conditions = accepted_conditions
 
-        # convert dictionaries to sympy equations
-        converted_conditions = set()
-        for cond_set in conditions:
-            cond_eqs_set = set([SymmetricEq(k, v) for k, v in cond_set.items()])    # convert to actual equations
-            converted_conditions.add(frozenset(cond_eqs_set))
+    #     # convert dictionaries to sympy equations
+    #     converted_conditions = set()
+    #     for cond_set in conditions:
+    #         cond_eqs_set = set([SymmetricEq(k, v) for k, v in cond_set.items()])    # convert to actual equations
+    #         converted_conditions.add(frozenset(cond_eqs_set))
 
-        conditions = converted_conditions
+    #     conditions = converted_conditions
 
-        return conditions
+    #     return conditions
 
     @staticmethod
     def find_inhomogeneous_singularities(A: sympy.Matrix, b: sympy.Matrix) -> Set[SymmetricEq]:
@@ -224,11 +231,12 @@ class SingularityDetection:
             a set with equations, where the left-hand side of each equation is the variable that is to be subsituted, and the right-hand side is the expression to put in its place
         """
         logging.debug("Checking for singularities in the propagator matrix...")
-        try:
+        # try:
+        if 1:
             conditions = SingularityDetection._generate_singularity_conditions(P)
             conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
-        except Exception as e:
-            print(e)
-            raise SingularityDetectionException()
+        # except Exception as e:
+        #     print(e)
+        #     raise SingularityDetectionException()
 
         return conditions
