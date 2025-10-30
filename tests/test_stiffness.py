@@ -47,7 +47,6 @@ class TestStiffnessChecker:
         assert len(result) == 1 \
                and result[0]["solver"].endswith("explicit")
 
-
     def test_morris_lecar_stiff(self):
         indict = _open_json("morris_lecar.json")
 

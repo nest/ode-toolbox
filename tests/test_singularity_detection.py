@@ -141,7 +141,6 @@ class TestSingularityInBothPropagatorAndInhomogeneous:
 
         spike_times = SpikeGenerator.spike_times_from_json(stimuli, T)
 
-
         indict = {"dynamics": [{"expression": "I_aux' = -I_aux / tau_1",    # double exponential
                                 "initial_values": {"I_aux": "0."}},
                                {"expression": "I' = I_aux - I / tau_2",    # double exponential
@@ -153,7 +152,6 @@ class TestSingularityInBothPropagatorAndInhomogeneous:
                                  "tau_2": str(tau_2),
                                  "w": str(w),
                                  "alpha": str(alpha)}}
-
 
         #
         #    integration using the ODE-toolbox analytic integrator
@@ -186,7 +184,6 @@ class TestSingularityInBothPropagatorAndInhomogeneous:
                 state[str(sym)].append(val)
 
         actual = [analytic_integrator.get_value(t)[sympy.Symbol("z", real=True)] for t in timevec]
-
 
         #
         #    integration using scipy.integrate.odeint
@@ -250,7 +247,6 @@ class TestSingularityInBothPropagatorAndInhomogeneous:
                     _ax.set_xticklabels([])
 
             fig.savefig("/tmp/test_singularity_simultaneous_[tau_1=" + str(tau_1) + "]_[tau_2=" + str(tau_2) + "]_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png")
-
 
         #
         #   test

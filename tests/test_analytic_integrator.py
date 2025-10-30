@@ -48,7 +48,6 @@ class TestAnalyticIntegrator:
         h = 1E-3    # [s]
         T = 100E-3    # [s]
 
-
         #
         #   timeseries using ode-toolbox generated propagators
         #

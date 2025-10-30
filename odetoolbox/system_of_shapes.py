@@ -97,7 +97,6 @@ class SystemOfShapes:
         self.c_ = c
         self.shapes_ = shapes
 
-
     def get_shape_by_symbol(self, sym: Union[str, sympy.Symbol]) -> Optional[Shape]:
         for shape in self.shapes_:
             if str(shape.symbol) == str(sym):
@@ -112,7 +111,6 @@ class SystemOfShapes:
 
         assert False, "Unknown symbol: " + str(sym)
 
-
     def get_dependency_edges(self):
         E = []
 
@@ -122,7 +120,6 @@ class SystemOfShapes:
                     E.append((sym2, sym1))
 
         return E
-
 
     def get_lin_cc_symbols(self, E, parameters=None):
         r"""
@@ -142,7 +139,6 @@ class SystemOfShapes:
                 node_is_lin[sym] = _node_is_lin
 
         return node_is_lin
-
 
     def propagate_lin_cc_judgements(self, node_is_lin, E):
         r"""
@@ -166,7 +162,6 @@ class SystemOfShapes:
 
         return node_is_lin
 
-
     def get_jacobian_matrix(self):
         r"""
         Get the Jacobian matrix as symbolic expressions. Entries in the matrix are sympy expressions.
@@ -182,7 +177,6 @@ class SystemOfShapes:
             for j, sym2 in enumerate(self.x_):
                 J[i, j] = sympy.diff(expr, sym2)
         return J
-
 
     def get_sub_system(self, symbols):
         r"""
@@ -205,7 +199,6 @@ class SystemOfShapes:
         shapes_sub = [shape for shape in self.shapes_ if shape.symbol in symbols]
 
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
-
 
     def _generate_propagator_matrix(self, A) -> sympy.Matrix:
         r"""Generate the propagator matrix by matrix exponentiation."""
@@ -245,7 +238,6 @@ class SystemOfShapes:
 
         return solver_dict
 
-
     def _remove_duplicate_conditions(self, conditions: Set[SymmetricEq]):
         for cond in conditions:
             inverted_eq = SymmetricEq(-cond.lhs, -cond.rhs)
@@ -255,7 +247,6 @@ class SystemOfShapes:
 
         # nothing was removed
         return conditions
-
 
     def generate_propagator_solver(self, disable_singularity_detection: bool = False):
         r"""
@@ -269,8 +260,7 @@ class SystemOfShapes:
         #
 
         if not disable_singularity_detection:
-            # try:
-            if 1:
+            try:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
                 conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_))
                 conditions = self._remove_duplicate_conditions(conditions)
@@ -340,8 +330,8 @@ class SystemOfShapes:
 
                     return solver_dict
 
-            # except SingularityDetectionException:
-                # logging.warning("Could not check the propagator matrix for singularities.")
+            except SingularityDetectionException:
+                logging.warning("Could not check the propagator matrix for singularities.")
 
         return self.generate_solver_dict_based_on_propagator_matrix_(P)
 
@@ -405,7 +395,6 @@ class SystemOfShapes:
 
         return solver_dict
 
-
     def generate_numeric_solver(self, state_variables=None):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
@@ -420,7 +409,6 @@ class SystemOfShapes:
                        "initial_values": initial_values}
 
         return solver_dict
-
 
     def reconstitute_expr(self, state_variables=None):
         r"""
@@ -451,7 +439,6 @@ class SystemOfShapes:
 
         return update_expr
 
-
     def shape_order_from_system_matrix(self, idx: int) -> int:
         r"""Determine shape differential order from system matrix of symbol ``self.x_[idx]``"""
         N = self.A_.shape[0]
@@ -463,7 +450,6 @@ class SystemOfShapes:
         scc = scipy.sparse.csgraph.connected_components(A, connection="strong")[1]
         shape_order = sum(scc == scc[idx])
         return shape_order
-
 
     def get_connected_symbols(self, idx: int) -> List[sympy.Symbol]:
         r"""Extract all symbols belonging to a shape with symbol ``self.x_[idx]`` from the system matrix.
@@ -486,7 +472,6 @@ class SystemOfShapes:
         scc = scipy.sparse.csgraph.connected_components(A, connection="strong")[1]
         idx = np.where(scc == scc[idx])[0]
         return [self.x_[i] for i in idx]
-
 
     @classmethod
     def from_shapes(cls, shapes: List[Shape], parameters=None):
@@ -527,7 +512,6 @@ class SystemOfShapes:
             A[highest_diff_sym_idx, :] = lin_factors.T
             b[highest_diff_sym_idx] = inhom_term
             c[highest_diff_sym_idx] = nonlin_term
-
 
             #
             #   for higher-order shapes: mark derivatives x_i' = x_(i+1) for i < shape.order

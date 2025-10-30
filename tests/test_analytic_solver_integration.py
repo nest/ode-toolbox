@@ -169,7 +169,6 @@ class TestAnalyticSolverIntegration:
         i_ex = numerical_sol[:2, :]
         v_rel = numerical_sol[2, :]
 
-
         #
         #   timeseries using hand-calculated propagators (only for alpha postsynaptic currents, not V_rel)
         #
@@ -189,7 +188,6 @@ class TestAnalyticSolverIntegration:
             if step - 1 == spike_time_idx:
                 i_ex__[:, step - 1] = i_ex_init
             i_ex__[:, step] = np.dot(P, i_ex__[:, step - 1])
-
 
         #
         #   timeseries using ode-toolbox generated propagators

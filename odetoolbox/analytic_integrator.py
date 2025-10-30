@@ -58,7 +58,6 @@ class AnalyticIntegrator(Integrator):
         self.enable_cache_update_ = True
         self.t = 0.
 
-
         #
         #   define the necessary numerical state variables
         #
@@ -77,7 +76,6 @@ class AnalyticIntegrator(Integrator):
 
             self.shape_starting_values[sym] = float(expr.evalf(subs=subs_dict))
 
-
         #
         #   initialise update expressions depending on whether conditional solver or not
         #
@@ -94,7 +92,6 @@ class AnalyticIntegrator(Integrator):
 
         self.reset()
 
-
     def _condition_holds(self, condition_string) -> bool:
         r"""Check boolean conditions of the form:
 
@@ -109,7 +106,6 @@ class AnalyticIntegrator(Integrator):
                 return True
 
         return False
-
 
     def _and_condition_holds(self, condition_string) -> bool:
         r"""Check boolean conditions of the form:
@@ -151,12 +147,10 @@ class AnalyticIntegrator(Integrator):
 
         return True
 
-
     def _pick_unconditional_solver(self):
         self.update_expressions = self.solver_dict["update_expressions"].copy()
         self.propagators = self.solver_dict["propagators"].copy()
         self._process_update_expressions_from_solver_dict()
-
 
     def _pick_solver_based_on_condition(self):
         r"""In case of a conditional propagator solver: pick a solver depending on the conditions that hold (depending on parameter values)"""
@@ -173,7 +167,6 @@ class AnalyticIntegrator(Integrator):
 
         self._process_update_expressions_from_solver_dict()
 
-
     def _process_update_expressions_from_solver_dict(self):
         #
         #   create substitution dictionary to replace symbolic variables with their numerical values
@@ -188,7 +181,7 @@ class AnalyticIntegrator(Integrator):
                 subs_dict[param_name] = param_expr
 
         # subs_dict = {sympy.Symbol(k, real=True): v for k, v in subs_dict.items()}
-        subs_dict = {sympy.Symbol(k, real=True): v if type(v) is float or isinstance(v, sympy.Expr) else _sympy_parse_real(v, global_dict=Shape._sympy_globals)  for k, v in subs_dict.items()}
+        subs_dict = {sympy.Symbol(k, real=True): v if type(v) is float or isinstance(v, sympy.Expr) else _sympy_parse_real(v, global_dict=Shape._sympy_globals) for k, v in subs_dict.items()}
 
         #
         #   parse the expressions from JSON if necessary
@@ -223,10 +216,8 @@ class AnalyticIntegrator(Integrator):
                                                                                    backend="cython",
                                                                                    helpers=Shape._sympy_autowrap_helpers)
 
-
     def get_all_variable_symbols(self):
         return self.all_variable_symbols
-
 
     def enable_cache_update(self):
         r"""
@@ -234,13 +225,11 @@ class AnalyticIntegrator(Integrator):
         """
         self.enable_cache_update_ = True
 
-
     def disable_cache_update(self):
         r"""
         Disallow caching of results between requested times.
         """
         self.enable_cache_update_ = False
-
 
     def reset(self):
         r"""
@@ -248,7 +237,6 @@ class AnalyticIntegrator(Integrator):
         """
         self.t_curr = 0.
         self.state_at_t_curr = self.initial_values.copy()
-
 
     def set_initial_values(self, vals: Union[Dict[str, str], Dict[sympy.Symbol, sympy.Expr]]):
         r"""
@@ -282,7 +270,6 @@ class AnalyticIntegrator(Integrator):
 
         self.reset()
 
-
     def _update_step(self, delta_t, initial_values) -> Dict[sympy.Symbol, sympy.Expr]:
         r"""
         Apply propagator to update the state, starting from `initial_values`, by timestep `delta_t`.
@@ -300,7 +287,6 @@ class AnalyticIntegrator(Integrator):
 
         y = [delta_t] + [initial_values[sym] for sym in self.all_variable_symbols]
 
-
         #
         #    for each state variable, perform the state update
         #
@@ -309,7 +295,6 @@ class AnalyticIntegrator(Integrator):
             new_state[sympy.Symbol(state_variable, real=True)] = self.update_expressions_wrapped[state_variable](*y)
 
         return new_state
-
 
     def get_value(self, t: float) -> Dict[sympy.Symbol, sympy.Expr]:
         r"""
@@ -332,7 +317,6 @@ class AnalyticIntegrator(Integrator):
 
         all_spike_times, all_spike_times_sym = self.get_sorted_spike_times()
 
-
         #
         #   process spikes between ⟨t_curr, t]
         #
@@ -345,7 +329,6 @@ class AnalyticIntegrator(Integrator):
             if spike_t > t:
                 break
 
-
             #
             #   apply propagator to update the state from `t_curr` to `spike_t`
             #
@@ -354,7 +337,6 @@ class AnalyticIntegrator(Integrator):
             if delta_t > 0:
                 state_at_t_curr = self._update_step(delta_t, state_at_t_curr)
                 t_curr = spike_t
-
 
             #
             #   delta impulse increment
@@ -371,7 +353,6 @@ class AnalyticIntegrator(Integrator):
         if self.enable_cache_update_:
             self.t_curr = t_curr
             self.state_at_t_curr = state_at_t_curr
-
 
         #
         #   apply propagator to update the state from `t_curr` to `t`

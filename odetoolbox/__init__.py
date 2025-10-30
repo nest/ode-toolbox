@@ -242,7 +242,6 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
 
             _check_forbidden_name(k)
 
-
     #
     #   create Shapes and SystemOfShapes
     #
@@ -263,7 +262,6 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     logging.debug("b = " + str(shape_sys.b_))
     logging.debug("c = " + str(shape_sys.c_))
 
-
     #
     #   generate analytical solutions (propagators) where possible
     #
@@ -281,7 +279,6 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
         analytic_solver_json = sub_sys.generate_propagator_solver(disable_singularity_detection=disable_singularity_detection)
         analytic_solver_json["solver"] = "analytical"
         solvers_json.append(analytic_solver_json)
-
 
     #
     #   generate numerical solvers for the remainder
@@ -319,7 +316,6 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
                 logging.info(solver_type + " scheme")
 
         solvers_json.append(solver_json)
-
 
     #
     #   copy the initial values from the input to the output for convenience; convert to numeric values
@@ -362,7 +358,6 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
                         _check_numerical_issue(var)
 
                     solver_json["parameters"][param_name] = str(sympy_expr)
-
 
     #
     #   convert expressions from sympy to string

@@ -137,20 +137,10 @@ class SingularityDetection:
 
         return conditions
 
-
     @staticmethod
     def find_singularity_conditions_in_expression_(expr: sympy.core.expr.Expr) -> Set[SymmetricEq]:
         r"""Find conditions under which subterms of ``expr`` of the form ``a / b`` equal infinity (in general, when b = 0)."""
         conditions = set()
-
-        # for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
-            # if isinstance(subexpr, sympy.Pow) and subexpr.args[1] < 0:  # find expressions of the form 1/x, which is encoded in sympy as x^-1
-            #     denom = subexpr.args[0]  # extracting the denominator
-            #     symbols = list(denom.free_symbols)
-            #     if len(symbols) == 0:
-            #         continue
-
-                # sub_expr_conds = SingularityDetection.find_singularity_conditions_in_denominator_expression_(denom, symbols)
 
         sub_expr_conds = set()
         for symbol in expr.free_symbols:
@@ -166,32 +156,6 @@ class SingularityDetection:
         conditions = conditions.union(sub_expr_conds)
 
         return conditions
-
-    # @staticmethod
-    # def find_singularity_conditions_in_denominator_expression_(expr, symbols) -> Set[SymmetricEq]:
-    #     r"""Find conditions under which expr == 0. The assumption is that ``expr`` is the denominator in an expression."""
-
-    #     # find all conditions under which the denominator goes to zero. Each element of the returned list contains a particular combination of conditions for which A[row, row] goes to zero. For instance: ``solve([x - 3, y**2 - 1])`` returns ``[{x: 3, y: -1}, {x: 3, y: 1}]``
-    #     conditions = sympy.solve(expr, symbols, dict=True, domain=sympy.S.Reals)
-
-    #     # remove solutions that contain the imaginary number. ``domain=sympy.S.Reals`` does not seem to work perfectly as an argument to sympy.solve(), while sympy's ``reduce_inequalities()`` only supports univariate equations at the time of writing
-    #     accepted_conditions = []
-    #     for cond_set in conditions:
-    #         i_in_expr = any([sympy.I in sympy.preorder_traversal(v) for v in cond_set.values()])
-    #         if not i_in_expr:
-    #             accepted_conditions.append(cond_set)
-
-    #     conditions = accepted_conditions
-
-    #     # convert dictionaries to sympy equations
-    #     converted_conditions = set()
-    #     for cond_set in conditions:
-    #         cond_eqs_set = set([SymmetricEq(k, v) for k, v in cond_set.items()])    # convert to actual equations
-    #         converted_conditions.add(frozenset(cond_eqs_set))
-
-    #     conditions = converted_conditions
-
-    #     return conditions
 
     @staticmethod
     def find_inhomogeneous_singularities(A: sympy.Matrix, b: sympy.Matrix) -> Set[SymmetricEq]:

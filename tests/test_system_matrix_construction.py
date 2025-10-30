@@ -42,7 +42,6 @@ class TestSystemMatrixConstruction:
                                              [3 * z * x**2 - x * y],
                                              [x * y]])
 
-
     def test_lorenz_attractor(self):
         indict = _open_json("lorenz_attractor.json")
         shapes, parameters = _from_json_to_shapes(indict)
@@ -55,7 +54,6 @@ class TestSystemMatrixConstruction:
         assert shape_sys.c_ == sympy.Matrix([[0],
                                              [-x * z],
                                              [x * y]])
-
 
     def test_morris_lecar(self):
         indict = _open_json("morris_lecar.json")

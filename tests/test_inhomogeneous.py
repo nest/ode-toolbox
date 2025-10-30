@@ -80,7 +80,7 @@ class TestInhomogeneous:
 
         sys_of_shape = SystemOfShapes.from_shapes([shape], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
-        solver_dict["parameters"] ={str(sym): expr for sym, expr in parameters_dict.items()}
+        solver_dict["parameters"] = {str(sym): expr for sym, expr in parameters_dict.items()}
 
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"x": str(x0)})
@@ -115,7 +115,7 @@ class TestInhomogeneous:
 
         sys_of_shape = SystemOfShapes.from_shapes([shape_x, shape_y], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
-        solver_dict["parameters"] ={str(sym): expr for sym, expr in parameters_dict.items()}
+        solver_dict["parameters"] = {str(sym): expr for sym, expr in parameters_dict.items()}
 
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"x": str(x0), "y": str(x0)})

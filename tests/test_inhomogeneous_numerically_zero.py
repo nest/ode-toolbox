@@ -62,7 +62,6 @@ class TestInhomogeneousNumericallyZero:
         dt = .1
         T = 100.
 
-
         #
         #    integration using the ODE-toolbox analytic integrator
         #
@@ -73,11 +72,9 @@ class TestInhomogeneousNumericallyZero:
         analytic_integrator.reset()
         actual = [analytic_integrator.get_value(t)[sympy.Symbol("z", real=True)] for t in timevec]
 
-
         #
         #    integration using scipy.integrate.odeint
         #
-
 
         def ode_model(z, t, p, late_ltp_check, late_ltd_check, tau_z):
             """
@@ -98,7 +95,6 @@ class TestInhomogeneousNumericallyZero:
         solution = scipy.integrate.odeint(ode_model, z0, timevec, args=ode_args, rtol=1E-12, atol=1E-12)
         correct = solution.flatten().tolist()
 
-
         #
         #   plot
         #
@@ -117,7 +113,6 @@ class TestInhomogeneousNumericallyZero:
                     _ax.set_xticklabels([])
 
             fig.savefig("/tmp/test_propagators_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png")
-
 
         #
         #   test

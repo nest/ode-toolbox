@@ -60,7 +60,6 @@ class SpikeGenerator():
 
         return spike_times
 
-
     @classmethod
     def _generate_homogeneous_poisson_spikes(cls, T: float, rate: float, min_isi: float = 1E-6):
         r"""
@@ -82,7 +81,6 @@ class SpikeGenerator():
                 spike_times.append(t)
 
         return spike_times
-
 
     @classmethod
     def _generate_regular_spikes(cls, T: float, rate: float):

@@ -180,18 +180,15 @@ class Shape:
 
         logging.debug("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", inhom_term = " + str(self.inhom_term) + ", nonlin_term = " + str(self.nonlin_term))
 
-
     def __str__(self):
         s = "Shape \"" + str(self.symbol) + "\" of order " + str(self.order)
         return s
-
 
     def is_homogeneous(self) -> bool:
         r"""
         :return: :python:`False` if and only if the shape has a nonzero right-hand side.
         """
         return _is_zero(self.inhom_term)
-
 
     def get_initial_value(self, sym: str):
         r"""
@@ -203,7 +200,6 @@ class Shape:
             return None
         return self.initial_values[sym]
 
-
     def get_state_variables(self, derivative_symbol="'") -> List[sympy.Symbol]:
         r"""
         Get all variable symbols for this shape, ordered according to derivative order, up to the shape's order :math:`N`: :python:`[sym, dsym/dt, d^2sym/dt^2, ..., d^(N-1)sym/dt^(N-1)]`
@@ -214,7 +210,6 @@ class Shape:
             all_symbols.append(sympy.Symbol(str(self.symbol) + derivative_symbol * order, real=True))
 
         return all_symbols
-
 
     def get_all_variable_symbols(self, shapes=None, derivative_symbol="'") -> List[sympy.Symbol]:
         r"""
@@ -238,13 +233,11 @@ class Shape:
 
         return all_symbols
 
-
     def is_lin_const_coeff(self) -> bool:
         r"""
         :return: :python:`True` if and only if the shape is linear and constant coefficient.
         """
         return _is_zero(self.nonlin_term)
-
 
     def is_lin_const_coeff_in(self, symbols, parameters=None):
         r"""
@@ -253,7 +246,6 @@ class Shape:
         expr = self.reconstitute_expr()
         derivative_factors, inhom_term, nonlin_term = Shape.split_lin_inhom_nonlin(expr, symbols, parameters=parameters)
         return _is_zero(nonlin_term)
-
 
     @classmethod
     def _parse_defining_expression(cls, s: str) -> Tuple[str, int, str]:
@@ -282,7 +274,6 @@ class Shape:
 
         order = len(re.findall("'", lhs))
         return symbol, order, rhs
-
 
     @classmethod
     def from_json(cls, indict, all_variable_symbols=None, parameters=None, _debug=False):
@@ -355,7 +346,6 @@ class Shape:
 
         return Shape.from_ode(symbol, rhs, initial_values, all_variable_symbols=all_variable_symbols, lower_bound=lower_bound, upper_bound=upper_bound, parameters=parameters)
 
-
     def reconstitute_expr(self) -> SympyExpr:
         r"""
         Recreate right-hand side expression from internal representation (linear coefficients, inhomogeneous, and nonlinear parts).
@@ -372,7 +362,6 @@ class Shape:
         for sym in expr.free_symbols:
             assert sym.is_real
         return expr
-
 
     @staticmethod
     def split_lin_inhom_nonlin(expr, x, parameters=None):
@@ -433,7 +422,6 @@ class Shape:
 
         return lin_factors, inhom_term, nonlin_term
 
-
     @classmethod
     def from_function(cls, symbol: str, definition, max_t=100, max_order=4, all_variable_symbols=None, debug=False) -> Shape:
         r"""
@@ -466,7 +454,6 @@ class Shape:
 
         logging.debug("Processing function-of-time shape \"" + symbol + "\" with defining expression = \"" + str(definition) + "\"")
 
-
         #
         #   to avoid a division by zero below, we have to find a `t` so that the shape function is not zero at this `t`.
         #
@@ -488,7 +475,6 @@ class Shape:
             msg = "Cannot find t for which shape function is unequal to zero"
             raise Exception(msg)
 
-
         #
         #   first handle the case for an ODE of order 1, i.e. of the form I' = a0 * I
         #
@@ -500,7 +486,6 @@ class Shape:
         derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(sympy.Symbol(Config().input_time_symbol, real=True), t_val)]
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
         found_ode = _is_zero(diff_rhs_lhs)
-
 
         #
         #   If `shape` does not satisfy a linear homogeneous ODE of order 1, we try to find one of higher order in a loop. The loop runs while no linear homogeneous ODE was found and the maximum order to check for was not yet reached.
@@ -539,13 +524,11 @@ class Shape:
             if not invertible:
                 continue
 
-
             #
             #   calculate `derivative_factors`
             #
 
             derivative_factors = sympy.simplify(X.inv() * Y)    # XXX: need sympy.simplify() here rather than _custom_simplify_expr()
-
 
             #
             #   fill in the obtained expressions for the derivative_factors and check whether they satisfy the definition of the shape
@@ -573,7 +556,6 @@ class Shape:
         initial_values = {symbol + derivative_order * "'": x.subs(sympy.Symbol(Config().input_time_symbol, real=True), 0) for derivative_order, x in enumerate(derivatives[:-1])}
 
         return cls(sympy.Symbol(symbol, real=True), order, initial_values, derivative_factors)
-
 
     @classmethod
     def from_ode(cls, symbol: str, definition: str, initial_values: dict, all_variable_symbols=None, lower_bound=None, upper_bound=None, parameters=None, debug=False, **kwargs) -> Shape:
@@ -609,7 +591,7 @@ class Shape:
         order: int = len(initial_values)
         all_variable_symbols_dict = {str(el): el for el in all_variable_symbols}
         if parameters:
-            parameter_symbols_real_dict = {str(sym): sym for sym in parameters.keys()}#sympy.Symbol(sym_name, is_real=True) for sym in parameters.keys()} # make a dict with a symbol for each parameter to make sure we can set the domain to Real
+            parameter_symbols_real_dict = {str(sym): sym for sym in parameters.keys()}    # make a dict with a symbol for each parameter to make sure we can set the domain to Real
         else:
             parameter_symbols_real_dict = {}
         definition = _sympy_parse_real(definition.replace("'", Config().differential_order_symbol), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict | parameter_symbols_real_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)

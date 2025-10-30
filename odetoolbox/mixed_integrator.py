@@ -128,13 +128,11 @@ class MixedIntegrator(Integrator):
                                                                                          backend="cython",
                                                                                          helpers=Shape._sympy_autowrap_helpers)
 
-
         #
         #   make a sorted list of all spike times for all symbols
         #
 
         self.set_spike_times(spike_times)
-
 
     def integrate_ode(self, initial_values=None, h_min_lower_bound=5E-9, raise_errors=True, debug=False):
         r"""
@@ -158,7 +156,6 @@ class MixedIntegrator(Integrator):
 
         all_spike_times, all_spike_times_sym = self.get_sorted_spike_times()
 
-
         #
         #  initialise analytic integrator
         #
@@ -168,7 +165,6 @@ class MixedIntegrator(Integrator):
             self.analytic_integrator = AnalyticIntegrator(self.analytic_solver_dict, analytic_integrator_spike_times)
             analytic_integrator_initial_values = {sym: iv for sym, iv in initial_values.items() if sym in self.analytic_integrator.get_all_variable_symbols()}
             self.analytic_integrator.set_initial_values(analytic_integrator_initial_values)
-
 
         #
         #    convert initial value expressions to floats
@@ -190,7 +186,6 @@ class MixedIntegrator(Integrator):
         control = odeiv.control_y_new(gsl_stepper, self.integration_accuracy_abs, self.integration_accuracy_rel)
         evolve = odeiv.evolve(gsl_stepper, control, len(y))
 
-
         #
         #    make NumPy warnings errors. Without this, we can't catch overflow errors that can occur in the step() function, which might indicate a problem with the ODE, the grid resolution or the stiffness testing framework itself.
         #
@@ -205,7 +200,6 @@ class MixedIntegrator(Integrator):
             #
 
             time_start = time.time()
-
 
             #
             #    main loop
@@ -276,7 +270,6 @@ class MixedIntegrator(Integrator):
                     h_sum += h_suggested
                     n_timesteps_taken += 1
 
-
                     #
                     #    enforce bounds/thresholds
                     #
@@ -289,7 +282,6 @@ class MixedIntegrator(Integrator):
                                 upper_bound_crossed = True
                                 y[idx] = initial_values[shape.symbol]
 
-
                 #
                 #    evaluate to numeric values those ODEs that are solved analytically
                 #
@@ -298,7 +290,6 @@ class MixedIntegrator(Integrator):
 
                 if not self.analytic_integrator is None:
                     self._locals.update(self.analytic_integrator.get_value(t))
-
 
                 #
                 #   apply the spikes, i.e. add the "initial values" to the system dynamical state vector
@@ -354,7 +345,6 @@ class MixedIntegrator(Integrator):
             return h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list
         else:
             return h_min, h_avg, runtime
-
 
     def integrator_debug_plot(self, t_log, h_log, y_log, dir):
         mpl, plt = import_matplotlib()
@@ -414,7 +404,6 @@ class MixedIntegrator(Integrator):
         plt.savefig(fn, dpi=600)
         plt.close(fig)
 
-
     def numerical_jacobian(self, t, y, params):
         r"""
         Compute the numerical values of the Jacobian matrix at the current time :python:`t` and state :python:`y`.
@@ -444,7 +433,6 @@ class MixedIntegrator(Integrator):
                 # dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))	# non-wrapped version
 
         return dfdy, dfdt
-
 
     def step(self, t, y, params):
         r"""

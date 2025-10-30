@@ -38,14 +38,12 @@ class TestLinConstCoeffAndHomogeneous:
         assert shape.is_lin_const_coeff()
         assert shape.is_lin_const_coeff_in([sympy.Symbol("I_in", real=True), sympy.Symbol("I_in__d", real=True)], parameters={sympy.Symbol("tau_syn_in", real=True): "3.14159"})
 
-
     def test_nonlinear_inhomogeneous(self):
         shape = Shape.from_ode("q", "(a - q**2) / b", initial_values={"q": "0."}, parameters=TestLinConstCoeffAndHomogeneous._parameters)
 
         assert not shape.is_homogeneous()
         assert not shape.is_lin_const_coeff()
         assert not shape.is_lin_const_coeff_in([sympy.Symbol("q", real=True)], parameters=TestLinConstCoeffAndHomogeneous._parameters)
-
 
     def test_nonlinear_homogeneous(self):
         shape = Shape.from_ode("q", "-q**2 / b", initial_values={"q": "0."}, parameters=TestLinConstCoeffAndHomogeneous._parameters)
@@ -54,14 +52,12 @@ class TestLinConstCoeffAndHomogeneous:
         assert not shape.is_lin_const_coeff()
         assert not shape.is_lin_const_coeff_in([sympy.Symbol("q", real=True)], parameters=TestLinConstCoeffAndHomogeneous._parameters)
 
-
     def test_from_homogeneous_ode(self):
         shape = Shape.from_ode("q", "-q / b", initial_values={"q": "0."})
 
         assert shape.is_homogeneous()
         assert not shape.is_lin_const_coeff()
         assert shape.is_lin_const_coeff_in([sympy.Symbol("q", real=True)], parameters=TestLinConstCoeffAndHomogeneous._parameters)
-
 
     def test_from_homogeneous_ode_alternate(self):
         shape = Shape.from_ode("q", "(a - q) / b", initial_values={"q": "0."}, parameters=TestLinConstCoeffAndHomogeneous._parameters)
