@@ -27,7 +27,7 @@ import sympy
 from sympy.core.expr import Expr as SympyExpr
 
 from .config import Config
-from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _find_in_matrix, _is_zero, _is_sympy_type, SympyPrinter
+from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _find_in_matrix, _is_zero, _is_sympy_type, SympyPrinter, _sympy_parse_real
 from .system_of_shapes import SystemOfShapes
 from .shapes import MalformedInputException, Shape
 
@@ -127,6 +127,7 @@ def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sym
     # validate input for forbidden names
     for var in set(all_variable_symbols) | all_parameter_symbols:
         _check_forbidden_name(var)
+        assert var.is_real
 
     # validate parameters
     for param in all_parameter_symbols:
@@ -234,7 +235,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
         parameters = {}
         for k, v in indict["parameters"].items():
             if type(k) is str:
-                parameters[sympy.Symbol(k)] = v
+                parameters[sympy.Symbol(k, real=True)] = v
             else:
                 assert type(k) is sympy.Symbol
                 parameters[k] = v
@@ -327,7 +328,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     for solver_json in solvers_json:
         solver_json["initial_values"] = {}
         for shape in shapes:
-            all_shape_symbols = [str(sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * i)) for i in range(shape.order)]
+            all_shape_symbols = [str(sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * i, real=True)) for i in range(shape.order)]
             for sym in all_shape_symbols:
                 if sym in solver_json["state_variables"]:
                     iv_expr = shape.get_initial_value(sym.replace(Config().differential_order_symbol, "'"))
@@ -347,7 +348,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             for param_name, param_expr in indict["parameters"].items():
                 # only make parameters appear in a solver if they are actually used there
                 if symbol_appears_in_any_expr(sym, solver_json):
-                    sympy_expr = sympy.parsing.sympy_parser.parse_expr(param_expr, global_dict=Shape._sympy_globals)
+                    sympy_expr = _sympy_parse_real(param_expr, global_dict=Shape._sympy_globals)
 
                     # validate output for numerical problems
                     for var in sympy_expr.atoms():

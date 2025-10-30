@@ -32,7 +32,7 @@ from odetoolbox.spike_generator import SpikeGenerator
 from .context import odetoolbox
 from tests.test_utils import _open_json
 from odetoolbox.singularity_detection import SingularityDetection
-from odetoolbox.sympy_helpers import SymmetricEq
+from odetoolbox.sympy_helpers import SymmetricEq, _sympy_parse_real
 
 try:
     import matplotlib as mpl
@@ -47,7 +47,7 @@ class TestSingularityDetection:
     r"""Test singularity detection"""
 
     def test_is_matrix_defined_under_substitution(self):
-        tau_m, tau_r, C, h = sympy.symbols("tau_m, tau_r, C, h")
+        tau_m, tau_r, C, h = sympy.symbols("tau_m, tau_r, C, h", real=True)
         P = sympy.Matrix([[-1 / tau_r, 0, 0], [1, -1 / tau_r, 0], [0, 1 / C, -1 / tau_m]])
         assert SingularityDetection._is_matrix_defined_under_substitution(P, set())
         assert SingularityDetection._is_matrix_defined_under_substitution(P, set([SymmetricEq(tau_r, 1)]))
@@ -57,10 +57,10 @@ class TestSingularityDetection:
     def test_alpha_beta_kernels(self, kernel_to_use: str):
         r"""Test correctness of result for simple leaky integrate-and-fire neuron with biexponential postsynaptic kernel"""
         if kernel_to_use == "alpha":
-            tau_m, tau_s, C, h = sympy.symbols("tau_m, tau_s, C, h")
+            tau_m, tau_s, C, h = sympy.symbols("tau_m, tau_s, C, h", real=True)
             A = sympy.Matrix([[-1 / tau_s, 0, 0], [1, -1 / tau_s, 0], [0, 1 / C, -1 / tau_m]])
         elif kernel_to_use == "beta":
-            tau_m, tau_d, tau_r, C, h = sympy.symbols("tau_m, tau_d, tau_r, C, h")
+            tau_m, tau_d, tau_r, C, h = sympy.symbols("tau_m, tau_d, tau_r, C, h", real=True)
             A = sympy.Matrix([[-1 / tau_d, 0, 0], [1, -1 / tau_r, 0], [0, 1 / C, -1 / tau_m]])
 
         P = sympy.simplify(sympy.exp(A * h))  # Propagator matrix
@@ -75,13 +75,15 @@ class TestSingularityDetection:
 
     def test_more_than_one_solution(self):
         r"""Test the case where there is more than one element returned in a solution to an equation; in this example, for a quadratic input equation"""
-        A = sympy.Matrix([[sympy.parsing.sympy_parser.parse_expr("-1/(tau_s**2 - 3*tau_s - 42)")]])
+        tau_s = sympy.Symbol("tau_s", real=True)
+        expr = _sympy_parse_real("-1/(tau_s**2 - 3*tau_s - 42)", local_dict={"tau_s": tau_s})
+        A = sympy.Matrix([[expr]])
         conditions = SingularityDetection._generate_singularity_conditions(A)
         assert len(conditions) == 2
         for cond in conditions:
-            assert sympy.Symbol("tau_s") == cond.lhs
-            assert cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 + sqrt(177)/2") \
-                or cond.rhs == sympy.parsing.sympy_parser.parse_expr("3/2 - sqrt(177)/2")
+            assert sympy.Symbol("tau_s", real=True) == cond.lhs
+            assert cond.rhs == _sympy_parse_real("3/2 + sqrt(177)/2") \
+                or cond.rhs == _sympy_parse_real("3/2 - sqrt(177)/2")
 
 
 class TestSingularityInBothPropagatorAndInhomogeneous:
@@ -172,7 +174,7 @@ class TestSingularityInBothPropagatorAndInhomogeneous:
         N = int(np.ceil(T / dt) + 1)
         timevec = np.linspace(0., T, N)
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times)
-        analytic_integrator.shape_starting_values["I_aux"] = w * alpha
+        analytic_integrator.shape_starting_values[sympy.Symbol("I_aux", real=True)] = w * alpha
         ODE_INITIAL_VALUES = {"I": 0., "I_aux": 0., "z": 0.}
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
         analytic_integrator.reset()
@@ -181,9 +183,9 @@ class TestSingularityInBothPropagatorAndInhomogeneous:
             state_ = analytic_integrator.get_value(t)
             state["timevec"].append(t)
             for sym, val in state_.items():
-                state[sym].append(val)
+                state[str(sym)].append(val)
 
-        actual = [analytic_integrator.get_value(t)["z"] for t in timevec]
+        actual = [analytic_integrator.get_value(t)[sympy.Symbol("z", real=True)] for t in timevec]
 
 
         #

@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Union
 
 import logging
 import sympy
@@ -89,7 +89,7 @@ class SingularityDetection:
     """
 
     @staticmethod
-    def _is_matrix_defined_under_substitution(A: sympy.Matrix, cond: SymmetricEq) -> bool:
+    def _is_matrix_defined_under_substitution(A: sympy.Matrix, cond: Union[SymmetricEq, Set[SymmetricEq]]) -> bool:
         r"""
         Function to check if a matrix is defined (i.e. does not contain NaN or infinity) after we perform a given set of subsitutions.
 
@@ -105,7 +105,11 @@ class SingularityDetection:
                 continue
 
             expr_sub = val.copy()
-            expr_sub = expr_sub.subs(cond.lhs, cond.rhs)
+            if isinstance(cond, set):
+                for _cond in cond:
+                    expr_sub = expr_sub.subs(_cond.lhs, _cond.rhs)
+            else:
+                expr_sub = expr_sub.subs(cond.lhs, cond.rhs)
 
             if symbol_in_expression([sympy.nan, sympy.zoo, sympy.oo], sympy.simplify(expr_sub)):
                 return False
@@ -135,27 +139,31 @@ class SingularityDetection:
 
 
     @staticmethod
-    def find_singularity_conditions_in_expression_(expr) -> Set[SymmetricEq]:
+    def find_singularity_conditions_in_expression_(expr: sympy.core.expr.Expr) -> Set[SymmetricEq]:
         r"""Find conditions under which subterms of ``expr`` of the form ``a / b`` equal infinity (in general, when b = 0)."""
         conditions = set()
 
-        for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
-            if isinstance(subexpr, sympy.Pow) and subexpr.args[1] < 0:  # find expressions of the form 1/x, which is encoded in sympy as x^-1
-                denom = subexpr.args[0]  # extracting the denominator
-                symbols = list(denom.free_symbols)
-                if len(symbols) == 0:
-                    continue
+        # for subexpr in sympy.preorder_traversal(expr):  # traversing through the tree
+            # if isinstance(subexpr, sympy.Pow) and subexpr.args[1] < 0:  # find expressions of the form 1/x, which is encoded in sympy as x^-1
+            #     denom = subexpr.args[0]  # extracting the denominator
+            #     symbols = list(denom.free_symbols)
+            #     if len(symbols) == 0:
+            #         continue
 
                 # sub_expr_conds = SingularityDetection.find_singularity_conditions_in_denominator_expression_(denom, symbols)
 
-                sub_expr_conds = set()
-                for symbol in symbols:
-                    singularity_set = sympy.calculus.singularities(expr, symbol=symbol)
-                    for singular_value in singularity_set:
-                        singular_condition = SymmetricEq(symbol, singular_value)
-                        sub_expr_conds.add(singular_condition)
+        sub_expr_conds = set()
+        for symbol in expr.free_symbols:
+            assert symbol.is_real
+            singularity_set = sympy.calculus.singularities(expr, symbol=symbol, domain=sympy.Reals)
+            for singular_value in singularity_set:
+                singular_value = sympy.nsimplify(singular_value)    # nsimplify is necessary to remove 1.0* factors
+                singular_condition = SymmetricEq(symbol, singular_value)
+                assert symbol.is_real
+                assert singular_value.is_real
+                sub_expr_conds.add(singular_condition)
 
-                conditions = conditions.union(sub_expr_conds)
+        conditions = conditions.union(sub_expr_conds)
 
         return conditions
 
@@ -204,7 +212,7 @@ class SingularityDetection:
                 continue
 
             particular_solution = -b[row] / A[row, row]
-            particular_solution = _custom_simplify_expr(particular_solution)
+            particular_solution = sympy.simplify(particular_solution)    # using _custom_update_expr() does not guarantee that an adequate number of cases will be covered
 
             conditions = conditions.union(SingularityDetection.find_singularity_conditions_in_expression_(particular_solution))
 
@@ -235,6 +243,7 @@ class SingularityDetection:
         if 1:
             conditions = SingularityDetection._generate_singularity_conditions(P)
             conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
+
         # except Exception as e:
         #     print(e)
         #     raise SingularityDetectionException()

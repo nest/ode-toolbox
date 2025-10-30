@@ -31,7 +31,9 @@ class Integrator:
     Integrate a dynamical system by means of the propagators returned by ODE-toolbox (base class).
     """
 
-    all_variable_symbols = []   # type: List[sympy.Symbol]
+    all_variable_symbols: List[sympy.Symbol] = []
+    all_spike_times: List[float] = []
+    all_spike_times_sym: List[List[sympy.Symbol]] = []
 
     def set_spike_times(self, spike_times: Optional[Dict[str, List[float]]]):
         r"""
@@ -39,13 +41,16 @@ class Integrator:
 
         :param spike_times: For each variable, used as a key, the list of spike times associated with it.
         """
+
         if spike_times is None:
             self.spike_times = {}
         else:
             self.spike_times = spike_times.copy()
+
         assert all([type(sym) is str for sym in self.spike_times.keys()]), "Spike time keys need to be of type str"
-        self.all_spike_times = []  # type: List[float]
-        self.all_spike_times_sym = []   # type: List[List[str]]
+
+        self.all_spike_times = []
+        self.all_spike_times_sym = []
         for sym, sym_spike_times in self.spike_times.items():
             assert type(sym) is str
             assert str(sym) in [str(_sym) for _sym in self.all_variable_symbols], "Tried to set a spike time of unknown symbol \"" + sym + "\""
@@ -59,7 +64,7 @@ class Integrator:
 
         idx = np.argsort(self.all_spike_times)
         self.all_spike_times = [self.all_spike_times[i] for i in idx]
-        self.all_spike_times_sym = [self.all_spike_times_sym[i] for i in idx]
+        self.all_spike_times_sym = [[sympy.Symbol(sym, real=True) for sym in self.all_spike_times_sym[i]] for i in idx]
 
 
     def get_spike_times(self):

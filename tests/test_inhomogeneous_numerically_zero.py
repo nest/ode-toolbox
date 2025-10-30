@@ -23,6 +23,7 @@ import pytest
 
 import numpy as np
 import scipy.integrate
+import sympy
 
 try:
     import matplotlib as mpl
@@ -70,7 +71,7 @@ class TestInhomogeneousNumericallyZero:
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"z": z0})
         analytic_integrator.reset()
-        actual = [analytic_integrator.get_value(t)["z"] for t in timevec]
+        actual = [analytic_integrator.get_value(t)[sympy.Symbol("z", real=True)] for t in timevec]
 
 
         #

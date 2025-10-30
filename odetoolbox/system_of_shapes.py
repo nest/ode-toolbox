@@ -20,7 +20,7 @@
 #
 
 import itertools
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Union
 
 import logging
 import numpy as np
@@ -33,7 +33,7 @@ import sympy.matrices
 from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
-from .sympy_helpers import SymmetricEq, _custom_simplify_expr, _is_zero
+from .sympy_helpers import SymmetricEq, _custom_simplify_expr, _is_zero, _sympy_parse_real
 
 
 class GetBlockDiagonalException(Exception):
@@ -98,16 +98,17 @@ class SystemOfShapes:
         self.shapes_ = shapes
 
 
-    def get_shape_by_symbol(self, sym: str) -> Optional[Shape]:
+    def get_shape_by_symbol(self, sym: Union[str, sympy.Symbol]) -> Optional[Shape]:
         for shape in self.shapes_:
-            if str(shape.symbol) == sym:
+            if str(shape.symbol) == str(sym):
                 return shape
+
         return None
 
-    def get_initial_value(self, sym):
+    def get_initial_value(self, sym: Union[str, sympy.Symbol]):
         for shape in self.shapes_:
             if str(shape.symbol) == str(sym).replace(Config().differential_order_symbol, "").replace("'", ""):
-                return shape.get_initial_value(sym.replace(Config().differential_order_symbol, "'"))
+                return shape.get_initial_value(str(sym).replace(Config().differential_order_symbol, "'"))
 
         assert False, "Unknown symbol: " + str(sym)
 
@@ -213,12 +214,12 @@ class SystemOfShapes:
             # optimized: be explicit about block diagonal elements; much faster!
             logging.debug("Computing propagator matrix (block-diagonal optimisation)...")
             blocks = get_block_diagonal_blocks(np.array(A))
-            propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
+            propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol, real=True))) for block in blocks]
             P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
         except GetBlockDiagonalException:
             # naive: calculate propagators in one step
             logging.debug("Computing propagator matrix...")
-            P = _custom_simplify_expr(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
+            P = _custom_simplify_expr(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol, real=True)))
 
         # check the result
         if sympy.I in sympy.preorder_traversal(P):
@@ -388,7 +389,7 @@ class SystemOfShapes:
                     update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
-            update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
+            update_expr[str(self.x_[row])] = _sympy_parse_real(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
@@ -440,7 +441,7 @@ class SystemOfShapes:
                 else:
                     update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.b_[row]) + ") + (" + str(self.c_[row]) + ")"
-            update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
+            update_expr[str(x)] = _sympy_parse_real(update_expr[str(x)], global_dict=Shape._sympy_globals)
 
         # custom expression simplification
         for name, expr in update_expr.items():
@@ -515,7 +516,7 @@ class SystemOfShapes:
 
         i = 0
         for shape in shapes:
-            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * (shape.order - 1))][0]
+            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * (shape.order - 1), real=True)][0]
             shape_expr = shape.reconstitute_expr()
 
             #

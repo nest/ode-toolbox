@@ -226,7 +226,7 @@ class TestAnalyticSolverIntegration:
             state_ = analytic_integrator.get_value(t)
             state["timevec"].append(t)
             for sym, val in state_.items():
-                state[sym].append(val)
+                state[str(sym)].append(val)
 
         for k, v in state.items():
             state[k] = np.array(v)

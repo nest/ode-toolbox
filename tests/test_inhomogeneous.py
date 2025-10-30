@@ -51,7 +51,7 @@ class TestInhomogeneous:
         cur_x = x0
         timevec = np.arange(0., 100., dt)
         for step, t in enumerate(timevec):
-            state_ = analytic_integrator.get_value(t)["x"]
+            state_ = analytic_integrator.get_value(t)[sympy.Symbol("x", real=True)]
             actual.append(state_)
 
             cur_x = x0 + 42 * t
@@ -70,8 +70,8 @@ class TestInhomogeneous:
 
         x0 = 0.
 
-        parameters_dict = {sympy.Symbol("U"): str(U),
-                           sympy.Symbol("tau"): str(tau)}
+        parameters_dict = {sympy.Symbol("U", real=True): str(U),
+                           sympy.Symbol("tau", real=True): str(tau)}
 
         shape = Shape.from_ode("x", ode_definition, initial_values={"x": str(x0)}, parameters=parameters_dict)
 
@@ -80,7 +80,7 @@ class TestInhomogeneous:
 
         sys_of_shape = SystemOfShapes.from_shapes([shape], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
-        solver_dict["parameters"] = parameters_dict
+        solver_dict["parameters"] ={str(sym): expr for sym, expr in parameters_dict.items()}
 
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"x": str(x0)})
@@ -92,7 +92,7 @@ class TestInhomogeneous:
         timevec = np.arange(0., 100., dt)
         kernel = np.exp(-dt / tau)
         for step, t in enumerate(timevec):
-            state_ = analytic_integrator.get_value(t)["x"]
+            state_ = analytic_integrator.get_value(t)[sympy.Symbol("x", real=True)]
             actual.append(state_)
             correct.append(cur_x)
             cur_x = U + kernel * (cur_x - U)
@@ -106,16 +106,16 @@ class TestInhomogeneous:
 
         x0 = 0.
 
-        parameters_dict = {sympy.Symbol("U"): str(U),
-                           sympy.Symbol("tau1"): str(tau),
-                           sympy.Symbol("tau2"): str(tau)}
+        parameters_dict = {sympy.Symbol("U", real=True): str(U),
+                           sympy.Symbol("tau1", real=True): str(tau),
+                           sympy.Symbol("tau2", real=True): str(tau)}
 
         shape_x = Shape.from_ode("x", "(U - x) / tau1", initial_values={"x": str(x0)}, parameters=parameters_dict)
         shape_y = Shape.from_ode("y", "(1 - y) / tau2", initial_values={"y": str(x0)}, parameters=parameters_dict)
 
         sys_of_shape = SystemOfShapes.from_shapes([shape_x, shape_y], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
-        solver_dict["parameters"] = parameters_dict
+        solver_dict["parameters"] ={str(sym): expr for sym, expr in parameters_dict.items()}
 
         analytic_integrator = AnalyticIntegrator(solver_dict)
         analytic_integrator.set_initial_values({"x": str(x0), "y": str(x0)})
@@ -130,8 +130,8 @@ class TestInhomogeneous:
         timevec = np.arange(0., 100., dt)
         kernel = np.exp(-dt / tau)
         for step, t in enumerate(timevec):
-            state_x = analytic_integrator.get_value(t)["x"]
-            state_y = analytic_integrator.get_value(t)["y"]
+            state_x = analytic_integrator.get_value(t)[sympy.Symbol("x", real=True)]
+            state_y = analytic_integrator.get_value(t)[sympy.Symbol("y", real=True)]
             actual_x.append(state_x)
             actual_y.append(state_y)
             correct_x.append(cur_x)
@@ -146,7 +146,7 @@ class TestInhomogeneous:
     def test_inhomogeneous_solver_second_order(self):
         r"""test failure to generate propagators for inhomogeneous 2nd order ODE"""
         tau = 10.  # [s]
-        parameters_dict = {sympy.Symbol("tau"): str(tau)}
+        parameters_dict = {sympy.Symbol("tau", real=True): str(tau)}
 
         x0 = 0.
         x0d = 10.
@@ -159,7 +159,7 @@ class TestInhomogeneous:
     def test_inhomogeneous_solver_second_order_system(self):
         r"""test failure to generate propagators for inhomogeneous 2nd order ODE"""
         tau = 10.  # [s]
-        parameters_dict = {sympy.Symbol("tau"): str(tau)}
+        parameters_dict = {sympy.Symbol("tau", real=True): str(tau)}
 
         x0 = 0.
         x0d = 10.
@@ -185,8 +185,8 @@ class TestInhomogeneous:
         r"""test propagators generation for combined homogeneous/inhomogeneous ODEs"""
         tau = 10.  # [s]
         E_L = -70.  # [mV]
-        parameters_dict = {sympy.Symbol("tau"): str(tau),
-                           sympy.Symbol("E_L"): str(E_L)}
+        parameters_dict = {sympy.Symbol("tau", real=True): str(tau),
+                           sympy.Symbol("E_L", real=True): str(E_L)}
 
         x0 = 0.
         x0d = 10.

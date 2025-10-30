@@ -21,6 +21,7 @@
 
 import sympy
 import sympy.parsing.sympy_parser
+from odetoolbox.sympy_helpers import _sympy_parse_real
 
 from tests.test_utils import _open_json
 
@@ -41,9 +42,9 @@ class TestLorenzAttractor:
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"].startswith("numeric")
-        assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["x"], global_dict=Shape._sympy_globals).expand().simplify() \
-               == sympy.parsing.sympy_parser.parse_expr("sigma*(-x + y)", global_dict=Shape._sympy_globals).expand().simplify()
-        assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["y"], global_dict=Shape._sympy_globals).expand().simplify() \
-               == sympy.parsing.sympy_parser.parse_expr("rho*x - x*z - y", global_dict=Shape._sympy_globals).expand().simplify()
-        assert sympy.parsing.sympy_parser.parse_expr(solver_dict["update_expressions"]["z"], global_dict=Shape._sympy_globals).expand().simplify() \
-               == sympy.parsing.sympy_parser.parse_expr("-beta*z + x*y", global_dict=Shape._sympy_globals).expand().simplify()
+        assert _sympy_parse_real(solver_dict["update_expressions"]["x"], global_dict=Shape._sympy_globals).expand().simplify() \
+               == _sympy_parse_real("sigma*(-x + y)", global_dict=Shape._sympy_globals).expand().simplify()
+        assert _sympy_parse_real(solver_dict["update_expressions"]["y"], global_dict=Shape._sympy_globals).expand().simplify() \
+               == _sympy_parse_real("rho*x - x*z - y", global_dict=Shape._sympy_globals).expand().simplify()
+        assert _sympy_parse_real(solver_dict["update_expressions"]["z"], global_dict=Shape._sympy_globals).expand().simplify() \
+               == _sympy_parse_real("-beta*z + x*y", global_dict=Shape._sympy_globals).expand().simplify()

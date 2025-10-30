@@ -22,6 +22,7 @@
 import numpy as np
 import pytest
 from scipy.integrate import odeint
+import sympy
 
 import odetoolbox
 
@@ -113,7 +114,7 @@ class TestDoubleExponential:
         N = int(np.ceil(T / dt) + 1)
         timevec = np.linspace(0., T, N)
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times)
-        analytic_integrator.shape_starting_values["I_aux"] = w * alpha
+        analytic_integrator.shape_starting_values[sympy.Symbol("I_aux", real=True)] = w * alpha
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
         analytic_integrator.reset()
         state = {"timevec": [], "I": [], "I_aux": []}
@@ -121,7 +122,7 @@ class TestDoubleExponential:
             state_ = analytic_integrator.get_value(t)
             state["timevec"].append(t)
             for sym, val in state_.items():
-                state[sym].append(val)
+                state[str(sym)].append(val)
 
         # solve with odeint
         ts0 = np.arange(0., input_spike_times[0] - dt / 2, dt)

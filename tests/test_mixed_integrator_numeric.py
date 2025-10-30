@@ -74,7 +74,7 @@ def _run_simulation(indict, alias_spikes, integrator, params=None, **kwargs):
     T = 50E-3  # [s]
 
     initial_values = {"g_ex__d": 0., "g_in__d": 0.}    # optionally override initial values
-    initial_values = {sympy.Symbol(k): v for k, v in initial_values.items()}
+    initial_values = {sympy.Symbol(k, real=True): v for k, v in initial_values.items()}
     spike_times = {"g_ex__d": np.array([10E-3]), "g_in__d": np.array([6E-3])}
 
     analysis_json, shape_sys, shapes = odetoolbox._analysis(indict, disable_stiffness_check=True, disable_analytic_solver=True, log_level="DEBUG", **kwargs)
@@ -108,6 +108,7 @@ def _run_simulation(indict, alias_spikes, integrator, params=None, **kwargs):
                                        h_min_lower_bound=1E-12,
                                        raise_errors=True,
                                        debug=True)		# debug needs to be True here to obtain the right return values
+
     return h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list, analysis_json
 
 

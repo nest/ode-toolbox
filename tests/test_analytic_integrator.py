@@ -19,6 +19,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import sympy
 import numpy as np
 
@@ -53,10 +54,11 @@ class TestAnalyticIntegrator:
         #
 
         indict = _open_json("test_alpha_function_of_time.json")
-        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, log_level=logging.DEBUG)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
+        assert len(solver_dict["state_variables"]) == 2
 
         ODE_INITIAL_VALUES = {"I": 0., "I__d": 0.}
 
@@ -82,7 +84,7 @@ class TestAnalyticIntegrator:
                 state_ = analytic_integrator.get_value(t)
                 state[use_caching]["timevec"].append(t)
                 for sym, val in state_.items():
-                    state[use_caching][sym].append(val)
+                    state[use_caching][str(sym)].append(val)
 
         for use_caching in [False, True]:
             for k, v in state[use_caching].items():
@@ -110,4 +112,4 @@ class TestAnalyticIntegrator:
         np.testing.assert_allclose(state[True]["timevec"], timevec)
         np.testing.assert_allclose(state[True]["timevec"], state[False]["timevec"])
         for sym, val in state_.items():
-            np.testing.assert_allclose(state[True][sym], state[False][sym])
+            np.testing.assert_allclose(state[True][str(sym)], state[False][str(sym)])

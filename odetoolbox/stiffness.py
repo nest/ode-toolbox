@@ -24,6 +24,8 @@ import numpy as np
 import numpy.random
 import sympy
 
+from odetoolbox.sympy_helpers import _sympy_parse_real
+
 from .mixed_integrator import MixedIntegrator
 from .mixed_integrator import ParametersIncompleteException
 from .shapes import Shape
@@ -68,7 +70,7 @@ class StiffnessTester:
             self.parameters = {}
         else:
             self.parameters = parameters
-        self.parameters = {k: sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self.parameters.items()}
+        self.parameters = {k: _sympy_parse_real(v, global_dict=Shape._sympy_globals).n() for k, v in self.parameters.items()}
         self._locals = self.parameters.copy()
         if stimuli is None:
             self._stimuli = []
