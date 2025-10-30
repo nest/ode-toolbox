@@ -24,6 +24,8 @@ import numpy as np
 import numpy.random
 import sympy
 
+from odetoolbox.sympy_helpers import _sympy_parse_real
+
 from .mixed_integrator import MixedIntegrator
 from .mixed_integrator import ParametersIncompleteException
 from .shapes import Shape
@@ -68,7 +70,7 @@ class StiffnessTester:
             self.parameters = {}
         else:
             self.parameters = parameters
-        self.parameters = {k: sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() for k, v in self.parameters.items()}
+        self.parameters = {k: _sympy_parse_real(v, global_dict=Shape._sympy_globals).n() for k, v in self.parameters.items()}
         self._locals = self.parameters.copy()
         if stimuli is None:
             self._stimuli = []
@@ -83,18 +85,15 @@ class StiffnessTester:
             self.analytic_solver_dict["parameters"].update(self.parameters)
         self.analytic_integrator = None
 
-
     @property
     def random_seed(self):
         return self._random_seed
-
 
     @random_seed.setter
     def random_seed(self, value):
         assert type(value) is int
         assert value >= 0
         self._random_seed = value
-
 
     def check_stiffness(self, raise_errors=False):
         r"""
@@ -118,7 +117,6 @@ class StiffnessTester:
 
         return self._draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
-
     def _evaluate_integrator(self, integrator, h_min_lower_bound=1E-12, raise_errors=True, debug=True):
         r"""
         This function computes the average step size and the minimal step size that a given integration method from GSL uses to evolve a certain system of ODEs during a certain simulation time, integration method from GSL and spike train for a given maximal stepsize.
@@ -138,7 +136,6 @@ class StiffnessTester:
         np.random.seed(self.random_seed)
 
         spike_times = SpikeGenerator.spike_times_from_json(self._stimuli, self.sim_time)
-
 
         #
         #  initialise and run mixed integrator
@@ -164,7 +161,6 @@ class StiffnessTester:
 
         return h_min, h_avg, runtime
 
-
     def _draw_decision(self, step_min_imp, step_min_exp, step_average_imp, step_average_exp, machine_precision_dist_ratio=10, avg_step_size_ratio=6):
         r"""
         Decide which is the best integrator to use.
@@ -187,5 +183,5 @@ class StiffnessTester:
 
         if step_average_imp > avg_step_size_ratio * step_average_exp:
             return "implicit"
-        else:
-            return "explicit"
+
+        return "explicit"

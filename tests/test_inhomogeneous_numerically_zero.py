@@ -23,6 +23,7 @@ import pytest
 
 import numpy as np
 import scipy.integrate
+import sympy
 
 try:
     import matplotlib as mpl
@@ -48,6 +49,7 @@ class TestInhomogeneousNumericallyZero:
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"].startswith("analytic")
+        assert len(solver_dict["conditions"].keys()) == 2, "There should be exactly two conditions: default, and late_ltp_check == -late_ltd_check"
         print(solver_dict)
 
         solver_dict["parameters"] = {}
@@ -56,24 +58,23 @@ class TestInhomogeneousNumericallyZero:
         solver_dict["parameters"]["late_ltd_check"] = late_ltd_check
         solver_dict["parameters"]["late_ltp_check"] = late_ltp_check
 
+        z0 = 0.0      # set the initial condition
         dt = .1
         T = 100.
-        timevec = np.arange(0., T, dt)
 
         #
         #    integration using the ODE-toolbox analytic integrator
         #
 
+        timevec = np.arange(0., T, dt)
         analytic_integrator = AnalyticIntegrator(solver_dict)
-        analytic_integrator.set_initial_values({"z": 0.})
+        analytic_integrator.set_initial_values({"z": z0})
         analytic_integrator.reset()
-        actual = [analytic_integrator.get_value(t)["z"] for t in timevec]
-
+        actual = [analytic_integrator.get_value(t)[sympy.Symbol("z", real=True)] for t in timevec]
 
         #
         #    integration using scipy.integrate.odeint
         #
-
 
         def ode_model(z, t, p, late_ltp_check, late_ltd_check, tau_z):
             """
@@ -83,7 +84,6 @@ class TestInhomogeneousNumericallyZero:
             dzdt = (((p * (1.0 - z) * late_ltp_check) - (p * (z + 0.5) * late_ltd_check))) / tau_z
             return dzdt
 
-        z0 = 0.0      # set the initial condition
         params = solver_dict["parameters"]
         ode_args = (
             params["p"],
@@ -94,7 +94,6 @@ class TestInhomogeneousNumericallyZero:
 
         solution = scipy.integrate.odeint(ode_model, z0, timevec, args=ode_args, rtol=1E-12, atol=1E-12)
         correct = solution.flatten().tolist()
-
 
         #
         #   plot
@@ -115,18 +114,15 @@ class TestInhomogeneousNumericallyZero:
 
             fig.savefig("/tmp/test_propagators_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png")
 
-
         #
         #   test
         #
 
         np.testing.assert_allclose(correct, actual)
 
-    @pytest.mark.xfail(strict=True, raises=AssertionError)
     def test_inhomogeneous_numerically_zero(self):
         self._test_inhomogeneous_numerically_zero(late_ltd_check=1., late_ltp_check=-1.)
 
-    @pytest.mark.xfail(strict=True, raises=AssertionError)
     def test_inhomogeneous_numerically_zero_alt(self):
         self._test_inhomogeneous_numerically_zero(late_ltd_check=0., late_ltp_check=0.)
 

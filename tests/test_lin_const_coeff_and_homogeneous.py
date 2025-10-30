@@ -28,46 +28,42 @@ from odetoolbox.shapes import Shape
 class TestLinConstCoeffAndHomogeneous:
     """Test homogeneous and linear-and-constant-coefficient judgements on individual ODEs"""
 
-    _parameters = {sympy.Symbol("a"): "1",
-                   sympy.Symbol("b"): "3.14159"}
+    _parameters = {sympy.Symbol("a", real=True): "1",
+                   sympy.Symbol("b", real=True): "3.14159"}
 
     def test_from_function(self):
         shape = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
 
         assert shape.is_homogeneous()
         assert shape.is_lin_const_coeff()
-        assert shape.is_lin_const_coeff_in([sympy.Symbol("I_in"), sympy.Symbol("I_in__d")], parameters={sympy.Symbol("tau_syn_in"): "3.14159"})
-
+        assert shape.is_lin_const_coeff_in([sympy.Symbol("I_in", real=True), sympy.Symbol("I_in__d", real=True)], parameters={sympy.Symbol("tau_syn_in", real=True): "3.14159"})
 
     def test_nonlinear_inhomogeneous(self):
         shape = Shape.from_ode("q", "(a - q**2) / b", initial_values={"q": "0."}, parameters=TestLinConstCoeffAndHomogeneous._parameters)
 
         assert not shape.is_homogeneous()
         assert not shape.is_lin_const_coeff()
-        assert not shape.is_lin_const_coeff_in([sympy.Symbol("q")], parameters=TestLinConstCoeffAndHomogeneous._parameters)
-
+        assert not shape.is_lin_const_coeff_in([sympy.Symbol("q", real=True)], parameters=TestLinConstCoeffAndHomogeneous._parameters)
 
     def test_nonlinear_homogeneous(self):
         shape = Shape.from_ode("q", "-q**2 / b", initial_values={"q": "0."}, parameters=TestLinConstCoeffAndHomogeneous._parameters)
 
         assert shape.is_homogeneous()
         assert not shape.is_lin_const_coeff()
-        assert not shape.is_lin_const_coeff_in([sympy.Symbol("q")], parameters=TestLinConstCoeffAndHomogeneous._parameters)
-
+        assert not shape.is_lin_const_coeff_in([sympy.Symbol("q", real=True)], parameters=TestLinConstCoeffAndHomogeneous._parameters)
 
     def test_from_homogeneous_ode(self):
         shape = Shape.from_ode("q", "-q / b", initial_values={"q": "0."})
 
         assert shape.is_homogeneous()
         assert not shape.is_lin_const_coeff()
-        assert shape.is_lin_const_coeff_in([sympy.Symbol("q")], parameters=TestLinConstCoeffAndHomogeneous._parameters)
-
+        assert shape.is_lin_const_coeff_in([sympy.Symbol("q", real=True)], parameters=TestLinConstCoeffAndHomogeneous._parameters)
 
     def test_from_homogeneous_ode_alternate(self):
         shape = Shape.from_ode("q", "(a - q) / b", initial_values={"q": "0."}, parameters=TestLinConstCoeffAndHomogeneous._parameters)
         assert not shape.is_homogeneous()
         assert shape.is_lin_const_coeff()
-        assert shape.is_lin_const_coeff_in([sympy.Symbol("q")], parameters=TestLinConstCoeffAndHomogeneous._parameters)
+        assert shape.is_lin_const_coeff_in([sympy.Symbol("q", real=True)], parameters=TestLinConstCoeffAndHomogeneous._parameters)
 
         # xfail case: forgot to specify parameters
         shape = Shape.from_ode("q", "(a - q) / b", initial_values={"q": "0."})
@@ -78,14 +74,14 @@ class TestLinConstCoeffAndHomogeneous:
 class TestLinConstCoeffAndHomogeneousSystem:
     """Test homogeneous and linear-and-constant-coefficient judgements on systems of ODEs"""
 
-    _parameters = {sympy.Symbol("I_e"): "1.",
-                   sympy.Symbol("Tau"): "1.",
-                   sympy.Symbol("C_m"): "1.",
-                   sympy.Symbol("tau_syn_in"): "1.",
-                   sympy.Symbol("tau_syn_ex"): "1."}
+    _parameters = {sympy.Symbol("I_e", real=True): "1.",
+                   sympy.Symbol("Tau", real=True): "1.",
+                   sympy.Symbol("C_m", real=True): "1.",
+                   sympy.Symbol("tau_syn_in", real=True): "1.",
+                   sympy.Symbol("tau_syn_ex", real=True): "1."}
 
     def test_system_of_equations(self):
-        all_symbols = [sympy.Symbol(n) for n in ["I_in", "I_in__d", "I_ex", "I_ex__d", "V_m"]]
+        all_symbols = [sympy.Symbol(n, real=True) for n in ["I_in", "I_in__d", "I_ex", "I_ex__d", "V_m"]]
 
         shape_inh = Shape.from_function("I_in", "(e/tau_syn_in) * t * exp(-t/tau_syn_in)")
         shape_exc = Shape.from_function("I_ex", "(e/tau_syn_ex) * t * exp(-t/tau_syn_ex)")

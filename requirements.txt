@@ -1,5 +1,4 @@
 sympy
 scipy
 numpy>=1.8.2
-pytest
 cython

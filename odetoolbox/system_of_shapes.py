@@ -19,7 +19,8 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from typing import List, Optional
+import itertools
+from typing import List, Optional, Set, Union
 
 import logging
 import numpy as np
@@ -32,7 +33,7 @@ import sympy.matrices
 from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
-from .sympy_helpers import _custom_simplify_expr, _is_zero
+from .sympy_helpers import SymmetricEq, _custom_simplify_expr, _is_zero, _sympy_parse_real
 
 
 class GetBlockDiagonalException(Exception):
@@ -96,20 +97,19 @@ class SystemOfShapes:
         self.c_ = c
         self.shapes_ = shapes
 
-
-    def get_shape_by_symbol(self, sym: str) -> Optional[Shape]:
+    def get_shape_by_symbol(self, sym: Union[str, sympy.Symbol]) -> Optional[Shape]:
         for shape in self.shapes_:
-            if str(shape.symbol) == sym:
+            if str(shape.symbol) == str(sym):
                 return shape
+
         return None
 
-    def get_initial_value(self, sym):
+    def get_initial_value(self, sym: Union[str, sympy.Symbol]):
         for shape in self.shapes_:
             if str(shape.symbol) == str(sym).replace(Config().differential_order_symbol, "").replace("'", ""):
-                return shape.get_initial_value(sym.replace(Config().differential_order_symbol, "'"))
+                return shape.get_initial_value(str(sym).replace(Config().differential_order_symbol, "'"))
 
         assert False, "Unknown symbol: " + str(sym)
-
 
     def get_dependency_edges(self):
         E = []
@@ -120,7 +120,6 @@ class SystemOfShapes:
                     E.append((sym2, sym1))
 
         return E
-
 
     def get_lin_cc_symbols(self, E, parameters=None):
         r"""
@@ -140,7 +139,6 @@ class SystemOfShapes:
                 node_is_lin[sym] = _node_is_lin
 
         return node_is_lin
-
 
     def propagate_lin_cc_judgements(self, node_is_lin, E):
         r"""
@@ -164,7 +162,6 @@ class SystemOfShapes:
 
         return node_is_lin
 
-
     def get_jacobian_matrix(self):
         r"""
         Get the Jacobian matrix as symbolic expressions. Entries in the matrix are sympy expressions.
@@ -180,7 +177,6 @@ class SystemOfShapes:
             for j, sym2 in enumerate(self.x_):
                 J[i, j] = sympy.diff(expr, sym2)
         return J
-
 
     def get_sub_system(self, symbols):
         r"""
@@ -204,27 +200,53 @@ class SystemOfShapes:
 
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
-
-    def _generate_propagator_matrix(self, A):
+    def _generate_propagator_matrix(self, A) -> sympy.Matrix:
         r"""Generate the propagator matrix by matrix exponentiation."""
 
-        # naive: calculate propagators in one step
-        # P_naive = _custom_simplify_expr(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
-
-        # optimized: be explicit about block diagonal elements; much faster!
         try:
+            # optimized: be explicit about block diagonal elements; much faster!
+            logging.debug("Computing propagator matrix (block-diagonal optimisation)...")
             blocks = get_block_diagonal_blocks(np.array(A))
-            propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
+            propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol, real=True))) for block in blocks]
             P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
         except GetBlockDiagonalException:
             # naive: calculate propagators in one step
-            P = sympy.simplify(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol)))
+            logging.debug("Computing propagator matrix...")
+            P = _custom_simplify_expr(sympy.exp(A * sympy.Symbol(Config().output_timestep_symbol, real=True)))
 
         # check the result
         if sympy.I in sympy.preorder_traversal(P):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
         return P
+
+    def _merge_conditions(self, solver_dict):
+        r"""merge together conditions (a OR b OR c OR...) if the propagators and update_expressions are the same"""
+
+        for condition, sub_solver_dict in solver_dict["conditions"].items():
+            for condition2, sub_solver_dict2 in solver_dict["conditions"].items():
+                if condition == condition2:
+                    # don't check a condition against itself
+                    continue
+
+                if sub_solver_dict["propagators"] == sub_solver_dict2["propagators"] and sub_solver_dict["update_expressions"] == sub_solver_dict2["update_expressions"]:
+                    # ``condition`` and ``condition2`` can be merged
+                    solver_dict["conditions"]["(" + condition + ") || (" + condition2 + ")"] = sub_solver_dict
+                    solver_dict["conditions"].pop(condition)
+                    solver_dict["conditions"].pop(condition2)
+                    return self._merge_conditions(solver_dict)
+
+        return solver_dict
+
+    def _remove_duplicate_conditions(self, conditions: Set[SymmetricEq]):
+        for cond in conditions:
+            inverted_eq = SymmetricEq(-cond.lhs, -cond.rhs)
+            if inverted_eq in conditions:
+                conditions.discard(cond)
+                return self._remove_duplicate_conditions(conditions)
+
+        # nothing was removed
+        return conditions
 
     def generate_propagator_solver(self, disable_singularity_detection: bool = False):
         r"""
@@ -240,25 +262,88 @@ class SystemOfShapes:
         if not disable_singularity_detection:
             try:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
+                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_))
+                conditions = self._remove_duplicate_conditions(conditions)
 
                 if conditions:
                     # if there is one or more condition under which the solution goes to infinity...
+                    logging.info("Under certain conditions, the default analytic solver contains singularities due to division by zero.")
+                    logging.info("List of all conditions that result in a division by zero:")
+                    for cond in conditions:
+                        logging.info("\t" + str(cond.lhs) + " = " + str(cond.rhs))
+                    logging.info("Alternate solvers will be generated for each of these conditions (and combinations thereof).")
 
-                    logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-                    logging.warning("List of all conditions that result in a division by zero:")
-                    for cond_set in conditions:
-                        logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+                    # generate solver for the base case (with singularity conditions that are not met)
+                    default_solver = self.generate_solver_dict_based_on_propagator_matrix_(P)
+
+                    # change the returned solver dictionary to include conditions
+                    solver_dict = {"solver": "analytical",
+                                   "state_variables": default_solver["state_variables"],
+                                   "initial_values": default_solver["initial_values"],
+                                   "conditions": {"default": {"propagators": default_solver["propagators"],
+                                                              "update_expressions": default_solver["update_expressions"]}}}
+
+                    #
+                    #    generate all combinations of conditions
+                    #
+
+                    num_conditions = len(conditions)
+                    condition_permutations = list(itertools.product([False, True], repeat=num_conditions))
+                    for condition_permutation in condition_permutations:
+                        # each ``condition_permutation[i]`` is True/False corresponding to condition i
+
+                        cond_set = set()    # cond_set is the set of conditions that have to hold
+                        for i, cond_holds in enumerate(condition_permutation):
+                            cond = list(conditions)[i]
+                            if cond_holds:
+                                # ``cond`` needs to hold for this propagator
+                                cond_set.add(cond)
+                            else:
+                                # ``cond`` needs to **not** hold for this propagator
+                                cond_set.add(sympy.Ne(cond.lhs, cond.rhs))
+
+                        condition_str: str = " && ".join(["(" + str(eq.lhs) + (" == " if isinstance(eq, SymmetricEq) else "!=") + str(eq.rhs) + ")" for eq in cond_set])
+
+                        logging.debug("Generating solver for condition: " + str(condition_str))
+
+                        if not any([isinstance(eq, SymmetricEq) for eq in cond_set]):
+                            # this is the default condition, only containing inequalities
+                            continue
+
+                        conditional_A = self.A_.copy()
+                        conditional_b = self.b_.copy()
+                        conditional_c = self.c_.copy()
+
+                        for eq in cond_set:
+                            if isinstance(eq, SymmetricEq):
+                                # replace equalities (not inequalities)
+                                conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
+                                conditional_b = conditional_b.subs(eq.lhs, eq.rhs)
+                                conditional_c = conditional_c.subs(eq.lhs, eq.rhs)
+
+                        conditional_dynamics = SystemOfShapes(self.x_, conditional_A, conditional_b, conditional_c, self.shapes_)
+                        solver_dict_conditional = conditional_dynamics.generate_propagator_solver(disable_singularity_detection=True)
+                        solver_dict["conditions"][condition_str] = {"propagators": solver_dict_conditional["propagators"],
+                                                                    "update_expressions": solver_dict_conditional["update_expressions"]}
+
+                    solver_dict = self._merge_conditions(solver_dict)
+
+                    return solver_dict
+
             except SingularityDetectionException:
                 logging.warning("Could not check the propagator matrix for singularities.")
+
+        return self.generate_solver_dict_based_on_propagator_matrix_(P)
+
+    def generate_solver_dict_based_on_propagator_matrix_(self, P: sympy.Matrix):
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
         #
 
-        P_sym = sympy.zeros(*P.shape)   # each entry in the propagator matrix is assigned its own symbol
         P_expr = {}     # the expression corresponding to each propagator symbol
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key
-        for row in range(P_sym.shape[0]):
+        for row in range(P.shape[0]):
             # assemble update expression for symbol ``self.x_[row]``
             if not _is_zero(self.c_[row]):
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": nonlinear part should be zero for propagators")
@@ -267,10 +352,9 @@ class SystemOfShapes:
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": higher-order inhomogeneous ODEs are not supported")
 
             update_expr_terms = []
-            for col in range(P_sym.shape[1]):
+            for col in range(P.shape[1]):
                 if not _is_zero(P[row, col]):
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
-                    P_sym[row, col] = sympy.parsing.sympy_parser.parse_expr(sym_str, global_dict=Shape._sympy_globals)
                     P_expr[sym_str] = P[row, col]
                     if row != col and not _is_zero(self.b_[col]):
                         # the ODE for x_[row] depends on the inhomogeneous ODE of x_[col]. We can't solve this analytically in the general case (even though some specific cases might admit a solution)
@@ -286,14 +370,6 @@ class SystemOfShapes:
                 else:
 
                     #
-                    #    singularity detection on inhomogeneous part
-                    #
-
-                    if not disable_singularity_detection:
-                        SingularityDetection.find_inhomogeneous_singularities(expr=self.A_[row, row])
-
-
-                    #
                     #    generate update expressions
                     #
 
@@ -303,7 +379,7 @@ class SystemOfShapes:
                     update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
-            update_expr[str(self.x_[row])] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
+            update_expr[str(self.x_[row])] = _sympy_parse_real(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
@@ -319,7 +395,6 @@ class SystemOfShapes:
 
         return solver_dict
 
-
     def generate_numeric_solver(self, state_variables=None):
         r"""
         Generate the symbolic expressions for numeric integration state updates; return as JSON.
@@ -334,7 +409,6 @@ class SystemOfShapes:
                        "initial_values": initial_values}
 
         return solver_dict
-
 
     def reconstitute_expr(self, state_variables=None):
         r"""
@@ -355,7 +429,7 @@ class SystemOfShapes:
                 else:
                     update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.b_[row]) + ") + (" + str(self.c_[row]) + ")"
-            update_expr[str(x)] = sympy.parsing.sympy_parser.parse_expr(update_expr[str(x)], global_dict=Shape._sympy_globals)
+            update_expr[str(x)] = _sympy_parse_real(update_expr[str(x)], global_dict=Shape._sympy_globals)
 
         # custom expression simplification
         for name, expr in update_expr.items():
@@ -364,7 +438,6 @@ class SystemOfShapes:
             update_expr[name] = sympy.collect(update_expr[name], collect_syms)
 
         return update_expr
-
 
     def shape_order_from_system_matrix(self, idx: int) -> int:
         r"""Determine shape differential order from system matrix of symbol ``self.x_[idx]``"""
@@ -377,7 +450,6 @@ class SystemOfShapes:
         scc = scipy.sparse.csgraph.connected_components(A, connection="strong")[1]
         shape_order = sum(scc == scc[idx])
         return shape_order
-
 
     def get_connected_symbols(self, idx: int) -> List[sympy.Symbol]:
         r"""Extract all symbols belonging to a shape with symbol ``self.x_[idx]`` from the system matrix.
@@ -400,7 +472,6 @@ class SystemOfShapes:
         scc = scipy.sparse.csgraph.connected_components(A, connection="strong")[1]
         idx = np.where(scc == scc[idx])[0]
         return [self.x_[i] for i in idx]
-
 
     @classmethod
     def from_shapes(cls, shapes: List[Shape], parameters=None):
@@ -430,7 +501,7 @@ class SystemOfShapes:
 
         i = 0
         for shape in shapes:
-            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * (shape.order - 1))][0]
+            highest_diff_sym_idx = [k for k, el in enumerate(x) if el == sympy.Symbol(str(shape.symbol) + Config().differential_order_symbol * (shape.order - 1), real=True)][0]
             shape_expr = shape.reconstitute_expr()
 
             #
@@ -441,7 +512,6 @@ class SystemOfShapes:
             A[highest_diff_sym_idx, :] = lin_factors.T
             b[highest_diff_sym_idx] = inhom_term
             c[highest_diff_sym_idx] = nonlin_term
-
 
             #
             #   for higher-order shapes: mark derivatives x_i' = x_(i+1) for i < shape.order

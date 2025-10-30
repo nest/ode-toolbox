@@ -19,24 +19,23 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from typing import Optional
+from typing import Iterable, Optional
 
 import logging
 import numpy as np
-import numpy.random
 import os
 import sympy
 import sympy.utilities.autowrap
 from sympy.utilities.autowrap import CodeGenArgumentListError
 import time
 
-
 from .analytic_integrator import AnalyticIntegrator
 from .config import Config
 from .integrator import Integrator
 from .plot_helper import import_matplotlib
 from .shapes import Shape
-from .sympy_helpers import _is_sympy_type
+from .system_of_shapes import SystemOfShapes
+from .sympy_helpers import _is_sympy_type, _sympy_parse_real
 
 try:
     import pygsl.odeiv as odeiv
@@ -59,7 +58,7 @@ class MixedIntegrator(Integrator):
     Mixed numeric+analytic integrator. Supply with a result from ODE-toolbox analysis; calculates numeric approximation of the solution.
     """
 
-    def __init__(self, numeric_integrator, system_of_shapes, shapes, analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False, debug_plot_dir: Optional[str] = None):
+    def __init__(self, numeric_integrator, system_of_shapes: SystemOfShapes, shapes: Iterable[Shape], analytic_solver_dict=None, parameters=None, spike_times=None, random_seed=123, max_step_size=np.inf, integration_accuracy_abs=1E-6, integration_accuracy_rel=1E-6, sim_time=1., alias_spikes=False, debug_plot_dir: Optional[str] = None):
         r"""
         :param numeric_integrator: A method from the GSL library for evolving ODEs, e.g. :python:`odeiv.step_rk4`
         :param system_of_shapes: Dynamical system to solve.
@@ -93,8 +92,10 @@ class MixedIntegrator(Integrator):
             self._parameters = {}
         else:
             self._parameters = parameters
-        self._parameters = {k: sympy.parsing.sympy_parser.parse_expr(v, global_dict=Shape._sympy_globals).n() if not _is_sympy_type(v) else v for k, v in self._parameters.items()}
-        self._locals = self._parameters.copy()
+        self._parameters = {k: _sympy_parse_real(v, global_dict=Shape._sympy_globals).n() if not _is_sympy_type(v) else v for k, v in self._parameters.items()}
+        self._locals = {}
+        for parameter_name, parameter_expr in self._parameters.items():
+            self._locals[sympy.Symbol(parameter_name, real=True)] = parameter_expr
         self.random_seed = random_seed
 
         self.analytic_solver_dict = analytic_solver_dict
@@ -109,7 +110,7 @@ class MixedIntegrator(Integrator):
         self.all_variable_symbols = list(self._system_of_shapes.x_)
         if not self.analytic_solver_dict is None:
             self.all_variable_symbols += self.analytic_solver_dict["state_variables"]
-        self.all_variable_symbols = [sympy.Symbol(str(sym).replace("'", Config().differential_order_symbol)) for sym in self.all_variable_symbols]
+        self.all_variable_symbols = [sympy.Symbol(str(sym).replace("'", Config().differential_order_symbol), real=True) for sym in self.all_variable_symbols]
 
         for sym, expr in self._update_expr.items():
             try:
@@ -127,13 +128,11 @@ class MixedIntegrator(Integrator):
                                                                                          backend="cython",
                                                                                          helpers=Shape._sympy_autowrap_helpers)
 
-
         #
         #   make a sorted list of all spike times for all symbols
         #
 
         self.set_spike_times(spike_times)
-
 
     def integrate_ode(self, initial_values=None, h_min_lower_bound=5E-9, raise_errors=True, debug=False):
         r"""
@@ -157,7 +156,6 @@ class MixedIntegrator(Integrator):
 
         all_spike_times, all_spike_times_sym = self.get_sorted_spike_times()
 
-
         #
         #  initialise analytic integrator
         #
@@ -168,14 +166,13 @@ class MixedIntegrator(Integrator):
             analytic_integrator_initial_values = {sym: iv for sym, iv in initial_values.items() if sym in self.analytic_integrator.get_all_variable_symbols()}
             self.analytic_integrator.set_initial_values(analytic_integrator_initial_values)
 
-
         #
         #    convert initial value expressions to floats
         #
 
         for sym in self._system_of_shapes.x_:
             if not sym in initial_values.keys():
-                initial_values[sym] = float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs=self._parameters))
+                initial_values[sym] = float(self._system_of_shapes.get_initial_value(str(sym)).evalf(subs={sympy.Symbol(sym, real=True): v for sym, v in self._parameters.items()}))
 
         upper_bound_crossed = False
         y = np.array([initial_values[sym] for sym in self._system_of_shapes.x_])
@@ -188,7 +185,6 @@ class MixedIntegrator(Integrator):
         gsl_stepper = self.numeric_integrator(len(y), self.step, self.numerical_jacobian)
         control = odeiv.control_y_new(gsl_stepper, self.integration_accuracy_abs, self.integration_accuracy_rel)
         evolve = odeiv.evolve(gsl_stepper, control, len(y))
-
 
         #
         #    make NumPy warnings errors. Without this, we can't catch overflow errors that can occur in the step() function, which might indicate a problem with the ODE, the grid resolution or the stiffness testing framework itself.
@@ -204,7 +200,6 @@ class MixedIntegrator(Integrator):
             #
 
             time_start = time.time()
-
 
             #
             #    main loop
@@ -275,7 +270,6 @@ class MixedIntegrator(Integrator):
                     h_sum += h_suggested
                     n_timesteps_taken += 1
 
-
                     #
                     #    enforce bounds/thresholds
                     #
@@ -288,16 +282,14 @@ class MixedIntegrator(Integrator):
                                 upper_bound_crossed = True
                                 y[idx] = initial_values[shape.symbol]
 
-
                 #
                 #    evaluate to numeric values those ODEs that are solved analytically
                 #
 
-                self._locals.update({str(sym): y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
+                self._locals.update({sym: y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
 
                 if not self.analytic_integrator is None:
                     self._locals.update(self.analytic_integrator.get_value(t))
-
 
                 #
                 #   apply the spikes, i.e. add the "initial values" to the system dynamical state vector
@@ -317,8 +309,8 @@ class MixedIntegrator(Integrator):
                     while t_next_spike <= t:
                         syms_next_spike = all_spike_times_sym[idx_next_spike]
                         for sym in syms_next_spike:
-                            if sym in [str(sym_) for sym_ in self._system_of_shapes.x_]:
-                                idx = [str(sym_) for sym_ in list(self._system_of_shapes.x_)].index(sym)
+                            if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
+                                idx = [str(sym_) for sym_ in list(self._system_of_shapes.x_)].index(str(sym))
                                 y[idx] += float(self._system_of_shapes.get_initial_value(sym).evalf(subs=self._locals))
                         idx_next_spike += 1
                         if idx_next_spike < len(all_spike_times):
@@ -327,8 +319,8 @@ class MixedIntegrator(Integrator):
                             t_next_spike = np.inf
                 else:
                     for sym in syms_next_spike:
-                        if sym in [str(sym_) for sym_ in self._system_of_shapes.x_]:
-                            idx = [str(sym_) for sym_ in list(self._system_of_shapes.x_)].index(sym)
+                        if str(sym) in [str(sym_) for sym_ in self._system_of_shapes.x_]:
+                            idx = [str(sym_) for sym_ in list(self._system_of_shapes.x_)].index(str(sym))
                             y[idx] += float(self._system_of_shapes.get_initial_value(sym).evalf(subs=self._locals))
 
             h_avg = h_sum / n_timesteps_taken
@@ -353,7 +345,6 @@ class MixedIntegrator(Integrator):
             return h_min, h_avg, runtime, upper_bound_crossed, t_log, h_log, y_log, sym_list
         else:
             return h_min, h_avg, runtime
-
 
     def integrator_debug_plot(self, t_log, h_log, y_log, dir):
         mpl, plt = import_matplotlib()
@@ -413,7 +404,6 @@ class MixedIntegrator(Integrator):
         plt.savefig(fn, dpi=600)
         plt.close(fig)
 
-
     def numerical_jacobian(self, t, y, params):
         r"""
         Compute the numerical values of the Jacobian matrix at the current time :python:`t` and state :python:`y`.
@@ -430,12 +420,12 @@ class MixedIntegrator(Integrator):
         dfdy = np.zeros((dimension, dimension), float)
         dfdt = np.zeros((dimension,))
 
-        self._locals.update({str(sym): y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
+        self._locals.update({sym: y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
 
         if not self.analytic_integrator is None:
             self._locals.update(self.analytic_integrator.get_value(t))
 
-        y = [self._locals[str(sym)] for sym in self.all_variable_symbols]
+        y = [self._locals[sym] for sym in self.all_variable_symbols]
 
         for row in range(0, dimension):
             for col in range(0, dimension):
@@ -443,7 +433,6 @@ class MixedIntegrator(Integrator):
                 # dfdy[row, col] = float(self.symbolic_jacobian_[row, col].evalf(subs=self._locals))	# non-wrapped version
 
         return dfdy, dfdt
-
 
     def step(self, t, y, params):
         r"""
@@ -455,7 +444,7 @@ class MixedIntegrator(Integrator):
 
         :return: Updated state vector
         """
-        self._locals.update({str(sym): y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
+        self._locals.update({sym: y[i] for i, sym in enumerate(self._system_of_shapes.x_)})
 
         #
         #   update state of analytically solved variables to time `t`
@@ -465,7 +454,7 @@ class MixedIntegrator(Integrator):
             self._locals.update(self.analytic_integrator.get_value(t))
 
         # y holds the state of all the symbols in the numeric part of the system; add those for the analytic part
-        y = [self._locals[str(sym)] for sym in self.all_variable_symbols]
+        y = [self._locals[sym] for sym in self.all_variable_symbols]
 
         try:
             # return [ float(self._update_expr[str(sym)].evalf(subs=self._locals)) for sym in self._system_of_shapes.x_ ]	# non-wrapped version
