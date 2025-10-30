@@ -34,7 +34,7 @@ jobs:
 
       - name: Static code style analysis
         run: |
-          python3 -m pycodestyle $GITHUB_WORKSPACE -v --ignore=E241,E501,E303,E714,E713,E714,E252 --exclude=$GITHUB_WORKSPACE/doc,$GITHUB_WORKSPACE/.eggs,$GITHUB_WORKSPACE/build,$GITHUB_WORKSPACE/.git,$GITHUB_WORKSPACE/odetoolbox.egg-info,$GITHUB_WORKSPACE/dist
+          python3 -m pycodestyle $GITHUB_WORKSPACE -v --ignore=E241,E501,E714,E713,E714,E252 --exclude=$GITHUB_WORKSPACE/doc,$GITHUB_WORKSPACE/.eggs,$GITHUB_WORKSPACE/build,$GITHUB_WORKSPACE/.git,$GITHUB_WORKSPACE/odetoolbox.egg-info,$GITHUB_WORKSPACE/dist
 
 
   build:
