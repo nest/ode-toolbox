@@ -171,9 +171,10 @@ class SympyPrinter(sympy.printing.StrPrinter):
 def expMt(M, t=1):
     """Compute matrix exponential exp(M*t).
 
-    Based on code contributed by GitHub user @oscarbenjamin, July 29th, 2021 [1]_.
+    Based on code contributed by GitHub user @oscarbenjamin, July 29th, 2021 [1]_ (see also the discussion at [2]_).
 
     .. [1] https://github.com/sympy/sympy/issues/21585
+    .. [2] https://github.com/nest/ode-toolbox/pull/97
     """
     def ilt(e, s, t):
         """Fast inverse Laplace transform of rational function including RootSum"""
