@@ -205,7 +205,7 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def _generate_propagator_matrix(self, A):
+    def _generate_propagator_matrix(self, A, use_alternative_expM: bool = False):
         r"""Generate the propagator matrix by matrix exponentiation."""
 
         # naive: calculate propagators in one step
@@ -215,7 +215,7 @@ class SystemOfShapes:
         try:
             blocks = get_block_diagonal_blocks(np.array(A))
 
-            if Config().use_alternative_expM:
+            if use_alternative_expM:
                 expM = expMt
             else:
                 expM = sympy.exp
@@ -232,12 +232,12 @@ class SystemOfShapes:
 
         return P
 
-    def generate_propagator_solver(self, disable_singularity_detection: bool = False):
+    def generate_propagator_solver(self, disable_singularity_detection: bool = False, use_alternative_expM: bool = False):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
 
-        P = self._generate_propagator_matrix(self.A_)
+        P = self._generate_propagator_matrix(self.A_, use_alternative_expM=use_alternative_expM)
 
         #
         #    singularity detection
