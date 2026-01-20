@@ -101,11 +101,7 @@ class SingularityDetection:
             a set with equations, where the left-hand side of each equation is the variable that is to be subsituted, and the right-hand side is the expression to put in its place
         """
         for val in sympy.flatten(A):
-            if isinstance(val, sympy.Float):
-                expr_sub = sympy.Float(float(val))    # work around https://github.com/sympy/sympy/issues/28951
-            else:
-                expr_sub = val.copy()
-
+            expr_sub = val
             for eq in cond_set:
                 expr_sub = expr_sub.subs(eq.lhs, eq.rhs)
 
