@@ -105,7 +105,7 @@ def _custom_simplify_expr(expr: str):
     try:
         # skip simplification for long expressions
         if len(str(expr)) > Config().expression_simplification_threshold:
-            logging.warning("Length of expression \"" + str(expr) + "\" exceeds sympy simplification threshold")
+            logging.getLogger(__name__).warning("Length of expression \"" + str(expr) + "\" exceeds sympy simplification threshold")
 
         _simplify_expr = compile(Config().simplify_expression, filename="<string>", mode="eval")
         expr_simplified = eval(_simplify_expr)

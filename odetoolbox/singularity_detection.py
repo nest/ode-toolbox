@@ -169,7 +169,7 @@ class SingularityDetection:
         conditions
             a set with equations, where the left-hand side of each equation is the variable that is to be subsituted, and the right-hand side is the expression to put in its place
         """
-        logging.debug("Checking for singularities (divisions by zero) in the inhomogeneous part of the update equations...")
+        logging.getLogger(__name__).debug("Checking for singularities (divisions by zero) in the inhomogeneous part of the update equations...")
 
         symbols = list(expr.free_symbols)
         conditions = set()
@@ -178,10 +178,10 @@ class SingularityDetection:
             if conditions:
                 # if there is one or more condition under which the solution goes to infinity...
 
-                logging.warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
-                logging.warning("List of all conditions that result in a division by zero:")
+                logging.getLogger(__name__).warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
+                logging.getLogger(__name__).warning("List of all conditions that result in a division by zero:")
                 for cond_set in conditions:
-                    logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+                    logging.getLogger(__name__).warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
 
         return conditions
 
@@ -203,7 +203,7 @@ class SingularityDetection:
         conditions
             a set with equations, where the left-hand side of each equation is the variable that is to be subsituted, and the right-hand side is the expression to put in its place
         """
-        logging.debug("Checking for singularities (divisions by zero) in the propagator matrix...")
+        logging.getLogger(__name__).debug("Checking for singularities (divisions by zero) in the propagator matrix...")
         try:
             conditions = SingularityDetection._generate_singularity_conditions(P)
             conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)

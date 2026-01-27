@@ -250,12 +250,12 @@ class SystemOfShapes:
                 if conditions:
                     # if there is one or more condition under which the solution goes to infinity...
 
-                    logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-                    logging.warning("List of all conditions that result in a division by zero:")
+                    logging.getLogger(__name__).warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
+                    logging.getLogger(__name__).warning("List of all conditions that result in a division by zero:")
                     for cond_set in conditions:
-                        logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+                        logging.getLogger(__name__).warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
             except SingularityDetectionException:
-                logging.warning("Could not check the propagator matrix for singularities.")
+                logging.getLogger(__name__).warning("Could not check the propagator matrix for singularities.")
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
