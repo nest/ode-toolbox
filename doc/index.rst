@@ -360,6 +360,10 @@ The following global options are defined. Note that all are typically formatted 
      - :python:`["oo", "zoo", "nan", "NaN", "__h"]`
      - list of strings
      - For each forbidden name: emit an error if a variable or parameter by this name occurs in the input.
+   * - ``use_alternative_expM``
+     - :python:`False`
+     - boolean
+     - If :python:`False`, use the sympy function ``sympy.exp`` to compute the matrix exponential. If :python:`True`, use an alternative function (see :py:func:`odetoolbox.sympy_helpers.expMt` for details). This can be useful as calls to ``sympy.exp`` can sometimes take a very large amount of time.
 
 
 Output

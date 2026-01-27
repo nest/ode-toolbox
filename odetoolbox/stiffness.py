@@ -34,8 +34,8 @@ try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    logging.warning("PyGSL is not available. The stiffness test will be skipped.")
-    logging.warning("Error when importing: " + str(ie))
+    logging.getLogger(__name__).warning("PyGSL is not available. The stiffness test will be skipped.")
+    logging.getLogger(__name__).warning("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 
@@ -111,10 +111,10 @@ class StiffnessTester:
             step_min_exp, step_average_exp, runtime_exp = self._evaluate_integrator(odeiv.step_rk4, raise_errors=raise_errors)
             step_min_imp, step_average_imp, runtime_imp = self._evaluate_integrator(odeiv.step_bsimp, raise_errors=raise_errors)
         except ParametersIncompleteException:
-            logging.warning("Stiffness test not possible because numerical values were not specified for all parameters.")
+            logging.getLogger(__name__).warning("Stiffness test not possible because numerical values were not specified for all parameters.")
             return None
 
-        # logging.info("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
+        # logging.getLogger(__name__).info("runtime (imp:exp): %f:%f" % (runtime_imp, runtime_exp))
 
         return self._draw_decision(step_min_imp, step_min_exp, step_average_imp, step_average_exp)
 
@@ -144,7 +144,7 @@ class StiffnessTester:
         #  initialise and run mixed integrator
         #
 
-        logging.info("Simulating for " + str(self.sim_time) + " with max_step_size = " + str(self.max_step_size))
+        logging.getLogger(__name__).info("Simulating for " + str(self.sim_time) + " with max_step_size = " + str(self.max_step_size))
 
         mixed_integrator = MixedIntegrator(integrator,
                                            self.system_of_shapes,
@@ -160,7 +160,7 @@ class StiffnessTester:
                                            alias_spikes=self.alias_spikes)
         h_min, h_avg, runtime = (lambda x: x[:3])(mixed_integrator.integrate_ode(h_min_lower_bound=h_min_lower_bound, raise_errors=raise_errors, debug=debug))
 
-        logging.info("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
+        logging.getLogger(__name__).info("For integrator = " + str(integrator) + ": h_min = " + str(h_min) + ", h_avg = " + str(h_avg) + ", runtime = " + str(runtime))
 
         return h_min, h_avg, runtime
 

@@ -36,8 +36,8 @@ try:
     import pygsl.odeiv as odeiv
     PYGSL_AVAILABLE = True
 except ImportError as ie:
-    logging.warning("PyGSL is not available. The stiffness test will be skipped.")
-    logging.warning("Error when importing: " + str(ie))
+    logging.getLogger(__name__).warning("PyGSL is not available. The stiffness test will be skipped.")
+    logging.getLogger(__name__).warning("Error when importing: " + str(ie))
     PYGSL_AVAILABLE = False
 
 if PYGSL_AVAILABLE:
@@ -45,6 +45,7 @@ if PYGSL_AVAILABLE:
 
 try:
     import graphviz
+    logging.getLogger("graphviz").setLevel(logging.ERROR)
     PLOT_DEPENDENCY_GRAPH = True
 except ImportError:
     PLOT_DEPENDENCY_GRAPH = False
@@ -61,7 +62,7 @@ def _find_analytically_solvable_equations(shape_sys, shapes, parameters=None):
 
     Perform dependency analysis and plot dependency graph.
     """
-    logging.info("Finding analytically solvable equations...")
+    logging.getLogger(__name__).debug("Finding analytically solvable equations...")
     dependency_edges = shape_sys.get_dependency_edges()
 
     if PLOT_DEPENDENCY_GRAPH:
@@ -94,7 +95,7 @@ def _read_global_config(indict):
     r"""
     Process global configuration options.
     """
-    logging.info("Processing global options...")
+    logging.getLogger(__name__).debug("Processing global options...")
     if "options" in indict.keys():
         for key, value in indict["options"].items():
             assert key in Config.config.keys(), "Unknown key specified in global options dictionary: \"" + str(key) + "\""
@@ -108,7 +109,7 @@ def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sym
     :param indict: ODE-toolbox input dictionary.
     """
 
-    logging.info("Processing input shapes...")
+    logging.getLogger(__name__).debug("Processing input...")
 
     # first run for grabbing all the variable names. Coefficients might be incorrect.
     all_variable_symbols = []
@@ -122,7 +123,6 @@ def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sym
     all_parameter_symbols -= all_variable_symbols_
     del all_variable_symbols_
     assert all([_is_sympy_type(sym) for sym in all_variable_symbols])
-    logging.info("All known variables: " + str(all_variable_symbols) + ", all parameters used in ODEs: " + str(all_parameter_symbols))
 
     # validate input for forbidden names
     for var in set(all_variable_symbols) | all_parameter_symbols:
@@ -136,13 +136,13 @@ def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sym
         assert isinstance(param, SympyExpr)
         if not param in parameters.keys():
             # this parameter was used in an ODE, but not explicitly numerically specified
-            logging.info("No numerical value specified for parameter \"" + str(param) + "\"")    # INFO level because this is OK!
+            logging.getLogger(__name__).info("No numerical value specified for parameter \"" + str(param) + "\"")    # INFO level because this is OK!
             parameters[param] = None
 
     # second run with the now-known list of variable symbols
     shapes = []
     for shape_json in indict["dynamics"]:
-        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, parameters=parameters, _debug=True)
+        shape = Shape.from_json(shape_json, all_variable_symbols=all_variable_symbols, parameters=parameters)
         shapes.append(shape)
 
     return shapes, parameters
@@ -193,11 +193,11 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
 
     _init_logging(log_level)
 
-    logging.info("Analysing input:")
-    logging.info(json.dumps(indict, indent=4, sort_keys=True))
+    logging.getLogger(__name__).info("Analysing input:")
+    logging.getLogger(__name__).info(json.dumps(indict, indent=4, sort_keys=True))
 
     if "dynamics" not in indict:
-        logging.info("Warning: empty input (no dynamical equations found); returning empty output")
+        logging.getLogger(__name__).info("Warning: empty input (no dynamical equations found); returning empty output")
         return [], SystemOfShapes.from_shapes([]), []
 
     _read_global_config(indict)
@@ -224,17 +224,17 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
 
     for shape in shapes:
         if not shape.is_homogeneous() and shape.order > 1:
-            logging.error("For symbol " + str(shape.symbol) + ": higher-order inhomogeneous ODEs are not supported")
+            logging.getLogger(__name__).error("For symbol " + str(shape.symbol) + ": higher-order inhomogeneous ODEs are not supported")
             sys.exit(1)
 
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
     _, node_is_analytically_solvable = _find_analytically_solvable_equations(shape_sys, shapes, parameters=parameters)
 
-    logging.debug("System of equations:")
-    logging.debug("x = " + str(shape_sys.x_))
-    logging.debug("A = " + repr(shape_sys.A_))
-    logging.debug("b = " + str(shape_sys.b_))
-    logging.debug("c = " + str(shape_sys.c_))
+    logging.getLogger(__name__).info("System of equations (with dx/dt = Ax + b + c):")
+    logging.getLogger(__name__).info("x = " + str(shape_sys.x_))
+    logging.getLogger(__name__).info("A = " + repr(shape_sys.A_))
+    logging.getLogger(__name__).info("b = " + str(shape_sys.b_))
+    logging.getLogger(__name__).info("c = " + str(shape_sys.c_))
 
 
     #
@@ -249,7 +249,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
 
     analytic_solver_json = None
     if analytic_syms:
-        logging.info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
+        logging.getLogger(__name__).info("Generating propagators for the following symbols: " + ", ".join([str(k) for k in analytic_syms]))
         sub_sys = shape_sys.get_sub_system(analytic_syms)
         analytic_solver_json = sub_sys.generate_propagator_solver(disable_singularity_detection=disable_singularity_detection)
         analytic_solver_json["solver"] = "analytical"
@@ -262,7 +262,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
 
     if len(analytic_syms) < len(shape_sys.x_):
         numeric_syms = list(set(shape_sys.x_) - set(analytic_syms))
-        logging.info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
+        logging.getLogger(__name__).info("Generating numerical solver for the following symbols: " + ", ".join([str(sym) for sym in numeric_syms]))
         sub_sys = shape_sys.get_sub_system(numeric_syms)
         solver_json = sub_sys.generate_numeric_solver(state_variables=shape_sys.x_)
         solver_json["solver"] = "numeric"   # will be appended to if stiffness testing is used
@@ -270,7 +270,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             if not PYGSL_AVAILABLE:
                 raise Exception("Stiffness test requested, but PyGSL not available")
 
-            logging.info("Performing stiffness test...")
+            logging.getLogger(__name__).info("Performing stiffness test...")
             kwargs = {}   # type: Dict[str, Any]
             if "options" in indict.keys() and "random_seed" in indict["options"].keys():
                 random_seed = int(indict["options"]["random_seed"])
@@ -289,7 +289,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             solver_type = tester.check_stiffness()
             if not solver_type is None:
                 solver_json["solver"] += "-" + solver_type
-                logging.info(solver_type + " scheme")
+                logging.getLogger(__name__).info(solver_type + " scheme")
 
         solvers_json.append(solver_json)
 
@@ -376,10 +376,10 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
 
                 if preserve_expressions and sym in preserve_expressions:
                     if "analytic" in solver_json["solver"]:
-                        logging.warning("Not preserving expression for variable \"" + sym + "\" as it is solved by propagator solver")
+                        logging.getLogger(__name__).warning("Not preserving expression for variable \"" + sym + "\" as it is solved by propagator solver")
                         continue
 
-                    logging.info("Preserving expression for variable \"" + sym + "\"")
+                    logging.getLogger(__name__).info("Preserving expression for variable \"" + sym + "\"")
                     var_def_str = _find_variable_definition(indict, sym, order=1)
                     assert var_def_str is not None
                     solver_json["update_expressions"][sym] = var_def_str.replace("'", Config().differential_order_symbol)
@@ -388,8 +388,8 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             for sym, expr in solver_json["propagators"].items():
                 solver_json["propagators"][sym] = str(expr)
 
-    logging.info("In ode-toolbox: returning outdict = ")
-    logging.info(json.dumps(solvers_json, indent=4, sort_keys=True))
+    logging.getLogger(__name__).info("Final output result:")
+    logging.getLogger(__name__).info(json.dumps(solvers_json, indent=4, sort_keys=True))
 
     return solvers_json, shape_sys, shapes
 
@@ -400,9 +400,10 @@ def _init_logging(log_level: Union[str, int] = logging.WARNING):
 
     :param log_level: Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
     """
-    fmt = '%(levelname)s:%(message)s'
+    fmt = "[ODE-toolbox] %(levelname)s:%(message)s"
     logging.basicConfig(format=fmt)
-    logging.getLogger().setLevel(log_level)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level)
 
 
 def analysis(indict, disable_stiffness_check: bool = False, disable_analytic_solver: bool = False, disable_singularity_detection: bool = False, preserve_expressions: Union[bool, Iterable[str]] = False, log_level: Union[str, int] = logging.WARNING) -> List[Dict]:

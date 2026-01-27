@@ -36,7 +36,8 @@ class Config:
         "max_step_size": 999.,
         "integration_accuracy_abs": 1E-6,
         "integration_accuracy_rel": 1E-6,
-        "forbidden_names": ["oo", "zoo", "nan", "NaN", "__h"]
+        "forbidden_names": ["oo", "zoo", "nan", "NaN", "__h"],
+        "use_alternative_expM": False
     }
 
     def __getitem__(self, key):

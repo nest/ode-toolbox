@@ -32,7 +32,7 @@ import sympy.matrices
 from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
-from .sympy_helpers import _custom_simplify_expr, _is_zero
+from .sympy_helpers import _custom_simplify_expr, _is_zero, expMt
 
 
 class GetBlockDiagonalException(Exception):
@@ -46,6 +46,7 @@ def get_block_diagonal_blocks(A):
     assert A.shape[0] == A.shape[1], "matrix A should be square"
 
     A_connectivity_undirected = (A != 0) | (A.T != 0)    # make symmetric (undirected) connectivity graph from the system matrix
+    A_connectivity_undirected = np.triu(A_connectivity_undirected)
 
     graph_components = scipy.sparse.csgraph.connected_components(A_connectivity_undirected)[1]
 
@@ -88,7 +89,6 @@ class SystemOfShapes:
         :param b: Vector containing inhomogeneous part (constant term).
         :param c: Vector containing nonlinear part.
         """
-        logging.debug("Initializing system of shapes with x = " + str(x) + ", A = " + str(A) + ", b = " + str(b) + ", c = " + str(c))
         assert x.shape[0] == A.shape[0] == A.shape[1] == b.shape[0] == c.shape[0]
         self.x_ = x
         self.A_ = A
@@ -214,7 +214,13 @@ class SystemOfShapes:
         # optimized: be explicit about block diagonal elements; much faster!
         try:
             blocks = get_block_diagonal_blocks(np.array(A))
-            propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
+
+            if Config().use_alternative_expM:
+                expM = expMt
+            else:
+                expM = sympy.exp
+
+            propagators = [sympy.simplify(expM(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol, real=True))) for block in blocks]
             P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
         except GetBlockDiagonalException:
             # naive: calculate propagators in one step
@@ -244,12 +250,12 @@ class SystemOfShapes:
                 if conditions:
                     # if there is one or more condition under which the solution goes to infinity...
 
-                    logging.warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-                    logging.warning("List of all conditions that result in a division by zero:")
+                    logging.getLogger(__name__).warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
+                    logging.getLogger(__name__).warning("List of all conditions that result in a division by zero:")
                     for cond_set in conditions:
-                        logging.warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
+                        logging.getLogger(__name__).warning("\t" + r" ∧ ".join([str(eq.lhs) + " = " + str(eq.rhs) for eq in cond_set]))
             except SingularityDetectionException:
-                logging.warning("Could not check the propagator matrix for singularities.")
+                logging.getLogger(__name__).warning("Could not check the propagator matrix for singularities.")
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -305,7 +311,6 @@ class SystemOfShapes:
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
-            logging.debug("update_expr[" + str(self.x_[row]) + "] = " + str(update_expr[str(self.x_[row])]))
 
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
