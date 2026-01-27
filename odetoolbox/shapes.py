@@ -160,8 +160,6 @@ class Shape:
         if not self.upper_bound is None:
             self.upper_bound = _custom_simplify_expr(self.upper_bound)
 
-        logging.debug("Created Shape with symbol " + str(self.symbol) + ", derivative_factors = " + str(self.derivative_factors) + ", inhom_term = " + str(self.inhom_term) + ", nonlin_term = " + str(self.nonlin_term))
-
 
     def __str__(self):
         s = "Shape \"" + str(self.symbol) + "\" of order " + str(self.order)
@@ -267,7 +265,7 @@ class Shape:
 
 
     @classmethod
-    def from_json(cls, indict, all_variable_symbols=None, parameters=None, _debug=False):
+    def from_json(cls, indict, all_variable_symbols=None, parameters=None):
         r"""
         Create a :python:`Shape` instance from an input dictionary.
 
@@ -346,7 +344,7 @@ class Shape:
         derivative_symbols = self.get_state_variables(derivative_symbol=Config().differential_order_symbol)
         for derivative_factor, derivative_symbol in zip(self.derivative_factors, derivative_symbols):
             expr += derivative_factor * derivative_symbol
-        logging.debug("Shape " + str(self.symbol) + ": reconstituting expression " + str(expr))
+
         return expr
 
 
@@ -370,8 +368,6 @@ class Shape:
 
         if parameters is None:
             parameters = {}
-
-        logging.debug("Splitting expression " + str(expr) + " (symbols " + str(x) + ")")
 
         lin_factors = sympy.zeros(len(x), 1)
         inhom_term = sympy.Float(0)
@@ -397,15 +393,11 @@ class Shape:
                 if not is_lin:
                     nonlin_term += term
 
-        logging.debug("\tlinear factors: " + str(lin_factors))
-        logging.debug("\tinhomogeneous term: " + str(inhom_term))
-        logging.debug("\tnonlinear term: " + str(nonlin_term))
-
         return lin_factors, inhom_term, nonlin_term
 
 
     @classmethod
-    def from_function(cls, symbol: str, definition, max_t=100, max_order=4, all_variable_symbols=None, debug=False) -> Shape:
+    def from_function(cls, symbol: str, definition, max_t=100, max_order=4, all_variable_symbols=None) -> Shape:
         r"""
         Create a Shape object given a function of time.
 
@@ -434,9 +426,6 @@ class Shape:
         # `derivatives` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, Config().input_time_symbol)]
 
-        logging.debug("Processing function-of-time shape \"" + symbol + "\" with defining expression = \"" + str(definition) + "\"")
-
-
         #
         #   to avoid a division by zero below, we have to find a `t` so that the shape function is not zero at this `t`.
         #
@@ -446,8 +435,6 @@ class Shape:
             if not _is_zero(definition.subs(Config().input_time_symbol, t_)):
                 t_val = t_
                 break
-
-        logging.debug("Found t: " + str(t_val))
 
         if t_val is None:
 
@@ -465,8 +452,6 @@ class Shape:
 
         order = 1
 
-        logging.debug("\tFinding ode for order 1...")
-
         derivative_factors = [(1 / derivatives[0] * derivatives[1]).subs(Config().input_time_symbol, t_val)]
         diff_rhs_lhs = derivatives[1] - derivative_factors[0] * derivatives[0]
         found_ode = _is_zero(diff_rhs_lhs)
@@ -478,8 +463,6 @@ class Shape:
 
         while not found_ode and order < max_order:
             order += 1
-
-            logging.debug("\tFinding ode for order " + str(order) + "...")
 
             # Add the next higher derivative to the list
             derivatives.append(sympy.diff(derivatives[-1], Config().input_time_symbol))
@@ -522,7 +505,6 @@ class Shape:
             #
 
             diff_rhs_lhs = 0
-            logging.debug("\tchecking whether shape definition is satisfied...")
             for k in range(order):
                 diff_rhs_lhs -= derivative_factors[k] * derivatives[k]
             diff_rhs_lhs += derivatives[order]
@@ -534,7 +516,6 @@ class Shape:
         if not found_ode:
             raise Exception("Shape does not satisfy any ODE of order <= " + str(max_order))
 
-        logging.debug("Shape satisfies ODE of order = " + str(order))
 
         #
         #    calculate the initial values of the found ODE
@@ -546,7 +527,7 @@ class Shape:
 
 
     @classmethod
-    def from_ode(cls, symbol: str, definition: str, initial_values: dict, all_variable_symbols=None, lower_bound=None, upper_bound=None, parameters=None, debug=False, **kwargs) -> Shape:
+    def from_ode(cls, symbol: str, definition: str, initial_values: dict, all_variable_symbols=None, lower_bound=None, upper_bound=None, parameters=None, **kwargs) -> Shape:
         r"""
         Create a :python:`Shape` object given an ODE and initial values.
 
@@ -567,8 +548,6 @@ class Shape:
         assert type(symbol) is str
         assert type(definition) is str
         assert type(initial_values) is dict
-
-        logging.debug("\nProcessing differential-equation form shape " + str(symbol) + " with defining expression = \"" + str(definition) + "\"")
 
         if all_variable_symbols is None:
             all_variable_symbols = []
@@ -605,6 +584,5 @@ class Shape:
             nonlin_term = nonlin_term + functools.reduce(lambda x, y: x + y, nonlocal_derivative_terms)
 
         shape = cls(sympy.Symbol(symbol), order, initial_values, local_derivative_factors, inhom_term, nonlin_term, lower_bound, upper_bound)
-        logging.debug("\tReturning shape: " + str(shape))
 
         return shape
