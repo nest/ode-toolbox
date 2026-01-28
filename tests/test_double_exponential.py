@@ -20,6 +20,7 @@
 #
 
 import numpy as np
+import pytest
 from scipy.integrate import odeint
 
 import odetoolbox
@@ -39,7 +40,8 @@ except ImportError:
 class TestDoubleExponential:
     r"""Test propagators generation for double exponential"""
 
-    def test_double_exponential(self):
+    @pytest.mark.parametrize("use_alternative_expM", [True, False])
+    def test_double_exponential(self, use_alternative_expM: bool):
         r"""Test propagators generation for double exponential"""
 
         def time_to_max(tau_1, tau_2):
@@ -95,7 +97,7 @@ class TestDoubleExponential:
         ODE_INITIAL_VALUES = {"I": 0., "I_aux": 0.}
 
         # simulate with ode-toolbox
-        solver_dict = odetoolbox.analysis(indict, log_level="DEBUG", disable_stiffness_check=True)
+        solver_dict = odetoolbox.analysis(indict, log_level="DEBUG", disable_stiffness_check=True, use_alternative_expM=use_alternative_expM)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
@@ -152,12 +154,13 @@ class TestDoubleExponential:
 
         np.testing.assert_allclose(y_[:, 1], rec_I_interp, atol=1E-7)
 
-    def test_constant_factors_double_exponential(self):
+    @pytest.mark.parametrize("use_alternative_expM", [True, False])
+    def test_constant_factors_double_exponential(self, use_alternative_expM: bool):
         r"""Test the computation of propagators for an alpha (double-exponential) kernel with constant coefficients; this tests the block-diagonal computation of propagators."""
         indict = {"dynamics": [{"expression": "x'' = -2 * x' - x",
                                 "initial_values": {"x": "0",
                                                    "x'": "0"}}]}
-        solver_dict = odetoolbox.analysis(indict, log_level="DEBUG", disable_stiffness_check=True)
+        solver_dict = odetoolbox.analysis(indict, log_level="DEBUG", disable_stiffness_check=True, use_alternative_expM=use_alternative_expM)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
