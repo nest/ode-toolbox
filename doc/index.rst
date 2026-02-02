@@ -611,7 +611,7 @@ If you use ODE-toolbox in your work, please cite it depending on the version you
 
 For version 2.5.12:
 
-.. [1] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2026) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.18341161 <10.5281/zenodo.18341161>`__.
+.. [1] Charl Linssen, Shraddha Jain, Pooja N. Babu, Abigail Morrison and Jochen M. Eppler (2026) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.18341252 <https://doi.org/10.5281/zenodo.18341252>`__.
 
 For version 2.5.11:
 
