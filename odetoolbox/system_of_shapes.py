@@ -32,7 +32,7 @@ import sympy.matrices
 from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
-from .sympy_helpers import _custom_simplify_expr, _is_zero
+from .sympy_helpers import _custom_simplify_expr, _is_zero, expMt
 
 
 class GetBlockDiagonalException(Exception):
@@ -205,7 +205,7 @@ class SystemOfShapes:
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
 
-    def _generate_propagator_matrix(self, A):
+    def _generate_propagator_matrix(self, A, use_alternative_expM: bool = False):
         r"""Generate the propagator matrix by matrix exponentiation."""
 
         # naive: calculate propagators in one step
@@ -214,7 +214,13 @@ class SystemOfShapes:
         # optimized: be explicit about block diagonal elements; much faster!
         try:
             blocks = get_block_diagonal_blocks(np.array(A))
-            propagators = [sympy.simplify(sympy.exp(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol))) for block in blocks]
+
+            if use_alternative_expM:
+                expM = expMt
+            else:
+                expM = sympy.exp
+
+            propagators = [sympy.simplify(expM(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol, real=True))) for block in blocks]
             P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
         except GetBlockDiagonalException:
             # naive: calculate propagators in one step
@@ -226,12 +232,12 @@ class SystemOfShapes:
 
         return P
 
-    def generate_propagator_solver(self, disable_singularity_detection: bool = False):
+    def generate_propagator_solver(self, disable_singularity_detection: bool = False, use_alternative_expM: bool = False):
         r"""
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
 
-        P = self._generate_propagator_matrix(self.A_)
+        P = self._generate_propagator_matrix(self.A_, use_alternative_expM=use_alternative_expM)
 
         #
         #    singularity detection

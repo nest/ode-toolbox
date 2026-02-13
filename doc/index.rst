@@ -127,16 +127,19 @@ The following flags exist:
      - Default
      - Description
    * - ``disable_analytic_solver``
-     - False
+     - :python:`False`
      - Set to True to return numerical solver recommendations, and no propagators, even for ODEs that are analytically tractable.
    * - ``disable_stiffness_check``
-     - False
+     - :python:`False`
      - Set to True to disable stiffness check.
    * - ``disable_singularity_detection``
-     - False
+     - :python:`False`
      - Set to True to disable detection of conditions under which numerical singularities (division by zero) could occur.
+   * - ``use_alternative_expM``
+     - :python:`False`
+     - If :python:`False`, use the sympy function ``sympy.exp`` to compute the matrix exponential. If :python:`True`, use an alternative function (see :py:func:`odetoolbox.sympy_helpers.expMt` for details). This can be useful as calls to ``sympy.exp`` can sometimes take a very large amount of time.
    * - ``preserve_expressions``
-     - False
+     - :python:`False`
      - Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
    * - ``log_level``
      - :python:`logging.WARN`

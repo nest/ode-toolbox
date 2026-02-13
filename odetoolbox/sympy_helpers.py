@@ -166,3 +166,71 @@ class SympyPrinter(sympy.printing.StrPrinter):
             return expr.func.__name__.lower() + "(%s)" % self.stringify(expr.args, ", ")
 
         return expr.func.__name__ + "(%s)" % self.stringify(expr.args, ", ")
+
+
+def expMt(M, t=1):
+    """Compute matrix exponential exp(M*t).
+
+    Based on code contributed by GitHub user @oscarbenjamin, July 29th, 2021 [1]_ (see also the discussion at [2]_).
+
+    .. [1] https://github.com/sympy/sympy/issues/21585
+    .. [2] https://github.com/nest/ode-toolbox/pull/97
+    """
+    def ilt(e, s, t):
+        """Fast inverse Laplace transform of rational function including RootSum"""
+        a, b, n = sympy.symbols('a, b, n', cls=sympy.Wild, exclude=[s])
+
+        def _ilt(e):
+            if not e.has(s):
+                return e
+            elif e.is_Add:
+                return _ilt_add(e)
+            elif e.is_Mul:
+                return _ilt_mul(e)
+            elif e.is_Pow:
+                return _ilt_pow(e)
+            elif isinstance(e, sympy.RootSum):
+                return _ilt_rootsum(e)
+            else:
+                raise NotImplementedError
+
+        def _ilt_add(e):
+            return e.func(*map(_ilt, e.args))
+
+        def _ilt_mul(e):
+            coeff, expr = e.as_independent(s)
+            if expr.is_Mul:
+                raise NotImplementedError
+            return coeff * _ilt(expr)
+
+        def _ilt_pow(e):
+            match = e.match((a * s + b)**n)
+            if match is not None:
+                nm, am, bm = match[n], match[a], match[b]
+                if nm.is_Integer and nm < 0:
+                    if nm == 1:
+                        return sympy.exp(-(bm / am) * t) / am
+                    else:
+                        return t**(-nm - 1) * sympy.exp(-(bm / am) * t) / (am**-nm * sympy.gamma(-nm))
+            raise NotImplementedError
+
+        def _ilt_rootsum(e):
+            expr = e.fun.expr
+            [variable] = e.fun.variables
+            return sympy.RootSum(e.poly, sympy.Lambda(variable, sympy.together(_ilt(expr))))
+
+        return _ilt(e)
+
+    assert M.is_square
+    N = M.shape[0]
+    s = sympy.Dummy("s")
+
+    Ms = (s * sympy.eye(N) - M)
+    Mres = Ms.adjugate() / Ms.det()
+
+    def expMij(i, j):
+        """Partial fraction expansion then inverse Laplace transform"""
+        Mresij_pfe = sympy.apart(Mres[i, j], s, full=True)
+        return ilt(Mresij_pfe, s, t)
+
+    return sympy.Matrix(N, N, expMij)
