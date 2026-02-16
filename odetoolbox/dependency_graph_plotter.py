@@ -75,5 +75,5 @@ class DependencyGraphPlotter:
             dot.edge(str(e[0]), str(e[1]))
 
         if not fn is None:
-            logging.info("Saving dependency graph plot to " + fn)
+            logging.getLogger(__name__).debug("Saving dependency graph plot to " + fn)
             dot.render(fn)
