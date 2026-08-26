@@ -344,10 +344,6 @@ class SystemOfShapes:
                 if not _is_zero(P[row, col]):
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
                     P_expr[sym_str] = P[row, col]
-                    if row != col and not _is_zero(self.b_[col]):
-                        # the ODE for x_[row] depends on the inhomogeneous ODE of x_[col]. We can't solve this analytically in the general case (even though some specific cases might admit a solution)
-                        raise PropagatorGenerationException("the ODE for " + str(self.x_[row]) + " depends on the inhomogeneous ODE of " + str(self.x_[col]) + ". We can't solve this analytically in the general case (even though some specific cases might admit a solution)")
-
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
 
             if not _is_zero(self.b_[row]):

@@ -162,19 +162,6 @@ def _custom_simplify_expr(expr: Union[str, sympy.matrices.MatrixBase]):
         sys.exit(1)
 
 
-def _find_in_matrix(A, el):
-    num_rows = A.rows
-    num_cols = A.cols
-
-    # Iterate over the elements of the matrix
-    for i in range(num_rows):
-        for j in range(num_cols):
-            if A[i, j] == el:
-                return (i, j)
-
-    return None
-
-
 def symbol_in_expression(list_of_symbols, expr) -> bool:
     for symbol in list_of_symbols:
         if symbol in sympy.preorder_traversal(expr):
