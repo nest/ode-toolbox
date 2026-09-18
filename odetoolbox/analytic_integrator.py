@@ -31,6 +31,7 @@ from odetoolbox.sympy_helpers import SymmetricEq, _sympy_parse_real
 
 from .shapes import Shape
 from .integrator import Integrator
+from .expression_optimisation import expand_cse_solver, _has_cse
 
 
 class AnalyticIntegrator(Integrator):
@@ -38,7 +39,11 @@ class AnalyticIntegrator(Integrator):
     Integrate a dynamical system by means of the propagators returned by ODE-toolbox.
     """
 
-    def __init__(self, solver_dict, spike_times: Optional[Dict[str, List[float]]] = None, enable_caching: bool = True):
+    def __init__(self,
+                 solver_dict,
+                 spike_times: Optional[Dict[str,
+                                            List[float]]] = None,
+                 enable_caching: bool = True):
         r"""
         :param solve_dict: The results dictionary returned by a call to :python:`odetoolbox.analysis()`.
         :param spike_times: For each variable, used as a key, the list of times at which a spike occurs.
@@ -47,10 +52,16 @@ class AnalyticIntegrator(Integrator):
 
         super(AnalyticIntegrator, self).__init__()
 
-        self.solver_dict = solver_dict
+        is_cse_active = _has_cse(solver_dict)
+        if is_cse_active:
+            # expand cse representations for analytic integrator
+            self.solver_dict = expand_cse_solver(solver_dict)
+        else:  # if cse disabled, solver is pased to analytical integrator
+            self.solver_dict = solver_dict
 
         self.all_variable_symbols = self.solver_dict["state_variables"]
-        self.all_variable_symbols = [sympy.Symbol(s, real=True) for s in self.all_variable_symbols]
+        self.all_variable_symbols = [sympy.Symbol(
+            s, real=True) for s in self.all_variable_symbols]
 
         self.set_spike_times(spike_times)
 
@@ -63,14 +74,23 @@ class AnalyticIntegrator(Integrator):
         #
 
         self.dim = len(self.all_variable_symbols)
-        self.initial_values = {sympy.Symbol(k, real=True): v for k, v in self.solver_dict["initial_values"].items()}
+        self.initial_values = {
+            sympy.Symbol(
+                k,
+                real=True): v for k,
+            v in self.solver_dict["initial_values"].items()}
         self.set_initial_values(self.initial_values)
-        self.shape_starting_values = {sympy.Symbol(k, real=True): v for k, v in self.solver_dict["initial_values"].items()}
+        self.shape_starting_values = {
+            sympy.Symbol(
+                k,
+                real=True): v for k,
+            v in self.solver_dict["initial_values"].items()}
         for sym, v in self.shape_starting_values.items():
             expr = _sympy_parse_real(v, global_dict=Shape._sympy_globals)
             subs_dict = {}
             if "parameters" in self.solver_dict.keys():
-                for parameter_name, v_ in self.solver_dict["parameters"].items():
+                for parameter_name, v_ in self.solver_dict["parameters"].items(
+                ):
                     parameter_symbol = sympy.Symbol(parameter_name, real=True)
                     subs_dict[parameter_symbol] = v_
 
@@ -101,7 +121,8 @@ class AnalyticIntegrator(Integrator):
 
         """
         for sub_condition_string in condition_string.split("||"):
-            # if any of the subterms hold, the whole expression holds (OR-ed together)
+            # if any of the subterms hold, the whole expression holds (OR-ed
+            # together)
             if self._and_condition_holds(sub_condition_string):
                 return True
 
@@ -135,14 +156,16 @@ class AnalyticIntegrator(Integrator):
 
             subs_dict = {}
             if "parameters" in self.solver_dict.keys():
-                for param_name, param_val in self.solver_dict["parameters"].items():
+                for param_name, param_val in self.solver_dict["parameters"].items(
+                ):
                     param_symbol = sympy.Symbol(param_name, real=True)
                     subs_dict[param_symbol] = param_val
 
             sub_condition_holds = equation.subs(subs_dict)
 
             if not sub_condition_holds:
-                # if any of the subterms do not hold, the whole expression does not hold (AND-ed together)
+                # if any of the subterms do not hold, the whole expression does
+                # not hold (AND-ed together)
                 return False
 
         return True
@@ -157,11 +180,13 @@ class AnalyticIntegrator(Integrator):
         self.update_expressions = self.solver_dict["conditions"]["default"]["update_expressions"]
         self.propagators = self.solver_dict["conditions"]["default"]["propagators"]
 
-        for condition, conditional_solver in self.solver_dict["conditions"].items():
+        for condition, conditional_solver in self.solver_dict["conditions"].items(
+        ):
             if condition != "default" and self._condition_holds(condition):
                 self.update_expressions = conditional_solver["update_expressions"]
                 self.propagators = conditional_solver["propagators"]
-                logging.getLogger(__name__).debug("Picking solver based on condition: " + str(condition))
+                logging.getLogger(__name__).debug(
+                    "Picking solver based on condition: " + str(condition))
 
                 break
 
@@ -177,10 +202,19 @@ class AnalyticIntegrator(Integrator):
             subs_dict[prop_name] = prop_expr
 
         if "parameters" in self.solver_dict.keys():
-            for param_name, param_expr in self.solver_dict["parameters"].items():
+            for param_name, param_expr in self.solver_dict["parameters"].items(
+            ):
                 subs_dict[param_name] = param_expr
 
-        subs_dict = {sympy.Symbol(k, real=True): v if type(v) is float or isinstance(v, sympy.Expr) else _sympy_parse_real(v, global_dict=Shape._sympy_globals) for k, v in subs_dict.items()}
+        subs_dict = {
+            sympy.Symbol(
+                k,
+                real=True): v if type(v) is float or isinstance(
+                v,
+                sympy.Expr) else _sympy_parse_real(
+                v,
+                global_dict=Shape._sympy_globals) for k,
+            v in subs_dict.items()}
 
         #
         #   parse the expressions from JSON if necessary
@@ -188,7 +222,8 @@ class AnalyticIntegrator(Integrator):
 
         for k, v in self.update_expressions.items():
             if type(self.update_expressions[k]) is str:
-                self.update_expressions[k] = _sympy_parse_real(self.update_expressions[k], global_dict=Shape._sympy_globals)
+                self.update_expressions[k] = _sympy_parse_real(
+                    self.update_expressions[k], global_dict=Shape._sympy_globals)
 
         #
         #   perform substitution in update expressions ahead of time to save time later
@@ -197,10 +232,12 @@ class AnalyticIntegrator(Integrator):
         for k, v in self.update_expressions.items():
             for sym in self.update_expressions[k].free_symbols:
                 assert sym.is_real
-            self.update_expressions[k] = self.update_expressions[k].subs(subs_dict)
+            self.update_expressions[k] = self.update_expressions[k].subs(
+                subs_dict)
             for sym in self.update_expressions[k].free_symbols:
                 assert sym.is_real
-            self.update_expressions[k] = self.update_expressions[k].subs(subs_dict)
+            self.update_expressions[k] = self.update_expressions[k].subs(
+                subs_dict)
             for sym in self.update_expressions[k].free_symbols:
                 assert sym.is_real
 
@@ -210,10 +247,15 @@ class AnalyticIntegrator(Integrator):
 
         self.update_expressions_wrapped = {}
         for k, v in self.update_expressions.items():
-            self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v,
-                                                                                   args=[sympy.Symbol(Config().output_timestep_symbol, real=True)] + self.all_variable_symbols,
-                                                                                   backend="cython",
-                                                                                   helpers=Shape._sympy_autowrap_helpers)
+            self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(
+                v,
+                args=[
+                    sympy.Symbol(
+                        Config().output_timestep_symbol,
+                        real=True)] +
+                self.all_variable_symbols,
+                backend="cython",
+                helpers=Shape._sympy_autowrap_helpers)
 
     def get_all_variable_symbols(self):
         return self.all_variable_symbols
@@ -237,7 +279,8 @@ class AnalyticIntegrator(Integrator):
         self.t_curr = 0.
         self.state_at_t_curr = self.initial_values.copy()
 
-    def set_initial_values(self, vals: Union[Dict[str, str], Dict[sympy.Symbol, sympy.Expr]]):
+    def set_initial_values(
+            self, vals: Union[Dict[str, str], Dict[sympy.Symbol, sympy.Expr]]):
         r"""
         Set initial values, i.e. the state of the system at :math:`t = 0`. This will additionally cause the system state to be reset to :math:`t = 0` and the new initial conditions.
 
@@ -247,14 +290,17 @@ class AnalyticIntegrator(Integrator):
             if type(sym) is str:
                 sym = sympy.Symbol(sym, real=True)
 
-            assert sym in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
+            assert sym in self.initial_values.keys(
+            ), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
 
             if type(expr) is str:
-                expr = _sympy_parse_real(expr, global_dict=Shape._sympy_globals)
+                expr = _sympy_parse_real(
+                    expr, global_dict=Shape._sympy_globals)
 
             subs_dict = {}
             if "parameters" in self.solver_dict.keys():
-                for param_name, param_val in self.solver_dict["parameters"].items():
+                for param_name, param_val in self.solver_dict["parameters"].items(
+                ):
                     param_symbol = sympy.Symbol(param_name, real=True)
                     subs_dict[param_symbol] = param_val
 
@@ -262,14 +308,17 @@ class AnalyticIntegrator(Integrator):
                 if type(expr) is float:
                     self.initial_values[sym] = expr
                 else:
-                    self.initial_values[sym] = float(expr.evalf(subs=subs_dict))
+                    self.initial_values[sym] = float(
+                        expr.evalf(subs=subs_dict))
             except TypeError:
-                msg = "Could not convert initial value expression to float. The following symbol(s) may be undeclared: " + ", ".join([str(expr_) for expr_ in expr.evalf(subs=subs_dict).free_symbols])
+                msg = "Could not convert initial value expression to float. The following symbol(s) may be undeclared: " + ", ".join(
+                    [str(expr_) for expr_ in expr.evalf(subs=subs_dict).free_symbols])
                 raise Exception(msg)
 
         self.reset()
 
-    def _update_step(self, delta_t, initial_values) -> Dict[sympy.Symbol, sympy.Expr]:
+    def _update_step(
+            self, delta_t, initial_values) -> Dict[sympy.Symbol, sympy.Expr]:
         r"""
         Apply propagator to update the state, starting from `initial_values`, by timestep `delta_t`.
 
@@ -284,14 +333,16 @@ class AnalyticIntegrator(Integrator):
         #    replace expressions by their numeric values
         #
 
-        y = [delta_t] + [initial_values[sym] for sym in self.all_variable_symbols]
+        y = [delta_t] + [initial_values[sym]
+                         for sym in self.all_variable_symbols]
 
         #
         #    for each state variable, perform the state update
         #
 
         for state_variable, expr in self.update_expressions.items():
-            new_state[sympy.Symbol(state_variable, real=True)] = self.update_expressions_wrapped[state_variable](*y)
+            new_state[sympy.Symbol(
+                state_variable, real=True)] = self.update_expressions_wrapped[state_variable](*y)
 
         return new_state
 

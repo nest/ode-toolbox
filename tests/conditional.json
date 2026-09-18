@@ -1,0 +1,26 @@
+{
+  "dynamics": [
+    {
+      "expression": "dg' = -dg / tau_syn",
+      "initial_value": "1.0"
+    },
+    {
+      "expression": "g' = dg - g / tau_syn",
+      "initial_value": "0"
+    },
+    {
+      "expression": "V' = -V / tau_m + g / C_m",
+      "initial_value": "0"
+    },
+    {
+      "expression": "z' = z - z**3 / tau_z",
+      "initial_value": "0.1"
+    }
+  ],
+  "parameters": {
+    "tau_syn": "2.0",
+    "tau_m": "2.0",
+    "C_m": "250.0",
+    "tau_z": "10.0"
+  }
+}

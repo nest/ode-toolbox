@@ -1,0 +1,19 @@
+{
+    "__info": "Small analytical system designed to exercise propagator CSE",
+    "dynamics": [
+        {
+            "expression": "x' = -x / tau",
+            "initial_value": "1"
+        },
+        {
+            "expression": "y' = -y / tau",
+            "initial_value": "2"
+        }
+    ],
+    "parameters": {
+        "tau": "10"
+    },
+    "options": {
+        "output_timestep_symbol": "__h"
+    }
+}

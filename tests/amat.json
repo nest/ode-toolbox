@@ -1,0 +1,35 @@
+{
+    "dynamics": [
+        {
+            "expression": "V_th_alpha_1' = -0.1 * V_th_alpha_1",
+            "initial_values": { "V_th_alpha_1": "0" }
+        },
+        {
+            "expression": "V_th_alpha_2' = -0.005 * V_th_alpha_2",
+            "initial_values": { "V_th_alpha_2": "0" }
+        },
+        {
+            "expression": "V_m' = -0.1 * V_m - 7.0 + 0.005 * I_e_stim_total",
+            "initial_values": { "V_m": "-70" }
+        },
+        {
+            "expression": "V_th_v_aux' = -0.2 * V_th_v_aux",
+            "initial_values": { "V_th_v_aux": "0" }
+        },
+        {
+            "expression": "V_th_v' = -0.2 * V_th_v + V_th_v_aux",
+            "initial_values": { "V_th_v": "0" }
+        },
+        {
+            "expression": "refr_t' = -1.0",
+            "initial_values": { "refr_t": "0" }
+        }
+    ],
+    "options": {
+        "output_timestep_symbol": "__h",
+        "simplify_expression": "sympy.logcombine(sympy.powsimp(sympy.expand(expr)))"
+    },
+    "parameters": {
+        "I_e_stim_total": "0"
+    }
+}

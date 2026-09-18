@@ -63,7 +63,7 @@ class Shape:
 
     # a minimal subset of sympy classes and functions to avoid "from sympy import *"
     _sympy_globals = {"Symbol": sympy.Symbol,
-                      "Integer": sympy.Integer,
+                      "Integer": sympy.Integer, # XXX TO DO: Utilise this in our LOCALS optimisation condition
                       "Float": sympy.Float,
                       "Function": sympy.Function,
                       "Add": sympy.Add,
