@@ -265,7 +265,7 @@ class SystemOfShapes:
         #
         #    singularity detection
         #
-        disable_singularity_detection = True
+
         if not disable_singularity_detection:
             try:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
@@ -274,7 +274,7 @@ class SystemOfShapes:
 
                 if conditions and not disable_singularity_mitigation:
                     # generate solver for the base case (with singularity conditions that are not met)
-                    default_solver = self.generate_solver_dict_based_on_propagator_matrix_(P)
+                    default_solver = self.generate_solver_dict_based_on_propagator_matrix_(P, Qb)
 
                     # change the returned solver dictionary to include conditions
                     solver_dict = {"solver": "analytical",
@@ -341,7 +341,6 @@ class SystemOfShapes:
         #
         #   generate symbols for each nonzero entry of the propagator matrix
         #
-        # inhom_term = Q * self.b_
 
         P_expr = {}     # the expression corresponding to each propagator symbol
         update_expr = {}    # keys are str(variable symbol), values are str(expressions) that evaluate to the new value of the corresponding key

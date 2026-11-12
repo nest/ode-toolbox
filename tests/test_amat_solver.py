@@ -126,19 +126,19 @@ class TestAMATSolver:
         indict = {
             "dynamics": [
                 {
-                    "expression": "V_th_alpha_1' = (-V_th_alpha_1) / tau_1",
+                    "expression": "V_th_alpha_1' = -V_th_alpha_1 / tau_1",
                     "initial_values": {
                         "V_th_alpha_1": "0"
                     }
                 },
                 {
-                    "expression": "V_th_alpha_2' = (-V_th_alpha_2) / tau_2",
+                    "expression": "V_th_alpha_2' = -V_th_alpha_2 / tau_2",
                     "initial_values": {
                         "V_th_alpha_2": "0"
                     }
                 },
                 {
-                    "expression": "V_m' = ((-(V_m - E_L)) / tau_m + ((((unit_psc * I_kernel_exc__X__exc_spikes)) + (((-unit_psc) * I_kernel_inh__X__inh_spikes))) + I_e + I_stim) / C_m)",
+                    "expression": "V_m' = ((-(V_m - E_L)) / tau_m + ((((unit_psc * I_kernel_exc__X__exc_spikes)) + ((-unit_psc * I_kernel_inh__X__inh_spikes))) + I_e + I_stim) / C_m)",
                     "initial_values": {
                         "V_m": str(parameters["E_L"])
                     }
@@ -199,7 +199,7 @@ class TestAMATSolver:
 
         spike_times = SpikeGenerator.spike_times_from_json(stimuli, T)
 
-        # analyse with ode-toolbox
+        # analyse with ODE-toolbox
         solver_dict = odetoolbox.analysis(indict, log_level="DEBUG", disable_stiffness_check=True)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
