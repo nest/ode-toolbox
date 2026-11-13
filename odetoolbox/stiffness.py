@@ -22,7 +22,7 @@
 import logging
 import numpy as np
 
-from odetoolbox.sympy_helpers import _sympy_parse_real
+from odetoolbox.sympy_helpers import _sympy_parse_real, sympy_globals
 
 from .mixed_integrator import MixedIntegrator
 from .mixed_integrator import ParametersIncompleteException

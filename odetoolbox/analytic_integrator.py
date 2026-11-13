@@ -247,7 +247,7 @@ class AnalyticIntegrator(Integrator):
             if type(sym) is str:
                 sym = sympy.Symbol(sym, real=True)
 
-            assert sym in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
+            assert sym in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(sym) + "\""
 
             if type(expr) is str:
                 expr = _sympy_parse_real(expr, global_dict=sympy_globals)
