@@ -532,7 +532,7 @@ The propagator matrix :math:`\mathbf{P}` is derived from the system matrix by ma
 
 .. math::
 
-   \mathbf{P} = \exp(\mathbf{A} \cdot h)
+   \mathbf{P} = \exp(\mathbf{A} \cdot \Delta t)
 
 If the imaginary unit :math:`i` is found in any of the entries in :math:`\mathbf{P}`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
 
@@ -542,7 +542,7 @@ To speed up processing, the final system matrix :math:`\mathbf{A}` is rewritten 
 
 .. math::
 
-   \exp(\mathbf{A}\cdot h) = \text{diag}(\exp(\mathbf{A}_1 \cdot h), \exp(\mathbf{A}_2 \cdot h), \dots, \exp(\mathbf{A}_k \cdot h))
+   \exp(\mathbf{A}\cdot \Delta t) = \text{diag}(\exp(\mathbf{A}_1 \cdot \Delta t), \exp(\mathbf{A}_2 \cdot \Delta t), \dots, \exp(\mathbf{A}_k \cdot \Delta t))
 
 
 Computing the update expressions
@@ -555,9 +555,10 @@ The update expressions formulate the way in which the propagators are used to co
    I_{syn} &\leftarrow P_{I_{syn},I_{syn}} I_{syn}\\
    V_m &\leftarrow P_{V_m,V_m} V_m + P_{V_m,I_{syn}} I_{syn}
 
-In the case of an autonomous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry), the update equation is of the form:
+In the case of an inhomogeneous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry), the update equation is of the form:
 
 .. math::
+   :label: eq-update-inhomogeneous
 
    x \leftarrow P x + Q b
 
@@ -565,37 +566,35 @@ where
 
 .. math::
 
+   Q = \int_0^{\Delta t} \exp(A s)\,ds
+
+When :math:`A` is invertible, the integral can be evaluated as
+
+.. math::
+
    Q = A^{-1}(P - I)
 
-For example for the ODE:
+However, :math:`A` is in general not invertible (for instance, when :math:`A = 0`). ODE-toolbox therefore never explicitly inverts :math:`A`, but computes :math:`P` and the product :math:`Qb` together, by exponentiating an augmented matrix using the "Van Loan method" [4]_:
+
+.. math::
+
+   \exp\left(\left[\begin{matrix}A & b\\ 0 & 0\end{matrix}\right] \Delta t\right) = \left[\begin{matrix}P & Qb\\ 0 & 1\end{matrix}\right]
+
+For example for the following ODE with :math:`A = 0` and :math:`b = 1.618`:
 
 .. math::
 
    \frac{dx}{dt} = 1.618
 
-the update equation is:
+the update equation is :eq:`eq-update-inhomogeneous` with :math:`Q = \Delta t` and :math:`P = 1`.
 
-.. math::
-
-   x \leftarrow P x + 1.618
-
-In the case of an inhomogenous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry, but the corresponding entry in :math:`\textbf{A}` is nonzero), the update equation is of the form:
-
-.. math::
-
-   x \leftarrow P \left(x + \frac{b}{A}\right) - \frac{b}{A}
-
-For example for the ODE:
+As a second example, for the ODE with :math:`A = -1` and :math:`b = 1.618`:
 
 .. math::
 
    \frac{dx}{dt} = 1.618 - x
 
-the update equation is:
-
-.. math::
-
-   x \leftarrow P (x - 1.618) + 1.618
+the update equation is :eq:`eq-update-inhomogeneous` with :math:`P = \exp(-\Delta t)` and :math:`Q = 1 - \exp(-\Delta t)`.
 
 In some cases, elements of :math:`\mathbf{A}` may contain terms that involve a parameter of the system to be integrated. If at a later stage, the numerical value of these parameters is chosen equal to zero, a numerical singularity (division by zero) occurs. ODE-toolbox will detect the conditions (for instance, :python:`param1 - param2 = 0`) under which these singularities occur. In case potential division by zero is detected, separate, conditional solvers are generated, so that a valid solver can be selected (for the given choice of parameter values) during numerical integration.
 
