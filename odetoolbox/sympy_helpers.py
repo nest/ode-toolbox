@@ -64,6 +64,11 @@ class NumericalIssueException(Exception):
     pass
 
 
+def _sympy_floats_to_ints(expr):
+    r"""Replace integer-valued Floats (1.0, 2.0, ...) by sympy Integers; leave all other Floats untouched."""
+    return expr.xreplace({f: sympy.Integer(int(f)) for f in expr.atoms(sympy.Float) if float(f).is_integer()})
+
+
 def _sympy_parse_real(expr: str, global_dict: Optional[Dict] = None, local_dict: Optional[Dict] = None, evaluate: bool = True) -> sympy.core.expr.Expr:
     r"""Custom parse function to make sure that all returned symbols have domain Real.
 

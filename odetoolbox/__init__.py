@@ -83,6 +83,10 @@ def _read_global_config(indict):
             assert key in Config.config.keys(), "Unknown key specified in global options dictionary: \"" + str(key) + "\""
             Config.config[key] = value
 
+    # always convert integer-valued floats (1.0, 2.0, ...) to sympy Integers after simplification. Note that ``Config.config`` persists across invocations, so take care not to wrap more than once.
+    if not Config.config["simplify_expression"].startswith("_sympy_floats_to_ints("):
+        Config.config["simplify_expression"] = "_sympy_floats_to_ints(" + Config.config["simplify_expression"] + ")"
+
 
 def _from_json_to_shapes(indict, parameters=None) -> Tuple[List[Shape], Dict[sympy.Symbol, str]]:
     r"""

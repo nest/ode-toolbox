@@ -22,11 +22,11 @@
 class Config:
     r"""Static class to store global configuration options.
 
-    Options are stored in the static dict ``config``. Access using either :python:`Config().key` or :python:`Config()[key]` or :python:`Config.config[key]`.
+    Options are stored in the static dict ``config``. Access using either :python:`Config().key` or :python:`Config()["key"]` or :python:`Config.config["key"]`.
     """
 
     config = {
-        "simplify_expression": "sympy.nsimplify(sympy.simplify(expr), rational=True)",
+        "simplify_expression": "sympy.simplify(expr)",
         "expression_simplification_threshold": 2500,
         "input_time_symbol": "t",
         "output_timestep_symbol": "__h",
