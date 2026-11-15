@@ -20,7 +20,7 @@
 #
 
 import itertools
-from typing import List, Optional, Set, Union
+from typing import List, Optional, Set, Tuple, Union
 
 import logging
 import numpy as np
@@ -43,7 +43,12 @@ class GetBlockDiagonalException(Exception):
     pass
 
 
-def get_block_diagonal_blocks(A):
+def get_block_diagonal_block_indices(A) -> List[slice]:
+    r"""
+    Return, for each block on the diagonal of the block-diagonal matrix ``A``, the slice of row (and column) indices spanned by that block.
+
+    Raises GetBlockDiagonalException if ``A`` cannot be written as a block-diagonal matrix without reordering its rows and columns.
+    """
     assert A.shape[0] == A.shape[1], "matrix A should be square"
 
     A_connectivity_undirected = (A != 0) | (A.T != 0)    # make symmetric (undirected) connectivity graph from the system matrix
@@ -54,19 +59,20 @@ def get_block_diagonal_blocks(A):
         # matrix is not ordered
         raise GetBlockDiagonalException()
 
-    blocks = []
+    block_indices = []
     for i in np.unique(graph_components):
         idx = np.where(graph_components == i)[0]
 
         if not all(np.diff(idx) > 0) or not (len(idx) == 1 or (len(np.unique(np.diff(idx))) == 1 and np.unique(np.diff(idx))[0] == 1)):
             raise GetBlockDiagonalException()
 
-        idx_min = np.amin(idx)
-        idx_max = np.amax(idx)
-        block = A[idx_min:idx_max + 1, idx_min:idx_max + 1]
-        blocks.append(block)
+        block_indices.append(slice(int(np.amin(idx)), int(np.amax(idx)) + 1))
 
-    return blocks
+    return block_indices
+
+
+def get_block_diagonal_blocks(A):
+    return [A[s, s] for s in get_block_diagonal_block_indices(A)]
 
 
 class PropagatorGenerationException(Exception):
@@ -199,8 +205,34 @@ class SystemOfShapes:
 
         return SystemOfShapes(x_sub, A_sub, b_sub, c_sub, shapes_sub)
 
-    def _generate_propagator_matrix(self, A, use_alternative_expM: bool = False) -> sympy.Matrix:
-        r"""Generate the propagator matrix by matrix exponentiation."""
+    @staticmethod
+    def _exponentiate_block(A: sympy.Matrix, b: sympy.Matrix, expM) -> Tuple[sympy.Matrix, sympy.Matrix]:
+        r"""
+        Compute the propagator matrix :math:`P = \exp(A h)` and the inhomogeneous update term :math:`Qb` for a single (square) block :math:`A` with inhomogeneous term :math:`b`, using the Van Loan method:
+
+        .. math::
+
+           \exp\left(\left[\begin{matrix}A & b\\ 0 & 0\end{matrix}\right] h\right) = \left[\begin{matrix}P & Qb\\ 0 & 1\end{matrix}\right]
+
+        If :math:`b = 0`, the augmentation is skipped and :math:`Qb = 0`.
+        """
+        N = A.rows
+        h = sympy.Symbol(Config().output_timestep_symbol, real=True)
+
+        if all(_is_zero(b_i) for b_i in b):
+            return _custom_simplify_expr(expM(A * h)), sympy.zeros(N, 1)
+
+        augmented_A = A.row_join(b).col_join(sympy.zeros(1, N + 1))
+        augmented_P = _custom_simplify_expr(expM(augmented_A * h))
+
+        return augmented_P[:N, :N], augmented_P[:N, N]
+
+    def _generate_propagator_matrix(self, A: sympy.Matrix, b: sympy.Matrix, use_alternative_expM: bool = False) -> Tuple[sympy.Matrix, sympy.Matrix]:
+        r"""
+        Generate the propagator matrix :math:`P` and the inhomogeneous update term :math:`Qb` by matrix exponentiation (see :py:meth:`_exponentiate_block`).
+
+        If possible, :math:`A` is decomposed into blocks along its diagonal, and each block is augmented with its own part of :math:`b` and exponentiated separately. (Augmenting the full matrix with :math:`b` before decomposing would connect all blocks that have a nonzero inhomogeneous term, and prevent the decomposition.)
+        """
 
         if use_alternative_expM:
             expM = expMt
@@ -210,19 +242,26 @@ class SystemOfShapes:
         try:
             # optimized: compute propagators separately for each block diagonal element of ``A``
             logging.getLogger(__name__).debug("Computing propagator matrix (block-diagonal optimisation)...")
-            blocks = get_block_diagonal_blocks(np.array(A))
-            propagators = [_custom_simplify_expr(expM(sympy.Matrix(block) * sympy.Symbol(Config().output_timestep_symbol, real=True))) for block in blocks]
-            P = sympy.Matrix(scipy.linalg.block_diag(*propagators))
+            block_indices = get_block_diagonal_block_indices(np.array(A))
+            P_blocks = []
+            Qb_blocks = []
+            for s in block_indices:
+                P_block, Qb_block = self._exponentiate_block(A[s, s], b[s, :], expM)
+                P_blocks.append(P_block)
+                Qb_blocks.append(Qb_block)
+
+            P = sympy.diag(*P_blocks)
+            Qb = sympy.Matrix.vstack(*Qb_blocks)
         except GetBlockDiagonalException:
             # naive: calculate propagators in one step -- can be quite slow if ``A`` is a large matrix
             logging.getLogger(__name__).debug("Computing propagator matrix...")
-            P = _custom_simplify_expr(expM(A * sympy.Symbol(Config().output_timestep_symbol, real=True)))
+            P, Qb = self._exponentiate_block(A, b, expM)
 
         # check the result
-        if sympy.I in sympy.preorder_traversal(P):
+        if sympy.I in sympy.preorder_traversal(P) or sympy.I in sympy.preorder_traversal(Qb):
             raise PropagatorGenerationException("The imaginary unit was found in the propagator matrix. This can happen if the dynamical system that was passed to ode-toolbox is unstable, i.e. one or more state variables will diverge to minus or positive infinity.")
 
-        return P
+        return P, Qb
 
     def _merge_conditions(self, solver_dict):
         r"""merge together conditions (a OR b OR c OR...) if the propagators and update_expressions are the same"""
@@ -247,20 +286,7 @@ class SystemOfShapes:
         Generate the propagator matrix and symbolic expressions for propagator-based updates; return as JSON.
         """
 
-        top_block = self.A_.row_join(self.b_)
-        bottom_block = sympy.zeros(1, top_block.cols)
-        augmented_A = top_block.col_join(bottom_block)
-
-        augmented_P = self._generate_propagator_matrix(augmented_A, use_alternative_expM=use_alternative_expM)
-
-        N = self.A_.rows  # Get the dimension of P
-        P = augmented_P[:N, :N]
-        Qb = augmented_P[:N, -1]
-
-        # following three lines are the naive way of computing Van Loan's method, namely by using an explicit matrix inverse
-        # P = self._generate_propagator_matrix(self.A_, use_alternative_expM=use_alternative_expM)
-        # N = self.A_.shape[0]
-        # Q = self.A_.pinv() * (P - sympy.eye(N))
+        P, Qb = self._generate_propagator_matrix(self.A_, self.b_, use_alternative_expM=use_alternative_expM)
 
         #
         #    singularity detection
