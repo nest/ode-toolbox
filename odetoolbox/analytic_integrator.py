@@ -33,6 +33,37 @@ from .shapes import Shape
 from .integrator import Integrator
 
 
+def _strip_parentheses(s: str) -> str:
+    r"""
+    Strip the parentheses surrounding an (in)equality such as ``(tau == sqrt(c))``, while leaving parentheses that are part of the (in)equality intact.
+
+    Splitting a condition string on ``||`` and ``&&`` can leave excess opening parentheses at the start or excess closing parentheses at the end, such as in ``(((b == 0)`` or ``(a != 0))``; these are removed first. Then, enclosing pairs of parentheses are removed, as long as the opening parenthesis at the start matches the closing parenthesis at the end.
+    """
+    s = s.strip()
+
+    while s.startswith("(") and s.count("(") > s.count(")"):
+        s = s[1:].strip()
+
+    while s.endswith(")") and s.count(")") > s.count("("):
+        s = s[:-1].strip()
+
+    while s.startswith("(") and s.endswith(")"):
+        depth = 0
+        for i, char in enumerate(s):
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+
+            if depth == 0 and i < len(s) - 1:
+                # the opening parenthesis at the start is closed before the end of the string
+                return s
+
+        s = s[1:-1].strip()
+
+    return s
+
+
 class AnalyticIntegrator(Integrator):
     r"""
     Integrate a dynamical system by means of the propagators returned by ODE-toolbox.
@@ -117,7 +148,7 @@ class AnalyticIntegrator(Integrator):
         """
         sub_conditions = condition_string.split("&&")
         for sub_condition_string in sub_conditions:
-            sub_condition_string = sub_condition_string.strip().strip("()")
+            sub_condition_string = _strip_parentheses(sub_condition_string)
             if "==" in sub_condition_string:
                 parts = sub_condition_string.split("==")
             else:
@@ -128,18 +159,27 @@ class AnalyticIntegrator(Integrator):
             lhs = _sympy_parse_real(lhs_str, global_dict=sympy_globals)
             rhs = _sympy_parse_real(rhs_str, global_dict=sympy_globals)
 
-            if "==" in sub_condition_string:
-                equation = SymmetricEq(lhs, rhs)
-            else:
-                equation = sympy.Ne(lhs, rhs)
-
             subs_dict = {}
             if "parameters" in self.solver_dict.keys():
                 for param_name, param_val in self.solver_dict["parameters"].items():
                     param_symbol = sympy.Symbol(param_name, real=True)
                     subs_dict[param_symbol] = param_val
 
-            sub_condition_holds = equation.subs(subs_dict)
+            # evaluate numerically, so that e.g. ``sqrt(4.0)`` is compared as ``2.0``; like ``==`` in generated code, the comparison is exact. Substitute before evaluating: ``evalf(subs=...)`` does not evaluate e.g. ``sqrt(4.0)``, and can return a nonzero ``Float`` for an exact zero.
+            difference = (lhs - rhs).subs(subs_dict).evalf()
+            if difference.free_symbols:
+                raise Exception("Cannot evaluate condition \"" + sub_condition_string + "\": no value given for parameter(s) " + ", ".join(sorted(str(sym) for sym in difference.free_symbols)))
+
+            if difference.has(sympy.zoo, sympy.oo, -sympy.oo, sympy.nan):
+                # for instance, ``tau == 1/g`` with ``g = 0``
+                is_equal = False
+            else:
+                is_equal = complex(difference) == 0
+
+            if "==" in sub_condition_string:
+                sub_condition_holds = is_equal
+            else:
+                sub_condition_holds = not is_equal
 
             if not sub_condition_holds:
                 # if any of the subterms do not hold, the whole expression does not hold (AND-ed together)

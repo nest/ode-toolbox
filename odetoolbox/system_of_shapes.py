@@ -263,6 +263,64 @@ class SystemOfShapes:
 
         return P, Qb
 
+    @staticmethod
+    def _orient_equality(lhs: sympy.Expr, rhs: sympy.Expr) -> Optional[Tuple[sympy.Symbol, sympy.Expr]]:
+        r"""
+        Solve the equality ``lhs = rhs`` for one of its symbols, so that it can be used as a substitution ``symbol -> expr`` (with ``symbol`` not occurring in ``expr``).
+
+        Returns None if the equality cannot be solved for any symbol with a unique solution. In that case it does not have the form of a substitution, for instance :math:`\tau = -\sqrt{\tau^2}` (which holds for all :math:`\tau \leq 0`), or :math:`1/\tau = \tau` (which has two discrete solutions).
+        """
+        for a, b in [(lhs, rhs), (rhs, lhs)]:
+            if isinstance(a, sympy.Symbol) and a not in b.free_symbols:
+                return a, b
+
+        expr = lhs - rhs
+        for sym in sorted(expr.free_symbols, key=str):
+            if not expr.is_rational_function(sym):
+                # ``sympy.solve()`` can return an incomplete set of solutions
+                continue
+
+            try:
+                solutions = sympy.solve(expr, sym)
+            except Exception:
+                continue
+
+            if len(solutions) == 1 and sym not in solutions[0].free_symbols:
+                return sym, solutions[0]
+
+        return None
+
+    @staticmethod
+    def _substitute_equalities(M: sympy.Matrix, equalities: List[SymmetricEq]) -> sympy.Matrix:
+        r"""
+        Substitute the equalities ``lhs = rhs``, which hold jointly, into ``M``.
+
+        Substituting the equalities one by one into ``M`` can reintroduce symbols that were already substituted: for instance, for :math:`m = 0 \wedge g = m`, substituting first :math:`m \rightarrow 0` and then :math:`g \rightarrow m` leaves :math:`m` in the result. For chains of equalities between symbols, such as :math:`t_2 = t_1 \wedge t_1 = t_4 \wedge t_4 = t_3 \wedge \ldots`, this cannot be fixed by ordering the substitutions or by repeating them.
+
+        Instead, the symbols are eliminated one at a time. Each equality is first rewritten using the substitutions found so far; if it is not already implied by them, it is solved for one of its symbols (see :py:meth:`_orient_equality`), and that symbol is eliminated from the right-hand sides of the existing substitutions. Hence, no symbol that is substituted occurs in any right-hand side, and all substitutions can be performed simultaneously, independent of the order in which the equalities are given.
+
+        Equalities that cannot be brought into the form of a substitution are skipped; the substitutions that are performed are still implied by the equalities.
+        """
+        substitutions = {}
+        for eq in sorted(equalities, key=lambda eq: (str(eq.lhs), str(eq.rhs))):
+            lhs = eq.lhs.subs(substitutions, simultaneous=True)
+            rhs = eq.rhs.subs(substitutions, simultaneous=True)
+
+            if sympy.simplify(lhs - rhs) == 0:
+                # implied by the substitutions found so far
+                continue
+
+            oriented = SystemOfShapes._orient_equality(lhs, rhs)
+            if oriented is None:
+                logging.getLogger(__name__).debug("Could not substitute equality: " + str(eq.lhs) + " = " + str(eq.rhs))
+                continue
+
+            sym, expr = oriented
+            substitutions = {key: val.subs(sym, expr) for key, val in substitutions.items()}
+            substitutions[sym] = expr
+
+        return M.subs(substitutions, simultaneous=True)
+
     def _merge_conditions(self, solver_dict):
         r"""merge together conditions (a OR b OR c OR...) if the propagators and update_expressions are the same"""
 
@@ -344,18 +402,18 @@ class SystemOfShapes:
                         # this is the default condition, only containing inequalities
                         continue
 
+                    if SingularityDetection._conditions_are_contradictory(cond_set):
+                        # these conditions can never hold simultaneously, so no solver is needed
+                        logging.getLogger(__name__).debug("Skipping contradictory condition: " + str(condition_str))
+                        continue
+
                     logging.getLogger(__name__).debug("Generating solver for condition: " + str(condition_str))
 
-                    conditional_A = self.A_.copy()
-                    conditional_b = self.b_.copy()
-                    conditional_c = self.c_.copy()
-
-                    for eq in cond_set:
-                        if isinstance(eq, SymmetricEq):
-                            # replace equalities (not inequalities)
-                            conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
-                            conditional_b = conditional_b.subs(eq.lhs, eq.rhs)
-                            conditional_c = conditional_c.subs(eq.lhs, eq.rhs)
+                    # replace equalities (not inequalities)
+                    equalities = [eq for eq in cond_set if isinstance(eq, SymmetricEq)]
+                    conditional_A = self._substitute_equalities(self.A_, equalities)
+                    conditional_b = self._substitute_equalities(self.b_, equalities)
+                    conditional_c = self._substitute_equalities(self.c_, equalities)
 
                     conditional_dynamics = SystemOfShapes(self.x_, conditional_A, conditional_b, conditional_c, self.shapes_)
                     solver_dict_conditional = conditional_dynamics.generate_propagator_solver(disable_singularity_detection=True, disable_singularity_mitigation=True, use_alternative_expM=use_alternative_expM)
