@@ -71,6 +71,7 @@ class Shape:
                       "Pow": sympy.Pow,
                       "power": sympy.Pow,
                       "exp": sympy.exp,
+                      "expm1": sympy.codegen.cfunctions.expm1,
                       "log": sympy.log,
                       "sin": sympy.sin,
                       "cos": sympy.cos,
