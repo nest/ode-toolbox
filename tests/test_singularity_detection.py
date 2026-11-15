@@ -252,6 +252,55 @@ class TestSingularityInBothPropagatorAndInhomogeneous:
         np.testing.assert_allclose(y_[:, 0], state["I_aux"], atol=1E-7)
 
 
+class TestSingularityInDownstreamInhomogeneousTerm:
+    r"""
+    Test detection of singularities in the inhomogeneous update term :math:`Qb` of a row that has no inhomogeneous term of its own, but is driven by a row that does:
+
+    .. math::
+
+       y' = -k y + I
+       x' = -g x + y
+
+    The update term for :math:`x` contains a factor :math:`1 / g`, while :math:`b_x = 0`, so that the condition :math:`g = 0` cannot be found by only inspecting the particular solutions :math:`-b_i / A_{ii}`.
+    """
+
+    @pytest.mark.parametrize("g", [0., .3])
+    def test_singularity_in_downstream_inhomogeneous_term(self, g: float):
+        k = .5
+        I = 2.
+        x0 = -1.
+        y0 = 1.
+
+        indict = {"dynamics": [{"expression": "y' = -k * y + I",
+                                "initial_value": str(y0)},
+                               {"expression": "x' = -g * x + y",
+                                "initial_value": str(x0)}],
+                  "options": {"output_timestep_symbol": "__h"}}
+
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
+        assert len(solver_dict) == 1
+        solver_dict = solver_dict[0]
+        assert solver_dict["solver"] == "analytical"
+        assert any("g == 0" in condition for condition in solver_dict["conditions"].keys())
+
+        solver_dict["parameters"] = {"k": k, "g": g, "I": I}
+
+        analytic_integrator = AnalyticIntegrator(solver_dict)
+        analytic_integrator.set_initial_values({"x": x0, "y": y0})
+        analytic_integrator.reset()
+
+        timevec = np.linspace(0., 20., 161)
+        actual = np.array([[analytic_integrator.get_value(t)[sympy.Symbol(sym, real=True)] for sym in ["y", "x"]] for t in timevec])
+
+        def flow(state, t):
+            y, x = state
+            return [-k * y + I, -g * x + y]
+
+        correct = scipy.integrate.odeint(flow, [y0, x0], timevec, rtol=1E-12, atol=1E-12)
+
+        np.testing.assert_allclose(actual, correct, rtol=1E-7, atol=1E-7)
+
+
 class TestPropagatorSolverHomogeneous:
     r"""Test ODE-toolbox ability to ignore imaginary roots of the dynamical equations.
 

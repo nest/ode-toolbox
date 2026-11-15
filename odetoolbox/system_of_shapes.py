@@ -295,7 +295,7 @@ class SystemOfShapes:
         if not disable_singularity_detection:
             try:
                 conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
-                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_))
+                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_, Qb))
                 conditions = SingularityDetection._remove_duplicate_conditions(conditions)
 
                 if conditions and not disable_singularity_mitigation:
