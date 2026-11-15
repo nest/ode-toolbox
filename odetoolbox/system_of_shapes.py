@@ -293,72 +293,78 @@ class SystemOfShapes:
         #
 
         if not disable_singularity_detection:
+            conditions = set()
+
             try:
-                conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
-                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_, Qb))
-                conditions = SingularityDetection._remove_duplicate_conditions(conditions)
-
-                if conditions and not disable_singularity_mitigation:
-                    # generate solver for the base case (with singularity conditions that are not met)
-                    default_solver = self.generate_solver_dict_based_on_propagator_matrix_(P, Qb)
-
-                    # change the returned solver dictionary to include conditions
-                    solver_dict = {"solver": "analytical",
-                                   "state_variables": default_solver["state_variables"],
-                                   "initial_values": default_solver["initial_values"],
-                                   "conditions": {"default": {"propagators": default_solver["propagators"],
-                                                              "update_expressions": default_solver["update_expressions"]}}}
-
-                    #
-                    #    generate all combinations of conditions
-                    #
-
-                    num_conditions = len(conditions)
-                    condition_permutations = list(itertools.product([False, True], repeat=num_conditions))
-                    logging.getLogger(__name__).info("Alternate solvers will be generated for each of these conditions (and combinations thereof), which amounts to " + str(len(condition_permutations)) + " solvers that will be generated.")
-                    for condition_permutation in condition_permutations:
-                        # each ``condition_permutation[i]`` is True/False corresponding to condition i
-
-                        cond_set = set()    # cond_set is the set of conditions that have to hold
-                        for i, cond_holds in enumerate(condition_permutation):
-                            cond = list(conditions)[i]
-                            if cond_holds:
-                                # ``cond`` needs to hold for this propagator
-                                cond_set.add(cond)
-                            else:
-                                # ``cond`` needs to **not** hold for this propagator
-                                cond_set.add(sympy.Ne(cond.lhs, cond.rhs))
-
-                        condition_str: str = " && ".join(["(" + str(eq.lhs) + (" == " if isinstance(eq, SymmetricEq) else "!=") + str(eq.rhs) + ")" for eq in cond_set])
-
-                        if not any([isinstance(eq, SymmetricEq) for eq in cond_set]):
-                            # this is the default condition, only containing inequalities
-                            continue
-
-                        logging.getLogger(__name__).debug("Generating solver for condition: " + str(condition_str))
-
-                        conditional_A = self.A_.copy()
-                        conditional_b = self.b_.copy()
-                        conditional_c = self.c_.copy()
-
-                        for eq in cond_set:
-                            if isinstance(eq, SymmetricEq):
-                                # replace equalities (not inequalities)
-                                conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
-                                conditional_b = conditional_b.subs(eq.lhs, eq.rhs)
-                                conditional_c = conditional_c.subs(eq.lhs, eq.rhs)
-
-                        conditional_dynamics = SystemOfShapes(self.x_, conditional_A, conditional_b, conditional_c, self.shapes_)
-                        solver_dict_conditional = conditional_dynamics.generate_propagator_solver(disable_singularity_detection=True, disable_singularity_mitigation=True, use_alternative_expM=use_alternative_expM)
-                        solver_dict["conditions"][condition_str] = {"propagators": solver_dict_conditional["propagators"],
-                                                                    "update_expressions": solver_dict_conditional["update_expressions"]}
-
-                    solver_dict = self._merge_conditions(solver_dict)
-
-                    return solver_dict
-
+                conditions = conditions.union(SingularityDetection.find_propagator_singularities(P, self.A_))
             except SingularityDetectionException:
                 logging.getLogger(__name__).warning("Could not check the propagator matrix for singularities.")
+
+            try:
+                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_, Qb))
+            except SingularityDetectionException:
+                logging.getLogger(__name__).warning("Could not check the inhomogeneous update terms for singularities.")
+
+            conditions = SingularityDetection._remove_duplicate_conditions(conditions)
+
+            if conditions and not disable_singularity_mitigation:
+                # generate solver for the base case (with singularity conditions that are not met)
+                default_solver = self.generate_solver_dict_based_on_propagator_matrix_(P, Qb)
+
+                # change the returned solver dictionary to include conditions
+                solver_dict = {"solver": "analytical",
+                               "state_variables": default_solver["state_variables"],
+                               "initial_values": default_solver["initial_values"],
+                               "conditions": {"default": {"propagators": default_solver["propagators"],
+                                                          "update_expressions": default_solver["update_expressions"]}}}
+
+                #
+                #    generate all combinations of conditions
+                #
+
+                num_conditions = len(conditions)
+                condition_permutations = list(itertools.product([False, True], repeat=num_conditions))
+                logging.getLogger(__name__).info("Alternate solvers will be generated for each of these conditions (and combinations thereof), which amounts to " + str(len(condition_permutations)) + " solvers that will be generated.")
+                for condition_permutation in condition_permutations:
+                    # each ``condition_permutation[i]`` is True/False corresponding to condition i
+
+                    cond_set = set()    # cond_set is the set of conditions that have to hold
+                    for i, cond_holds in enumerate(condition_permutation):
+                        cond = list(conditions)[i]
+                        if cond_holds:
+                            # ``cond`` needs to hold for this propagator
+                            cond_set.add(cond)
+                        else:
+                            # ``cond`` needs to **not** hold for this propagator
+                            cond_set.add(sympy.Ne(cond.lhs, cond.rhs))
+
+                    condition_str: str = " && ".join(["(" + str(eq.lhs) + (" == " if isinstance(eq, SymmetricEq) else "!=") + str(eq.rhs) + ")" for eq in cond_set])
+
+                    if not any([isinstance(eq, SymmetricEq) for eq in cond_set]):
+                        # this is the default condition, only containing inequalities
+                        continue
+
+                    logging.getLogger(__name__).debug("Generating solver for condition: " + str(condition_str))
+
+                    conditional_A = self.A_.copy()
+                    conditional_b = self.b_.copy()
+                    conditional_c = self.c_.copy()
+
+                    for eq in cond_set:
+                        if isinstance(eq, SymmetricEq):
+                            # replace equalities (not inequalities)
+                            conditional_A = conditional_A.subs(eq.lhs, eq.rhs)
+                            conditional_b = conditional_b.subs(eq.lhs, eq.rhs)
+                            conditional_c = conditional_c.subs(eq.lhs, eq.rhs)
+
+                    conditional_dynamics = SystemOfShapes(self.x_, conditional_A, conditional_b, conditional_c, self.shapes_)
+                    solver_dict_conditional = conditional_dynamics.generate_propagator_solver(disable_singularity_detection=True, disable_singularity_mitigation=True, use_alternative_expM=use_alternative_expM)
+                    solver_dict["conditions"][condition_str] = {"propagators": solver_dict_conditional["propagators"],
+                                                                "update_expressions": solver_dict_conditional["update_expressions"]}
+
+                solver_dict = self._merge_conditions(solver_dict)
+
+                return solver_dict
 
         return self.generate_solver_dict_based_on_propagator_matrix_(P, Qb)
 

@@ -183,30 +183,33 @@ class SingularityDetection:
         """
         logging.getLogger(__name__).debug("Checking for singularities (divisions by zero) in the inhomogeneous part of the update equations...")
 
-        conditions = set()
-        for row in range(A.shape[0]):
-            if _is_zero(b[row]):
-                # this is not an inhomogeneous ODE
-                continue
-
-            particular_solution = -b[row] / A[row, row]
-            particular_solution = sympy.simplify(particular_solution)    # using _custom_update_expr() does not guarantee that an adequate number of cases will be covered
-
-            conditions = conditions.union(SingularityDetection._find_singularity_conditions_in_expression(particular_solution))
-
-        if Qb is not None:
-            for row in range(Qb.shape[0]):
-                if _is_zero(Qb[row]):
+        try:
+            conditions = set()
+            for row in range(A.shape[0]):
+                if _is_zero(b[row]):
+                    # this is not an inhomogeneous ODE
                     continue
 
-                try:
-                    conditions = conditions.union(SingularityDetection._find_singularity_conditions_in_expression(Qb[row]))
-                except Exception as e:
-                    # keep the conditions that were found so far; the check for this row is skipped
-                    logging.getLogger(__name__).warning("Could not check the inhomogeneous update term for singularities: " + str(e))
+                particular_solution = -b[row] / A[row, row]
+                particular_solution = sympy.simplify(particular_solution)    # using _custom_update_expr() does not guarantee that an adequate number of cases will be covered
 
-        conditions = SingularityDetection._filter_valid_conditions(conditions, A.row_join(b))  # filters out the invalid conditions (invalid means those for which A or b is not defined)
-        conditions = SingularityDetection._remove_duplicate_conditions(conditions)
+                conditions = conditions.union(SingularityDetection._find_singularity_conditions_in_expression(particular_solution))
+
+            if Qb is not None:
+                for row in range(Qb.shape[0]):
+                    if _is_zero(Qb[row]):
+                        continue
+
+                    try:
+                        conditions = conditions.union(SingularityDetection._find_singularity_conditions_in_expression(Qb[row]))
+                    except Exception as e:
+                        # keep the conditions that were found so far; the check for this row is skipped
+                        logging.getLogger(__name__).warning("Could not check the inhomogeneous update term for singularities: " + str(e))
+
+            conditions = SingularityDetection._filter_valid_conditions(conditions, A.row_join(b))  # filters out the invalid conditions (invalid means those for which A or b is not defined)
+            conditions = SingularityDetection._remove_duplicate_conditions(conditions)
+        except Exception as e:
+            raise SingularityDetectionException(str(e)) from e
 
         if conditions:
             # if there is one or more condition under which the solution goes to infinity...
