@@ -30,10 +30,9 @@ from sympy.core.expr import Expr as SympyExpr
 import tempfile
 
 from .config import Config
-from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _is_zero, _is_sympy_type, SympyPrinter, _sympy_parse_real
+from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _is_zero, _is_sympy_type, SympyPrinter, _sympy_parse_real, sympy_globals
 from .system_of_shapes import SystemOfShapes
 from .shapes import MalformedInputException, Shape
-from .sympy_helpers import sympy_globals
 
 
 try:
