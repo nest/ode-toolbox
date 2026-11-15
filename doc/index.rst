@@ -580,6 +580,8 @@ However, :math:`A` is in general not invertible (for instance, when :math:`A = 0
 
    \exp\left(\left[\begin{matrix}A & b\\ 0 & 0\end{matrix}\right] \Delta t\right) = \left[\begin{matrix}P & Qb\\ 0 & 1\end{matrix}\right]
 
+Note that this method assumes that :math:`b` is constant over the timestep :math:`\Delta t`. If :math:`b` depends on parameters or external inputs that change during simulation, the update is exact only if these values remain constant within each timestep (that is, they are updated only at timestep boundaries). Inputs that vary continuously within a timestep (for instance, a sinusoidal or ramping current) are only approximated in this way.
+
 For example for the following ODE with :math:`A = 0` and :math:`b = 1.618`:
 
 .. math::
