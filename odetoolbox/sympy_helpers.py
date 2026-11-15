@@ -23,6 +23,8 @@ from typing import Dict, Mapping, Optional, Union
 
 import logging
 import sympy
+import sympy.codegen.cfunctions
+import sympy.codegen.rewriting
 import sys
 
 from .config import Config
@@ -173,6 +175,18 @@ def _find_in_matrix(A, el):
                 return (i, j)
 
     return None
+
+
+def _rewrite_with_expm1(expr: sympy.Expr) -> sympy.Expr:
+    r"""Rewrite subexpressions of the form :math:`\exp(x) - 1` as :math:`\mathrm{expm1}(x)`.
+
+    For small :math:`|x|` (for instance, :math:`x = -\Delta t/\tau` with :math:`\Delta t \ll \tau`), evaluating :math:`\exp(x) - 1` in floating point loses approximately :math:`\log_{10}(1/|x|)` significant digits due to catastrophic cancellation, whereas :math:`\mathrm{expm1}(x)` is accurate to machine precision.
+
+    Common factors are pulled out first, so that the expanded form :math:`a - a \exp(x)` (as typically returned by ``simplify()``) is also recognised."""
+    if not Config().use_expm1:
+        return expr
+
+    return sympy.codegen.rewriting.optimize(sympy.factor_terms(expr), [sympy.codegen.rewriting.expm1_opt])
 
 
 def symbol_in_expression(list_of_symbols, expr) -> bool:

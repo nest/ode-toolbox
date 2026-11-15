@@ -33,7 +33,7 @@ import sympy.matrices
 from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
-from .sympy_helpers import SymmetricEq, _custom_simplify_expr, _is_zero, expMt, _sympy_parse_real
+from .sympy_helpers import SymmetricEq, _custom_simplify_expr, _is_zero, expMt, _rewrite_with_expm1, _sympy_parse_real
 
 
 class GetBlockDiagonalException(Exception):
@@ -340,6 +340,7 @@ class SystemOfShapes:
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": higher-order inhomogeneous ODEs are not supported")
 
             update_expr_terms = []
+            inhomogeneous_term = sympy.Integer(0)
             for col in range(P.shape[1]):
                 if not _is_zero(P[row, col]):
                     sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[col]))
@@ -361,16 +362,24 @@ class SystemOfShapes:
                     #    generate update expressions
                     #
 
+                    # the update expression is ``P x + x_p * (1 - P_xx)``, where ``x_p = -b / A_xx`` is the particular solution.
+                    #
+                    # The inhomogeneous term ``x_p * (1 - P_xx)`` is formed and simplified separately from the propagator terms: simplifying the sum would expand it into ``x_p - x_p * P_xx``, which suffers from catastrophic cancellation when ``P_xx`` is close to 1 (i.e. when the timestep is small relative to the time constant). If ``use_expm1`` is enabled, the defining expression of ``P_xx`` is used instead of its symbol, so that ``1 - exp(x)`` can be rewritten as ``-expm1(x)``.
                     particular_solution = -self.b_[row] / self.A_[row, row]
-                    sym_str = Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[row]))
-                    update_expr_terms.append("-" + sym_str + " * " + str(self.x_[row]))    # remove the term (add its inverse) that would have corresponded to a homogeneous solution and that was added in the ``for col...`` loop above
-                    update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
+                    if Config().use_expm1:
+                        P_xx = P[row, row]
+                    else:
+                        P_xx = sympy.Symbol(Config().propagators_prefix + "__{}__{}".format(str(self.x_[row]), str(self.x_[row])), real=True)
 
-            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
+                    inhomogeneous_term = _rewrite_with_expm1(_custom_simplify_expr(particular_solution * (1 - P_xx)))
+
+            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) if update_expr_terms else "0"
             update_expr[str(self.x_[row])] = _sympy_parse_real(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
+
+            update_expr[str(self.x_[row])] += inhomogeneous_term
 
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}
