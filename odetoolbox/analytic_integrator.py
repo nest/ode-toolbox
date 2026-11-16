@@ -27,9 +27,8 @@ import sympy.utilities
 import sympy.utilities.autowrap
 
 from odetoolbox.config import Config
-from odetoolbox.sympy_helpers import SymmetricEq, _sympy_parse_real
+from odetoolbox.sympy_helpers import SymmetricEq, _sympy_parse_real, sympy_autowrap_helpers, sympy_globals
 
-from .shapes import Shape
 from .integrator import Integrator
 
 
@@ -67,7 +66,7 @@ class AnalyticIntegrator(Integrator):
         self.set_initial_values(self.initial_values)
         self.shape_starting_values = {sympy.Symbol(k, real=True): v for k, v in self.solver_dict["initial_values"].items()}
         for sym, v in self.shape_starting_values.items():
-            expr = _sympy_parse_real(v, global_dict=Shape._sympy_globals)
+            expr = _sympy_parse_real(v, global_dict=sympy_globals)
             subs_dict = {}
             if "parameters" in self.solver_dict.keys():
                 for parameter_name, v_ in self.solver_dict["parameters"].items():
@@ -125,8 +124,8 @@ class AnalyticIntegrator(Integrator):
 
             lhs_str = parts[0].strip()
             rhs_str = parts[1].strip()
-            lhs = _sympy_parse_real(lhs_str, global_dict=Shape._sympy_globals)
-            rhs = _sympy_parse_real(rhs_str, global_dict=Shape._sympy_globals)
+            lhs = _sympy_parse_real(lhs_str, global_dict=sympy_globals)
+            rhs = _sympy_parse_real(rhs_str, global_dict=sympy_globals)
 
             if "==" in sub_condition_string:
                 equation = SymmetricEq(lhs, rhs)
@@ -180,7 +179,7 @@ class AnalyticIntegrator(Integrator):
             for param_name, param_expr in self.solver_dict["parameters"].items():
                 subs_dict[param_name] = param_expr
 
-        subs_dict = {sympy.Symbol(k, real=True): v if type(v) is float or isinstance(v, sympy.Expr) else _sympy_parse_real(v, global_dict=Shape._sympy_globals) for k, v in subs_dict.items()}
+        subs_dict = {sympy.Symbol(k, real=True): v if type(v) is float or isinstance(v, sympy.Expr) else _sympy_parse_real(v, global_dict=sympy_globals) for k, v in subs_dict.items()}
 
         #
         #   parse the expressions from JSON if necessary
@@ -188,7 +187,7 @@ class AnalyticIntegrator(Integrator):
 
         for k, v in self.update_expressions.items():
             if type(self.update_expressions[k]) is str:
-                self.update_expressions[k] = _sympy_parse_real(self.update_expressions[k], global_dict=Shape._sympy_globals)
+                self.update_expressions[k] = _sympy_parse_real(self.update_expressions[k], global_dict=sympy_globals)
 
         #
         #   perform substitution in update expressions ahead of time to save time later
@@ -213,7 +212,7 @@ class AnalyticIntegrator(Integrator):
             self.update_expressions_wrapped[k] = sympy.utilities.autowrap.autowrap(v,
                                                                                    args=[sympy.Symbol(Config().output_timestep_symbol, real=True)] + self.all_variable_symbols,
                                                                                    backend="cython",
-                                                                                   helpers=Shape._sympy_autowrap_helpers)
+                                                                                   helpers=sympy_autowrap_helpers)
 
     def get_all_variable_symbols(self):
         return self.all_variable_symbols
@@ -250,7 +249,7 @@ class AnalyticIntegrator(Integrator):
             assert sym in self.initial_values.keys(), "Tried to set initial value for unknown parameter \"" + str(k) + "\""
 
             if type(expr) is str:
-                expr = _sympy_parse_real(expr, global_dict=Shape._sympy_globals)
+                expr = _sympy_parse_real(expr, global_dict=sympy_globals)
 
             subs_dict = {}
             if "parameters" in self.solver_dict.keys():
