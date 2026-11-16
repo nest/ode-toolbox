@@ -37,7 +37,8 @@ class Config:
         "integration_accuracy_abs": 1E-6,
         "integration_accuracy_rel": 1E-6,
         "forbidden_names": ["oo", "zoo", "nan", "NaN", "__h"],
-        "use_alternative_expM": False
+        "use_alternative_expM": False,
+        "max_float_to_int_bits": 23
     }
 
     def __getitem__(self, key):

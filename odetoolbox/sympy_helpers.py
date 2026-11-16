@@ -69,6 +69,18 @@ class NumericalIssueException(Exception):
     pass
 
 
+def _sympy_floats_to_ints(expr):
+    r"""Replace integer-valued Floats (1.0, 2.0, ...) by sympy Integers; leave all other Floats untouched.
+
+    Only Floats with magnitude strictly less than :math:`2^N` are converted, where :math:`N` is given by the global configuration option ``max_float_to_int_bits``. Beyond the number of mantissa bits of the floating-point type, not every integer is representable as a float, so that converting would yield integers with spurious digits. This already happens for literals in the input: for instance, ``2.5E30`` would become ``2499999999999999908974073741312``, as sympy stores it with the default precision of 53 bits. It also happens for the results of arithmetic: for instance, the simplified result of ``0.1 * 1E24`` would become ``100000000000000005551115`` instead of :math:`10^{23}`. Moreover, even when the conversion is exact, large integers might not fit in the integer type of the target platform: for instance, :math:`10^{23}` is too large for a 64-bit integer, so that, emitted as an integer literal in generated C/C++ code, it would cause a compilation error or overflow, whereas the floating-point literal ``1E23`` is valid.
+
+    The default value of 23 is conservative: it is within the number of mantissa bits of a single-precision float (24) as well as within the range of a signed 32-bit integer. If generating code exclusively for platforms with wider types, a larger value can be chosen, for instance 31 or 32 for signed or unsigned 32-bit integers, respectively, or 53 (``sys.float_info.mant_dig`` on most platforms) for double-precision floats.
+
+    :param expr: The expression in which to replace Floats."""
+    max_int = 2**Config().max_float_to_int_bits
+    return expr.xreplace({f: sympy.Integer(int(f)) for f in expr.atoms(sympy.Float) if float(f).is_integer() and abs(float(f)) < max_int})
+
+
 def _sympy_parse_real(expr: str, global_dict: Optional[Dict] = None, local_dict: Optional[Dict] = None, evaluate: bool = True) -> sympy.core.expr.Expr:
     r"""Custom parse function to make sure that all returned symbols have domain Real.
 
@@ -178,7 +190,7 @@ def _is_sympy_type(var):
 
 
 def _custom_simplify_expr(expr: Union[str, sympy.matrices.MatrixBase]):
-    """Custom expression simplification"""
+    """Custom expression simplification, using the ``simplify_expression`` global configuration option. Afterwards, integer-valued floats (1.0, 2.0, ...) are always converted to sympy Integers (see :py:func:`_sympy_floats_to_ints`)."""
     if isinstance(expr, sympy.matrices.MatrixBase):
         return expr.applyfunc(_custom_simplify_expr)
 
@@ -189,6 +201,9 @@ def _custom_simplify_expr(expr: Union[str, sympy.matrices.MatrixBase]):
 
         _simplify_expr = compile(Config().simplify_expression, filename="<string>", mode="eval")
         expr_simplified = eval(_simplify_expr)
+
+        if isinstance(expr_simplified, sympy.Basic):
+            expr_simplified = _sympy_floats_to_ints(expr_simplified)
 
         return expr_simplified
     except Exception as e:
