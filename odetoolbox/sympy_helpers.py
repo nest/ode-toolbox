@@ -179,7 +179,7 @@ def _is_sympy_type(var):
 
 
 def _custom_simplify_expr(expr: Union[str, sympy.matrices.MatrixBase]):
-    """Custom expression simplification"""
+    """Custom expression simplification, using the ``simplify_expression`` global configuration option. Afterwards, integer-valued floats (1.0, 2.0, ...) are always converted to sympy Integers (see :py:func:`_sympy_floats_to_ints`)."""
     if isinstance(expr, sympy.matrices.MatrixBase):
         return expr.applyfunc(_custom_simplify_expr)
 
@@ -190,6 +190,9 @@ def _custom_simplify_expr(expr: Union[str, sympy.matrices.MatrixBase]):
 
         _simplify_expr = compile(Config().simplify_expression, filename="<string>", mode="eval")
         expr_simplified = eval(_simplify_expr)
+
+        if isinstance(expr_simplified, sympy.Basic):
+            expr_simplified = _sympy_floats_to_ints(expr_simplified)
 
         return expr_simplified
     except Exception as e:
