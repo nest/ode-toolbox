@@ -166,7 +166,7 @@ Input
 
 The JSON input dictionary that is passed to ODE-toolbox contains :ref:`dynamics <Dynamics>`, :ref:`numerical parameters <Parameters>`, and :ref:`global options <Global options>`. Documentation may optionally be provided as a string.
 
-All expressions are parsed as SymPy expressions, and subsequently simplified through :python:`sympy.simplify()`. There are several predefined symbols, such as :python:`e` and :python:`E` for Euler's number, trigonometric functions, etc. :python:`t` is assumed to represent time. The list of predefined symbols is defined in `shapes.py <https://github.com/nest/ode-toolbox/blob/main/odetoolbox/shapes.py>`_, as the static member :python:`sympy_globals`. Variable names should be chosen such that they do not conflict with the predefined symbols.
+All expressions are parsed as SymPy expressions, and subsequently simplified through :python:`sympy.simplify()`. There are several predefined symbols, such as :python:`e` and :python:`E` for Euler's number, trigonometric functions, etc. :python:`t` is assumed to represent time. The list of predefined symbols is defined in `sympy_helpers.py <https://github.com/nest/ode-toolbox/blob/main/odetoolbox/sympy_helpers.py>`_, as the module-level variable :python:`sympy_globals`. Variable names should be chosen such that they do not conflict with the predefined symbols.
 
 Dynamics
 ~~~~~~~~
