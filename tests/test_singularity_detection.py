@@ -28,7 +28,7 @@ import sympy
 import pytest
 
 from .context import odetoolbox
-from odetoolbox.analytic_integrator import AnalyticIntegrator, _parse_condition
+from odetoolbox.analytic_integrator import AnalyticIntegrator
 from odetoolbox.debug_utils import import_matplotlib
 from odetoolbox.singularity_detection import SingularityDetection
 from odetoolbox.spike_generator import SpikeGenerator
@@ -397,7 +397,7 @@ class TestSingularityCases:
     @staticmethod
     def _parse_condition_keys(conditions):
         r"""Return the set of equalities, and the list of AND-ed (in)equalities for each OR-ed term, from the condition keys of a solver dictionary."""
-        and_terms = [set(and_term) for condition in conditions if condition != "default" for and_term in _parse_condition(condition)]
+        and_terms = [set(and_term) for condition in conditions if condition != "default" for and_term in AnalyticIntegrator._parse_condition(condition)]
         equalities = {relation for and_term in and_terms for relation in and_term if isinstance(relation, SymmetricEq)}
 
         return equalities, and_terms
@@ -530,7 +530,7 @@ class TestConditionParsing:
             lhs, rhs = [_sympy_parse_real(part, global_dict=sympy_globals) for part in s.split(op)]
             return SymmetricEq(lhs, rhs) if op == "==" else sympy.Ne(lhs, rhs)
 
-        assert _parse_condition(condition) == [[parse_relation(s) for s in and_term] for and_term in expected]
+        assert AnalyticIntegrator._parse_condition(condition) == [[parse_relation(s) for s in and_term] for and_term in expected]
 
     def test_parse_condition_generated(self):
         r"""For :math:`x' = -abc \cdot x + I`, the solvers for all combinations of the conditions :math:`a = 0`, :math:`b = 0` and :math:`c = 0` (except the default) are identical, and are merged into a single condition string with nested parentheses. Test that it is parsed into exactly these seven combinations."""
@@ -541,7 +541,7 @@ class TestConditionParsing:
 
         a, b, c = sympy.symbols("a, b, c", real=True)
         combinations = set()
-        for and_term in _parse_condition(conditions[0]):
+        for and_term in AnalyticIntegrator._parse_condition(conditions[0]):
             # each term specifies, for each of the parameters, whether it is zero or not
             assert len(and_term) == 3
             assert {rel.lhs for rel in and_term} == {a, b, c} and all(rel.rhs == 0 for rel in and_term)
