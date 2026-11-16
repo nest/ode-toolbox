@@ -244,7 +244,6 @@ class TestSingularityInBothPropagatorAndInhomogeneous:
             #
 
             tmax = time_to_max(tau_1, tau_2)
-            mpl.rcParams["text.usetex"] = True
 
             fig, ax = plt.subplots(nrows=6, figsize=(5, 4), dpi=600)
             ax[0].plot(timevec, state["I"], "-", lw=3, color="k", label=r"$I(t)$ (ODEtb)")

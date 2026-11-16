@@ -243,9 +243,6 @@ class TestAMATSolver:
         timevec_scipy = np.hstack([ts0, ts1, ts2])
 
         if ENABLE_PLOTS:
-            # tmax = time_to_max(tau_1, tau_2)
-            mpl.rcParams["text.usetex"] = True
-
             fig, ax = plt.subplots(nrows=5, figsize=(5, 4), dpi=300)
             ax[0].plot(timevec, state["I_kernel_exc__X__exc_spikes"], "-", lw=2, color="k", label=r"$I_\mathrm{syn}$ (ODEtb)")
             ax[0].plot(timevec_scipy, y_[:, 5], "--", lw=2, color="orange", label=r"$I_\mathrm{syn}$ (scipy)", alpha=.5)
