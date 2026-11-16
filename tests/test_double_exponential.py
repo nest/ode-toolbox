@@ -136,7 +136,6 @@ class TestDoubleExponential:
 
         if ENABLE_PLOTS:
             tmax = time_to_max(tau_1, tau_2)
-            mpl.rcParams["text.usetex"] = True
 
             fig, ax = plt.subplots(nrows=2, figsize=(5, 4), dpi=300)
             ax[0].plot(timevec, state["I_aux"], "--", lw=3, color="k", label=r"$I_\mathsf{aux}(t)$ (ODEtb)")
