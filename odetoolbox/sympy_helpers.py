@@ -206,9 +206,6 @@ def _custom_simplify_expr(expr: Union[str, sympy.matrices.MatrixBase]):
         if isinstance(expr_simplified, sympy.Basic):
             expr_simplified = _sympy_floats_to_ints(expr_simplified)
 
-        if isinstance(expr_simplified, sympy.Basic):
-            expr_simplified = _sympy_floats_to_ints(expr_simplified)
-
         return expr_simplified
     except Exception as e:
         print("Exception occurred while applying expression simplification function: " + type(e).__name__)
