@@ -458,6 +458,7 @@ class SystemOfShapes:
                 update_expr_terms.append(sym_str)
 
             # the update expression is a sum of distinct propagator symbols (each optionally multiplied by a state variable), so there is nothing to simplify
+            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) if update_expr_terms else "0"
             update_expr[str(self.x_[row])] = _sympy_parse_real(update_expr[str(self.x_[row])], global_dict=sympy_globals)
 
         all_state_symbols = [str(sym) for sym in self.x_]
