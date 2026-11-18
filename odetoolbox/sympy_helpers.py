@@ -78,7 +78,7 @@ def _sympy_floats_to_ints(expr):
 
     :param expr: The expression in which to replace Floats."""
     max_int = 2**Config().max_float_to_int_bits
-    return expr.xreplace({f: sympy.Integer(int(f)) for f in expr.atoms(sympy.Float) if float(f).is_integer() and abs(float(f)) < max_int})
+    return expr.xreplace({f: sympy.Integer(int(f)) for f in expr.atoms(sympy.Float) if (f % 1).is_zero and abs(int(f)) < max_int})
 
 
 def _sympy_parse_real(expr: str, global_dict: Optional[Dict] = None, local_dict: Optional[Dict] = None, evaluate: bool = True) -> sympy.core.expr.Expr:
