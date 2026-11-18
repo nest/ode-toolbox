@@ -58,7 +58,7 @@ jobs:
       - name: Install apt dependencies
         run: |
           sudo apt update
-          sudo apt install pkg-config python3-all-dev
+          sudo apt install pkg-config python3-all-dev libgsl-dev
 
 #      - name: Install GSL
 #        if: ${{ matrix.with_gsl == '1' }}
