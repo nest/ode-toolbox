@@ -30,7 +30,7 @@ from sympy.core.expr import Expr as SympyExpr
 import tempfile
 
 from .config import Config
-from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _find_in_matrix, _is_zero, _is_sympy_type, SympyPrinter, _sympy_parse_real
+from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _find_in_matrix, _is_zero, _is_sympy_type, SympyPrinter, _sympy_parse_real, sympy_globals
 from .system_of_shapes import SystemOfShapes
 from .shapes import MalformedInputException, Shape
 
@@ -330,7 +330,7 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
             for param_name, param_expr in indict["parameters"].items():
                 # only make parameters appear in a solver if they are actually used there
                 if symbol_appears_in_any_expr(sym, solver_json):
-                    sympy_expr = _sympy_parse_real(param_expr, global_dict=Shape._sympy_globals)
+                    sympy_expr = _sympy_parse_real(param_expr, global_dict=sympy_globals)
 
                     # validate output for numerical problems -- note that we skip checking for infinity here as some parameters (like "V_max") could be legitimately defined as infinity
                     for var in sympy_expr.atoms():

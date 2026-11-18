@@ -28,6 +28,42 @@ import sys
 from .config import Config
 
 
+# a minimal subset of sympy classes and functions to avoid "from sympy import *"
+sympy_globals = {"Symbol": sympy.Symbol,
+                 "Integer": sympy.Integer,
+                 "Float": sympy.Float,
+                 "Function": sympy.Function,
+                 "Add": sympy.Add,
+                 "Mul": sympy.Mul,
+                 "Pow": sympy.Pow,
+                 "power": sympy.Pow,
+                 "exp": sympy.exp,
+                 "log": sympy.log,
+                 "sin": sympy.sin,
+                 "cos": sympy.cos,
+                 "tan": sympy.tan,
+                 "asin": sympy.asin,
+                 "sinh": sympy.sinh,
+                 "asinh": sympy.asinh,
+                 "acos": sympy.acos,
+                 "cosh": sympy.cosh,
+                 "acosh": sympy.acosh,
+                 "tanh": sympy.tanh,
+                 "atanh": sympy.atanh,
+                 "min": sympy.Min,
+                 "max": sympy.Max,
+                 "Heaviside": sympy.Heaviside,
+                 "e": sympy.exp(1),
+                 "E": sympy.exp(1),
+                 "t": sympy.Symbol("t", real=True),
+                 "DiracDelta": sympy.DiracDelta}
+
+# cython backend (used by sympy autowrap()) cannot handle these functions; need to provide alternative implementation
+sympy_autowrap_helpers = [("Min", (abs(sympy.symbols("x", real=True) + sympy.symbols("y", real=True)) - abs(sympy.symbols("x", real=True) - sympy.symbols("y", real=True))) / 2, [sympy.symbols("x", real=True), sympy.symbols("y", real=True)]),
+                          ("Max", (abs(sympy.symbols("x", real=True) + sympy.symbols("y", real=True)) + abs(sympy.symbols("x", real=True) - sympy.symbols("y", real=True))) / 2, [sympy.symbols("x", real=True), sympy.symbols("y", real=True)]),
+                          ("Heaviside", (sympy.symbols("x", real=True) + abs(sympy.symbols("x", real=True))) / (2 * abs(sympy.symbols("x", real=True)) + 1E-300), [sympy.symbols("x", real=True)])]
+
+
 class NumericalIssueException(Exception):
     r"""Thrown in case of numerical issues, like division by zero."""
     pass

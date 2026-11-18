@@ -33,7 +33,7 @@ import sympy.matrices
 from .config import Config
 from .shapes import Shape
 from .singularity_detection import SingularityDetection, SingularityDetectionException
-from .sympy_helpers import SymmetricEq, _custom_simplify_expr, _is_zero, expMt, _sympy_parse_real
+from .sympy_helpers import SymmetricEq, _custom_simplify_expr, _is_zero, expMt, _sympy_parse_real, sympy_globals
 
 
 class GetBlockDiagonalException(Exception):
@@ -367,7 +367,7 @@ class SystemOfShapes:
                     update_expr_terms.append(sym_str + " * (" + str(self.x_[row]) + " - (" + str(particular_solution) + "))" + " + (" + str(particular_solution) + ")")
 
             update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
-            update_expr[str(self.x_[row])] = _sympy_parse_real(update_expr[str(self.x_[row])], global_dict=Shape._sympy_globals)
+            update_expr[str(self.x_[row])] = _sympy_parse_real(update_expr[str(self.x_[row])], global_dict=sympy_globals)
             if not _is_zero(self.b_[row]):
                 # only simplify in case an inhomogeneous term is present
                 update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
@@ -416,7 +416,7 @@ class SystemOfShapes:
                 else:
                     update_expr_terms.append(str(y) + " * (" + str(self.A_[row, col]) + ")")
             update_expr[str(x)] = " + ".join(update_expr_terms) + " + (" + str(self.b_[row]) + ") + (" + str(self.c_[row]) + ")"
-            update_expr[str(x)] = _sympy_parse_real(update_expr[str(x)], global_dict=Shape._sympy_globals)
+            update_expr[str(x)] = _sympy_parse_real(update_expr[str(x)], global_dict=sympy_globals)
 
         # custom expression simplification
         for name, expr in update_expr.items():

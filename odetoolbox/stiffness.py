@@ -22,11 +22,10 @@
 import logging
 import numpy as np
 
-from odetoolbox.sympy_helpers import _sympy_parse_real
+from odetoolbox.sympy_helpers import _sympy_parse_real, sympy_globals
 
 from .mixed_integrator import MixedIntegrator
 from .mixed_integrator import ParametersIncompleteException
-from .shapes import Shape
 from .spike_generator import SpikeGenerator
 
 
@@ -59,7 +58,7 @@ class StiffnessTester:
             self.parameters = {}
         else:
             self.parameters = parameters
-        self.parameters = {k: _sympy_parse_real(v, global_dict=Shape._sympy_globals).n() for k, v in self.parameters.items()}
+        self.parameters = {k: _sympy_parse_real(v, global_dict=sympy_globals).n() for k, v in self.parameters.items()}
         self._locals = self.parameters.copy()
         if stimuli is None:
             self._stimuli = []
