@@ -34,7 +34,7 @@ from .config import Config
 from .integrator import Integrator
 from .shapes import Shape
 from .system_of_shapes import SystemOfShapes
-from .sympy_helpers import _is_sympy_type, _sympy_parse_real, sympy_globals
+from .sympy_helpers import _is_sympy_type, _sympy_parse_real, sympy_autowrap_helpers, sympy_globals
 from .debug_utils import import_matplotlib
 
 try:
@@ -117,7 +117,7 @@ class MixedIntegrator(Integrator):
                 self._update_expr_wrapped[sym] = sympy.utilities.autowrap.autowrap(expr.subs(self._locals),
                                                                                    args=self.all_variable_symbols,
                                                                                    backend="cython",
-                                                                                   helpers=Shape._sympy_autowrap_helpers)
+                                                                                   helpers=sympy_autowrap_helpers)
             except sympy.utilities.codegen.CodeGenArgumentListError:
                 raise ParametersIncompleteException("Integration not possible because numerical values were not specified for all parameters.")
         self.symbolic_jacobian_wrapped = np.empty(self.symbolic_jacobian_.shape, dtype=object)
@@ -126,7 +126,7 @@ class MixedIntegrator(Integrator):
                 self.symbolic_jacobian_wrapped[i, j] = sympy.utilities.autowrap.autowrap(self.symbolic_jacobian_[i, j].subs(self._locals),
                                                                                          args=self.all_variable_symbols,
                                                                                          backend="cython",
-                                                                                         helpers=Shape._sympy_autowrap_helpers)
+                                                                                         helpers=sympy_autowrap_helpers)
 
         #
         #   make a sorted list of all spike times for all symbols

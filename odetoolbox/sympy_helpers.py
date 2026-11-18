@@ -59,6 +59,11 @@ sympy_globals = {"Symbol": sympy.Symbol,
                  "t": sympy.Symbol("t", real=True),
                  "DiracDelta": sympy.DiracDelta}
 
+# cython backend (used by sympy autowrap()) cannot handle these functions; need to provide alternative implementation
+sympy_autowrap_helpers = [("Min", (abs(sympy.symbols("x", real=True) + sympy.symbols("y", real=True)) - abs(sympy.symbols("x", real=True) - sympy.symbols("y", real=True))) / 2, [sympy.symbols("x", real=True), sympy.symbols("y", real=True)]),
+                          ("Max", (abs(sympy.symbols("x", real=True) + sympy.symbols("y", real=True)) + abs(sympy.symbols("x", real=True) - sympy.symbols("y", real=True))) / 2, [sympy.symbols("x", real=True), sympy.symbols("y", real=True)]),
+                          ("Heaviside", (sympy.symbols("x", real=True) + abs(sympy.symbols("x", real=True))) / (2 * abs(sympy.symbols("x", real=True)) + 1E-300), [sympy.symbols("x", real=True)])]
+
 
 class NumericalIssueException(Exception):
     r"""Thrown in case of numerical issues, like division by zero."""
