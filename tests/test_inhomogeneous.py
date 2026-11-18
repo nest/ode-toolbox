@@ -30,6 +30,7 @@ import odetoolbox
 
 from odetoolbox.analytic_integrator import AnalyticIntegrator
 from odetoolbox.shapes import Shape
+from odetoolbox.sympy_helpers import SymmetricEq
 from odetoolbox.system_of_shapes import SystemOfShapes
 
 
@@ -307,6 +308,13 @@ class TestInhomogeneousHigherOrder:
         r"""Test :math:`x'' = -ab x - (a + b) x' + I_e`, with eigenvalues :math:`-a` and :math:`-b`. This includes the cases of a repeated eigenvalue (:math:`a = b`) and of a singular system matrix (:math:`a = 0` and/or :math:`b = 0`), the latter of which yields a ramp or a parabola instead of a fixed point."""
         solver_dict = _analyse([{"expression": "x'' = -a * b * x - (a + b) * x' + I_e",
                                  "initial_values": {"x": "1.", "x'": "-1."}}])
+
+        # only the actual singularities are found; in particular not :math:`a = -b` (from the particular solution :math:`I_e / (a + b)` of the equation for :math:`x'`), for which the system is not singular
+        a_sym, b_sym = sympy.symbols("a, b", real=True)
+        equalities = {relation for condition in solver_dict["conditions"].keys() if condition != "default"
+                      for and_term in AnalyticIntegrator._parse_condition(condition)
+                      for relation in and_term if isinstance(relation, SymmetricEq)}
+        assert equalities == {SymmetricEq(a_sym, 0), SymmetricEq(b_sym, 0), SymmetricEq(a_sym, b_sym)}
 
         for a, b in [(.5, .2), (.5, .5), (0., .5), (.5, 0.), (0., 0.)]:
             _integrate_and_compare(solver_dict,

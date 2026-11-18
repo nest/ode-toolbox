@@ -181,10 +181,9 @@ class SingularityDetection:
     def find_inhomogeneous_singularities(A: sympy.Matrix, b: sympy.Matrix, Qb: Optional[sympy.Matrix] = None) -> Set[SymmetricEq]:
         r"""Find singularities in the inhomogeneous part of the update equations.
 
-        Two checks are performed:
+        If the inhomogeneous update term :math:`Qb` (as obtained by the Van Loan method, see :py:meth:`SystemOfShapes._exponentiate_block`) is given, each of its entries is checked. :math:`Qb` contains singularities wherever (a block of) :math:`A` becomes singular for particular parameter values, which need not coincide with a zero on the diagonal of :math:`A`. Moreover, a constant input in one row is propagated through :math:`A` into the :math:`Qb` of downstream rows that have no inhomogeneous term of their own, e.g. for :math:`y' = -ky + I,\; x' = -gx + y`, the update term for :math:`x` contains a factor :math:`1/g`, while :math:`b_x = 0`.
 
-        1. For each row :math:`i` with :math:`b_i \neq 0`, the particular solution :math:`-b_i / A_{ii}` is checked. This is only exact for rows that are decoupled from the other rows.
-        2. If the inhomogeneous update term :math:`Qb` (as obtained by the Van Loan method, see :py:meth:`SystemOfShapes._exponentiate_block`) is given, each of its entries is checked as well. :math:`Qb` contains singularities wherever (a block of) :math:`A` becomes singular for particular parameter values, which need not coincide with a zero on the diagonal of :math:`A`. Moreover, a constant input in one row is propagated through :math:`A` into the :math:`Qb` of downstream rows that have no inhomogeneous term of their own, e.g. for :math:`y' = -ky + I,\; x' = -gx + y`, the update term for :math:`x` contains a factor :math:`1/g`, while :math:`b_x = 0`.
+        If :math:`Qb` is not given, or if checking one of its entries fails, the particular solution :math:`-b_i / A_{ii}` is checked instead, for each row :math:`i` with :math:`b_i \neq 0` (or only for the rows whose check failed). This is only exact for rows that are decoupled from the other rows, and is not performed when :math:`Qb` could be checked, because it can yield spurious conditions: for instance, for :math:`x'' = -ab x - (a + b) x' + I`, it yields :math:`a = -b`, for which the system is not singular.
 
         Parameters
         ----------
@@ -205,7 +204,23 @@ class SingularityDetection:
 
         try:
             conditions = set()
-            for row in range(A.shape[0]):
+
+            if Qb is None:
+                rows_to_check_particular_solution = range(A.shape[0])
+            else:
+                rows_to_check_particular_solution = []
+                for row in range(Qb.shape[0]):
+                    if _is_zero(Qb[row]):
+                        continue
+
+                    try:
+                        conditions = conditions.union(SingularityDetection._find_singularity_conditions_in_expression(Qb[row]))
+                    except Exception as e:
+                        # keep the conditions that were found so far; fall back on checking the particular solution for this row
+                        logging.getLogger(__name__).warning("Could not check the inhomogeneous update term for singularities: " + str(e))
+                        rows_to_check_particular_solution.append(row)
+
+            for row in rows_to_check_particular_solution:
                 if _is_zero(b[row]):
                     # this is not an inhomogeneous ODE
                     continue
@@ -214,17 +229,6 @@ class SingularityDetection:
                 particular_solution = sympy.simplify(particular_solution)    # using _custom_update_expr() does not guarantee that an adequate number of cases will be covered
 
                 conditions = conditions.union(SingularityDetection._find_singularity_conditions_in_expression(particular_solution))
-
-            if Qb is not None:
-                for row in range(Qb.shape[0]):
-                    if _is_zero(Qb[row]):
-                        continue
-
-                    try:
-                        conditions = conditions.union(SingularityDetection._find_singularity_conditions_in_expression(Qb[row]))
-                    except Exception as e:
-                        # keep the conditions that were found so far; the check for this row is skipped
-                        logging.getLogger(__name__).warning("Could not check the inhomogeneous update term for singularities: " + str(e))
 
             conditions = SingularityDetection._filter_valid_conditions(conditions, A.row_join(b))  # filters out the invalid conditions (invalid means those for which A or b is not defined)
             conditions = SingularityDetection._remove_duplicate_conditions(conditions)
