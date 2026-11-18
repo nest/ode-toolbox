@@ -187,7 +187,7 @@ def symbol_appears_in_any_expr(param_name, solver_json) -> bool:
                         return True
 
             if "propagators" in conditional_solver_json.keys():
-                for sym, expr in solver_json["propagators"].items():
+                for sym, expr in conditional_solver_json["propagators"].items():
                     if param_name in [str(sym) for sym in list(expr.atoms())]:
                         return True
 

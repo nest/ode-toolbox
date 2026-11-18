@@ -426,7 +426,12 @@ class SystemOfShapes:
 
         return self.generate_solver_dict_based_on_propagator_matrix_(P, Qb)
 
-    def generate_solver_dict_based_on_propagator_matrix_(self, P: sympy.Matrix, Qb):
+    def generate_solver_dict_based_on_propagator_matrix_(self, P: sympy.Matrix, Qb: sympy.Matrix):
+        r"""
+        Generate the solver dictionary from the propagator matrix :math:`P` and the inhomogeneous update term :math:`Qb` (see :py:meth:`_exponentiate_block`).
+
+        A propagator symbol is generated for each nonzero entry of :math:`P` (named ``__P__{row}__{col}``) and of :math:`Qb` (named ``__P__{row}__1``; as variable names cannot start with a digit, this cannot clash with a propagator for a state variable). The update expressions are linear combinations of these symbols, so that all the terms that depend on the timestep (and that contain calls to ``exp()``) are computed only once, together with the other propagators, rather than in each timestep.
+        """
 
         #
         #   generate symbols for each nonzero entry of the propagator matrix
@@ -450,13 +455,14 @@ class SystemOfShapes:
                     update_expr_terms.append(sym_str + " * " + str(self.x_[col]))
 
             if not _is_zero(Qb[row]):
-                update_expr_terms.append(str(Qb[row]))
+                # inhomogeneous update term
+                sym_str = Config().propagators_prefix + "__{}__1".format(str(self.x_[row]))
+                P_expr[sym_str] = Qb[row]
+                update_expr_terms.append(sym_str)
 
-            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms)
+            # the update expression is a sum of distinct propagator symbols (each optionally multiplied by a state variable), so there is nothing to simplify
+            update_expr[str(self.x_[row])] = " + ".join(update_expr_terms) if update_expr_terms else "0"
             update_expr[str(self.x_[row])] = _sympy_parse_real(update_expr[str(self.x_[row])], global_dict=sympy_globals)
-            if not _is_zero(self.b_[row]):
-                # only simplify in case an inhomogeneous term is present
-                update_expr[str(self.x_[row])] = _custom_simplify_expr(update_expr[str(self.x_[row])])
 
         all_state_symbols = [str(sym) for sym in self.x_]
         initial_values = {sym: str(self.get_initial_value(sym)) for sym in all_state_symbols}

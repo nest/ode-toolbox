@@ -224,5 +224,9 @@ class TestInhomogeneous:
 
         assert len(result) == 1
         assert result[0]["solver"] == "analytical"
-        assert "__h" in result[0]["update_expressions"]["x"]
+        # the inhomogeneous update term (which depends on the timestep) is returned as a propagator, rather than inline in the update expression
+        assert "__h" not in result[0]["update_expressions"]["x"]
+        assert "__P__x__1" in result[0]["update_expressions"]["x"]
+        assert "__h" in result[0]["propagators"]["__P__x__1"]
         assert "__h" not in result[0]["update_expressions"]["y"]
+        assert "__P__y__1" not in result[0]["propagators"].keys()

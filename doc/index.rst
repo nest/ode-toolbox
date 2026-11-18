@@ -366,7 +366,7 @@ The following global options are defined. Note that all are typically formatted 
    * - ``propagators_prefix``
      - ``"__P"``
      - string
-     - Generated propagator terms are given names of the form ``"<propagators_prefix>__<var_name_1>__<var_name_2>"``.
+     - Generated propagator terms are given names of the form ``"<propagators_prefix>__<var_name_1>__<var_name_2>"``, and inhomogeneous update terms are given names of the form ``"<propagators_prefix>__<var_name>__1"``.
    * - ``differential_order_symbol``
      - :python:`"__d"`
      - string
@@ -408,32 +408,34 @@ ODE-toolbox will return a list of solvers. **Each solver has the following keys:
 In case of a solver without conditions:
 
 - :python:`"update_expressions"`\ : a dictionary that maps each variable symbol (in string form) to a SymPy propagator expression. The interpretation of an entry :python:`"g" : "g * __P__g__g + h * __P__g__h"` is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:`t` to the next step :math:`t + \Delta t`, we assign the new value :python:`"g * __P__g__g + h * __P__g__h"` to the variable :python:`g`. Note that the expression is always evaluated at the old time :math:`t`; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
-- :python:`propagators`\ : a dictionary that maps each propagator matrix entry to its defining expression; for example :python:`"__P__g__h" : "__h*exp(-__h/tau)"`
+- :python:`propagators`\ : a dictionary that maps each propagator matrix entry to its defining expression; for example :python:`"__P__g__h" : "__h*exp(-__h/tau)"`. For each variable :python:`g` whose update includes a constant (inhomogeneous) term (the entry of :math:`Qb` for that variable; see :ref:`Computing the update expressions`), there is an additional entry :python:`"__P__g__1"`, which is added to the update expression without a multiplying state variable, for example :python:`"g" : "g * __P__g__g + h * __P__g__h + __P__g__1"`. All terms that depend on the timestep are contained in the propagators, so that they only need to be recomputed when the timestep or a parameter changes, and not in each timestep.
 
 In some cases, parameter choices of the input can lead to numerical singularities (divisions by zero; see the sections :ref:`Computing the propagator matrix` and :ref:`Computing the update expressions` for more details). In this case, certain propagators and update expressions are only valid under certain conditions. These conditions, and the propagators and update expressions for each condition, are returned as follows:
 
 - :python:`"conditions"`\ : a dictionary that maps conditional expressions (as strings) to a nested dictionary containing the keys :python:`"update_expressions"` and :python:`"propagators"` as described in the previous paragraph. The default solver (in case none of the other conditions hold) is indicated by the key :python:`"default"`\ .
 
-  For example, if the condition :math:`d=-p` will cause a singularity in the update expression for the state variable :python:`z`, two separate solvers are returned, one for the condition :math:`d=-p`, and another for the default ("otherwise") condition:
+  For example, for the ODE :math:`z' = -(d + p) z / \tau_z + (p - d/2) / \tau_z`, the condition :math:`p=-d` will cause a singularity in the update expression for the state variable :python:`z`, so two separate solvers are returned, one for the condition :math:`p=-d`, and another for the default ("otherwise") condition:
 
   .. code:: python
 
      {
          "conditions": {
-             "(d == -p)": {
+             "(p == -d)": {
                  "propagators": {
-                     "__P__z__z": "1"
+                     "__P__z__z": "1",
+                     "__P__z__1": "-1.5*__h*d/tau_z"
                  },
                  "update_expressions": {
-                     "z": "__P__z__z*z + 1.5*__h*p/tau_z"
+                     "z": "__P__z__1 + __P__z__z*z"
                  }
              },
              "default": {
                  "propagators": {
-                     "__P__z__z": "exp(-__h*(d + p)/tau_z)"
+                     "__P__z__z": "exp(-__h*(d + p)/tau_z)",
+                     "__P__z__1": "0.5*(d - 2*p + (-d + 2*p)*exp(__h*(d + p)/tau_z))*exp(-__h*(d + p)/tau_z)/(d + p)"
                  },
                  "update_expressions": {
-                     "z": "(__P__z__z*(0.5*d - p + z*(d + p)) - 0.5*d + p)/(d + p)"
+                     "z": "__P__z__1 + __P__z__z*z"
                  }
              }
          }
