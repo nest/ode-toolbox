@@ -61,13 +61,13 @@ if __name__ == "__main__":
 
     with open(parsed_args.infile) as infile:
         try:
-            indict = json.load(infile)    # loads input json file 
+            indict = json.load(infile)    # loads input json file
         except Exception as e:
             logging.getLogger(__name__).error("The input JSON file could not be parsed; error: " + e.msg)
             sys.exit(1)
 
     try:
-        result = odetoolbox.analysis(indict,    # calling odetoolbox analysis in __init__ .py 
+        result = odetoolbox.analysis(indict,    # calling odetoolbox analysis in __init__ .py
                                      disable_stiffness_check=parsed_args.disable_stiffness_check,
                                      disable_analytic_solver=parsed_args.disable_analytic_solver,
                                      disable_singularity_detection=parsed_args.disable_singularity_detection,

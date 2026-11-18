@@ -400,8 +400,8 @@ def _apply_cse_to_expression_region(
 
 def apply_cse_to_solver(solver, symbol_prefix="__ode_cse_"):
     """
-    Apply CSE to one ODE-toolbox solver dictionary. Singularity branches are treated as independent execution regions that has no variable relationships to eachother. 
-    Both solvers are passed to _apply_cse_to_expression_region 
+    Apply CSE to one ODE-toolbox solver dictionary. Singularity branches are treated as independent execution regions that has no variable relationships to eachother.
+    Both solvers are passed to _apply_cse_to_expression_region
     """
 
     result = dict(solver)
@@ -478,10 +478,11 @@ def serialize_replacements(replacements):
 
     return result
 
+
 def _serialize_cse_region_blocks(region):
     """
-    Serialize the internal cse subexpressions belonging to a single solver and iterates  through through the structure logic blocks 
-    (e.g., specific branches or updates) and replaces raw Sympy symbolic data with JSON-strings. 
+    Serialize the internal cse subexpressions belonging to a single solver and iterates  through through the structure logic blocks
+    (e.g., specific branches or updates) and replaces raw Sympy symbolic data with JSON-strings.
     """
 
     # pass if cse wasn't conducted
@@ -492,6 +493,7 @@ def _serialize_cse_region_blocks(region):
 
         # call the indivudal serialise functon once within the solver
         region["cse"][expression_region] = serialize_replacements(replacements)
+
 
 def _find_non_json_serializable(obj, path="root"):
     """
@@ -535,7 +537,7 @@ def _find_non_json_serializable(obj, path="root"):
 
 def deserialize_cse_replacements(replacements):
     """
-    deserialize ordered cse replacement definitions into Sympy expressions. Takes a mapping of temporary symbol names to their serialized string expressions, 
+    deserialize ordered cse replacement definitions into Sympy expressions. Takes a mapping of temporary symbol names to their serialized string expressions,
     declares the symbols as real-valued SymPy Symbols, and parses the expressions while maintaining proper scoping dependencies between intermediate terms.
     """
 
@@ -606,13 +608,13 @@ def expand_cse_expressions(reduced_expressions, replacements):
 
 def expand_cse_solver(solver):
     """
-    convert an ode-toolbox solver containing serialized CSE definitions into an ordinary expression solver. 
+    convert an ode-toolbox solver containing serialized CSE definitions into an ordinary expression solver.
     Does not modify the original solver instance.
     """
 
     import copy
     result = copy.deepcopy(solver)  # make a scratch deep copy of the solver
-    
+
     # isolate cse tmp translations high level cdict
     cse_substitions = result.get("cse", {})
 

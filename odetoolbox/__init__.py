@@ -448,10 +448,10 @@ def _analysis(indict,
     # perform cse after parameter discovery whilst expressions are Sympy objects
     #
 
-    if disable_cse: 
+    if disable_cse:
         logging.getLogger(__name__).debug("CSE disabled")
-    else: 
-        logging.getLogger(__name__).debug("Applying CSE to %d solver block(s): %s", len(solvers_json), ", ".join(solver.get("solver","unknown") for solver in solvers_json))
+    else:
+        logging.getLogger(__name__).debug("Applying CSE to %d solver block(s): %s", len(solvers_json), ", ".join(solver.get("solver", "unknown") for solver in solvers_json))
 
         solvers_json = (_apply_cse_to_solver_blocks(solvers_json))  # pass solver dict as a list into blocks
 
@@ -464,7 +464,7 @@ def _analysis(indict,
         if preserve_expressions:
             if disable_cse:
                 logging.getLogger(__name__).debug("CSE disabled")
-            else: 
+            else:
                 raise Exception("If cse is enabled then then this requires setting ``preserve_expressions`` to False for numerical expressions!")
 
             # grab all first-order variables

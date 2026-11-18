@@ -55,7 +55,7 @@ class TestCSESingularityHandling:
         (baseline_solvers, baseline_shape_sys, baseline_shapes) = odetoolbox._analysis(
             copy.deepcopy(indict),
             disable_stiffness_check=True,
-            disable_cse=True,     # disable cse, so set this flag to true. 
+            disable_cse=True,     # disable cse, so set this flag to true.
             log_level=logging.DEBUG)
 
         # cse _analysis run
@@ -115,7 +115,7 @@ class TestCSESingularityHandling:
                 cse_state = cse_integrator.get_value(t)
                 assert baseline_state.keys() == cse_state.keys()
 
-                for symbol in baseline_state:    # ensure that they are numerically exact across all states 
+                for symbol in baseline_state:    # ensure that they are numerically exact across all states
                     np.testing.assert_allclose(
                         cse_state[symbol],
                         baseline_state[symbol],

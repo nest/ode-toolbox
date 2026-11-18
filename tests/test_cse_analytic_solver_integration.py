@@ -29,7 +29,7 @@ import sympy
 import odetoolbox
 from odetoolbox.analytic_integrator import (AnalyticIntegrator)
 from tests.test_utils import load_test_json
-import json 
+import json
 
 
 try:
@@ -58,7 +58,7 @@ class TestCSENumericalSolver:
             copy.deepcopy(indict),
             disable_stiffness_check=True,
             disable_singularity_detection=True,
-            disable_cse=True,    # disable cse so set this to true 
+            disable_cse=True,    # disable cse so set this to true
             # specified as false (default is already false)
             log_level=logging.DEBUG)
 

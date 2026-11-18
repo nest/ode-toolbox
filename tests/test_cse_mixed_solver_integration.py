@@ -18,7 +18,7 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 # This file is part of the NEST ODE toolbox.
-# 
+#
 
 import copy
 import logging
@@ -65,7 +65,7 @@ class TestCSEMixedSolver:
             disable_stiffness_check=True,
             disable_analytic_solver=True,
             disable_singularity_detection=True,
-            disable_cse=False,     # default is True, so disable_cse=False has no impact. 
+            disable_cse=False,     # default is True, so disable_cse=False has no impact.
             log_level=logging.DEBUG)
 
         # assert that _analysis produced solvers
@@ -146,7 +146,7 @@ class TestCSEMixedSolver:
         cse_y_log = cse_result[6]
         cse_symbols = cse_result[7]
 
-        # Same variables to be integrated, ensures that cse has not broken the code 
+        # Same variables to be integrated, ensures that cse has not broken the code
         assert ([str(symbol) for symbol in baseline_symbols] == [str(symbol) for symbol in cse_symbols])
 
         # execution check ensure that both simulations reached the requested time
