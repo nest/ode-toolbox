@@ -208,7 +208,7 @@ class TestAMATSolver:
         spike_times = SpikeGenerator.spike_times_from_json(stimuli, T)
 
         # analyse with ODE-toolbox
-        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, disable_singularity_detection=True)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
@@ -252,11 +252,14 @@ class TestAMATSolver:
             if i > 0:
                 # apply the spike at the start of this segment
                 _, spike_idx, spike_weight = spike_events[i - 1]
-                y_start = y_segments[-1][-1, :].copy()
+                y_start = y_end.copy()
                 y_start[spike_idx] += spike_weight
 
+            # integrate up to and including the next segment boundary, so that the state exactly at the next spike time is known; the boundary point itself is not part of the comparison
             ts = np.arange(segment_boundaries[i], segment_boundaries[i + 1] - dt / 2, dt)
-            y_segments.append(odeint(neuron_ode, y_start, ts, args=(parameters,), rtol=1E-12, atol=1E-12))
+            y = odeint(neuron_ode, y_start, np.append(ts, segment_boundaries[i + 1]), args=(parameters,), rtol=1E-12, atol=1E-12)
+            y_end = y[-1, :]
+            y_segments.append(y[:-1, :])
             timevec_segments.append(ts)
 
         y_ = np.vstack(y_segments)
