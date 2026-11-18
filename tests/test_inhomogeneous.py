@@ -19,15 +19,46 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from typing import Callable, Dict, List
+
 import numpy as np
 import pytest
+import scipy.integrate
 import sympy
 
 import odetoolbox
 
 from odetoolbox.analytic_integrator import AnalyticIntegrator
 from odetoolbox.shapes import Shape
-from odetoolbox.system_of_shapes import PropagatorGenerationException, SystemOfShapes
+from odetoolbox.system_of_shapes import SystemOfShapes
+
+
+def _integrate_and_compare(solver_dict, flow: Callable[[List[float], float], List[float]], x0: Dict[str, float], parameters: Dict[str, float], t_max: float = 20.):
+    r"""
+    Integrate the analytic solver in ``solver_dict`` for the given parameter values, and compare the result to a numerical reference obtained with ``scipy.integrate.odeint``.
+
+    ``flow(y, t)`` returns the derivatives of the state variables, in the order of the keys of ``x0``.
+    """
+    state_names = list(x0.keys())
+    timevec = np.linspace(0., t_max, 81)
+
+    analytic_integrator = AnalyticIntegrator(dict(solver_dict, parameters=dict(parameters)))
+    analytic_integrator.set_initial_values(x0)
+    analytic_integrator.reset()
+    actual = np.array([[float(analytic_integrator.get_value(t)[sympy.Symbol(name, real=True)]) for name in state_names] for t in timevec])
+
+    correct = scipy.integrate.odeint(flow, [x0[name] for name in state_names], timevec, rtol=1E-12, atol=1E-12)
+
+    np.testing.assert_allclose(actual, correct, rtol=1E-7, atol=1E-7, err_msg="for parameters " + str(parameters))
+
+
+def _analyse(dynamics) -> Dict:
+    r"""Run ODE-toolbox on the given dynamics, and check that a single analytic solver is returned."""
+    result = odetoolbox.analysis({"dynamics": dynamics}, disable_stiffness_check=True)
+    assert len(result) == 1
+    assert result[0]["solver"] == "analytical"
+
+    return result[0]
 
 
 class TestInhomogeneous:
@@ -142,9 +173,8 @@ class TestInhomogeneous:
         np.testing.assert_allclose(correct_x, actual_x)
         np.testing.assert_allclose(correct_y, actual_y)
 
-    @pytest.mark.xfail(strict=True, raises=PropagatorGenerationException, reason="Only first-order inhomogeneous ODEs are supported")
     def test_inhomogeneous_solver_second_order(self):
-        r"""test failure to generate propagators for inhomogeneous 2nd order ODE"""
+        r"""Test propagator generation for an inhomogeneous second-order ODE, given as a single shape."""
         tau = 10.  # [s]
         parameters_dict = {sympy.Symbol("tau", real=True): str(tau)}
 
@@ -155,9 +185,14 @@ class TestInhomogeneous:
         sys_of_shape = SystemOfShapes.from_shapes([shape], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
 
-    @pytest.mark.xfail(strict=True, raises=PropagatorGenerationException, reason="Only first-order inhomogeneous ODEs are supported")
+        _integrate_and_compare(solver_dict,
+                               lambda y, t: [y[1], -y[0] / tau**2 - 2 * y[1] / tau - 1],
+                               {"x": x0, "x__d": x0d},
+                               {"tau": tau},
+                               t_max=100.)
+
     def test_inhomogeneous_solver_second_order_system(self):
-        r"""test failure to generate propagators for inhomogeneous 2nd order ODE"""
+        r"""Test propagator generation for an inhomogeneous second-order ODE, given as a system of two first-order shapes."""
         tau = 10.  # [s]
         parameters_dict = {sympy.Symbol("tau", real=True): str(tau)}
 
@@ -169,8 +204,14 @@ class TestInhomogeneous:
         sys_of_shape = SystemOfShapes.from_shapes([shape1, shape2], parameters=parameters_dict)
         solver_dict = sys_of_shape.generate_propagator_solver()
 
+        _integrate_and_compare(solver_dict,
+                               lambda y, t: [y[1], -y[0] / tau**2 - 2 * y[1] / tau - 1],
+                               {"x": x0, "y": x0d},
+                               {"tau": tau},
+                               t_max=100.)
+
     def test_inhomogeneous_solver_second_order_system_api(self):
-        r"""test failure to generate propagators when called via analysis()"""
+        r"""Test that an analytic solver is returned for an inhomogeneous second-order ODE when called via analysis()"""
         indict = {"dynamics": [{"expression": "x' = y",
                                 "initial_value": "0."},
                                {"expression": "y' = -1/tau**2 * x - 2/tau * y - 1",
@@ -179,7 +220,7 @@ class TestInhomogeneous:
 
         result = odetoolbox.analysis(indict, disable_stiffness_check=True)
         assert len(result) == 1 \
-               and result[0]["solver"].startswith("numeric")
+               and result[0]["solver"] == "analytical"
 
     def test_inhomogeneous_solver_second_order_combined_system(self):
         r"""test propagators generation for combined homogeneous/inhomogeneous ODEs"""
@@ -230,3 +271,90 @@ class TestInhomogeneous:
         assert "__h" in result[0]["propagators"]["__P__x__1"]
         assert "__h" not in result[0]["update_expressions"]["y"]
         assert "__P__y__1" not in result[0]["propagators"].keys()
+
+
+class TestInhomogeneousHigherOrder:
+    r"""
+    Test analytic solvers for inhomogeneous ODEs of order greater than one. These are solved in the same way as first-order inhomogeneous ODEs (by the Van Loan method; see :py:meth:`SystemOfShapes._exponentiate_block`).
+
+    Each solver is compared with a numerical reference, at generic parameter values as well as at values for which one of the singularity conditions holds (such as repeated eigenvalues, or a singular system matrix), so that the conditional solvers are tested too.
+    """
+
+    @pytest.mark.parametrize("formulation", ["second_order", "first_order_system"])
+    def test_critically_damped(self, formulation: str):
+        r"""Test :math:`x'' = -x / \tau^2 - 2 x' / \tau + I_e`, given either as a single second-order ODE, or as an equivalent system of two first-order ODEs."""
+        if formulation == "second_order":
+            dynamics = [{"expression": "x'' = -x / tau**2 - 2 * x' / tau + I_e",
+                         "initial_values": {"x": "0.", "x'": "10."}}]
+            derivative_name = "x__d"
+        else:
+            dynamics = [{"expression": "x' = y",
+                         "initial_value": "0."},
+                        {"expression": "y' = -x / tau**2 - 2 * y / tau + I_e",
+                         "initial_value": "10."}]
+            derivative_name = "y"
+
+        solver_dict = _analyse(dynamics)
+        assert set(solver_dict["state_variables"]) == {"x", derivative_name}
+
+        for tau, I_e in [(10., -1.), (2., 3.), (2., 0.)]:
+            _integrate_and_compare(solver_dict,
+                                   lambda y, t: [y[1], -y[0] / tau**2 - 2 * y[1] / tau + I_e],
+                                   {"x": 0., derivative_name: 10.},
+                                   {"tau": tau, "I_e": I_e})
+
+    def test_overdamped(self):
+        r"""Test :math:`x'' = -ab x - (a + b) x' + I_e`, with eigenvalues :math:`-a` and :math:`-b`. This includes the cases of a repeated eigenvalue (:math:`a = b`) and of a singular system matrix (:math:`a = 0` and/or :math:`b = 0`), the latter of which yields a ramp or a parabola instead of a fixed point."""
+        solver_dict = _analyse([{"expression": "x'' = -a * b * x - (a + b) * x' + I_e",
+                                 "initial_values": {"x": "1.", "x'": "-1."}}])
+
+        for a, b in [(.5, .2), (.5, .5), (0., .5), (.5, 0.), (0., 0.)]:
+            _integrate_and_compare(solver_dict,
+                                   lambda y, t: [y[1], -a * b * y[0] - (a + b) * y[1] + 2.],
+                                   {"x": 1., "x__d": -1.},
+                                   {"a": a, "b": b, "I_e": 2.})
+
+    def test_constant_second_derivative(self):
+        r"""Test :math:`x'' = c`, for which the system matrix is nilpotent, and check the closed-form propagators: :math:`x \leftarrow x + h x' + h^2 c / 2` and :math:`x' \leftarrow x' + h c`."""
+        solver_dict = _analyse([{"expression": "x'' = c",
+                                 "initial_values": {"x": "0.", "x'": "0."}}])
+
+        h, c = sympy.symbols("__h, c", real=True)
+        Qb_x = sympy.sympify(solver_dict["propagators"]["__P__x__1"], locals={"__h": h, "c": c})
+        Qb_x_d = sympy.sympify(solver_dict["propagators"]["__P__x__d__1"], locals={"__h": h, "c": c})
+        assert sympy.simplify(Qb_x - c * h**2 / 2) == 0
+        assert sympy.simplify(Qb_x_d - c * h) == 0
+
+        _integrate_and_compare(solver_dict,
+                               lambda y, t: [y[1], 3.],
+                               {"x": 0., "x__d": 0.},
+                               {"c": 3.})
+
+    def test_third_order(self):
+        r"""Test the third-order ODE :math:`(D + 1/\tau)^3 x = I_e`, i.e. :math:`x''' = -x / \tau^3 - 3 x' / \tau^2 - 3 x'' / \tau + I_e`."""
+        solver_dict = _analyse([{"expression": "x''' = -x / tau**3 - 3 * x' / tau**2 - 3 * x'' / tau + I_e",
+                                 "initial_values": {"x": "0.", "x'": "1.", "x''": "0."}}])
+        assert set(solver_dict["state_variables"]) == {"x", "x__d", "x__d__d"}
+
+        tau = 2.
+        I_e = 1.5
+        _integrate_and_compare(solver_dict,
+                               lambda y, t: [y[1], y[2], -y[0] / tau**3 - 3 * y[1] / tau**2 - 3 * y[2] / tau + I_e],
+                               {"x": 0., "x__d": 1., "x__d__d": 0.},
+                               {"tau": tau, "I_e": I_e},
+                               t_max=40.)
+
+    def test_driving_downstream_ode(self):
+        r"""Test an inhomogeneous second-order ODE that drives a first-order ODE, which has no inhomogeneous term of its own: :math:`x'' = -x / \tau^2 - 2 x' / \tau + I_e`, :math:`V' = -V / \tau_m + x`. The solver is tested for :math:`\tau \neq \tau_m` as well as for :math:`\tau = \tau_m`."""
+        solver_dict = _analyse([{"expression": "x'' = -x / tau**2 - 2 * x' / tau + I_e",
+                                 "initial_values": {"x": "0.", "x'": "0."}},
+                                {"expression": "V' = -V / tau_m + x",
+                                 "initial_value": "-1."}])
+        assert set(solver_dict["state_variables"]) == {"x", "x__d", "V"}
+
+        for tau, tau_m in [(2., 10.), (2., 2.)]:
+            _integrate_and_compare(solver_dict,
+                                   lambda y, t: [y[1], -y[0] / tau**2 - 2 * y[1] / tau + 1., -y[2] / tau_m + y[0]],
+                                   {"x": 0., "x__d": 0., "V": -1.},
+                                   {"tau": tau, "tau_m": tau_m, "I_e": 1.},
+                                   t_max=40.)

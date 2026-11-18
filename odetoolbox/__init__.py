@@ -24,13 +24,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 import json
 import logging
 import os
-import sys
 import sympy
 from sympy.core.expr import Expr as SympyExpr
 import tempfile
 
 from .config import Config
-from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _is_zero, _is_sympy_type, SympyPrinter, _sympy_parse_real, sympy_globals
+from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _is_sympy_type, SympyPrinter, _sympy_parse_real, sympy_globals
 from .system_of_shapes import SystemOfShapes
 from .shapes import MalformedInputException, Shape
 
@@ -58,12 +57,6 @@ def _find_analytically_solvable_equations(shape_sys, shapes, parameters=None):
     dependency_edges = shape_sys.get_dependency_edges()
 
     node_is_analytically_solvable = shape_sys.get_lin_cc_symbols(dependency_edges, parameters=parameters)
-
-    # cannot analytically solve inhomogeneous, order > 1 shapes
-    for i in range(len(shape_sys.x_)):
-        if not _is_zero(shape_sys.b_[i]) and shape_sys.shape_order_from_system_matrix(i) > 1 and shape_sys.x_[i] in shape_sys.get_connected_symbols(i):
-            node_is_analytically_solvable[shape_sys.x_[i]] = False
-
     node_is_analytically_solvable = shape_sys.propagate_lin_cc_judgements(node_is_analytically_solvable, dependency_edges)
 
     if PLOT_DEPENDENCY_GRAPH:
@@ -232,12 +225,6 @@ def _analysis(indict, disable_stiffness_check: bool = False, disable_analytic_so
     #
 
     shapes, parameters = _from_json_to_shapes(indict, parameters=parameters)
-
-    for shape in shapes:
-        if not shape.is_homogeneous() and shape.order > 1:
-            logging.getLogger(__name__).error("For symbol " + str(shape.symbol) + ": higher-order inhomogeneous ODEs are not supported")
-            sys.exit(1)
-
     shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
 
     _, node_is_analytically_solvable = _find_analytically_solvable_equations(shape_sys, shapes, parameters=parameters)

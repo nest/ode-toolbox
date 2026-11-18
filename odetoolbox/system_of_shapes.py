@@ -444,9 +444,6 @@ class SystemOfShapes:
             if not _is_zero(self.c_[row]):
                 raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": nonlinear part should be zero for propagators")
 
-            if not _is_zero(self.b_[row]) and self.shape_order_from_system_matrix(row) > 1:
-                raise PropagatorGenerationException("For symbol " + str(self.x_[row]) + ": higher-order inhomogeneous ODEs are not supported")
-
             update_expr_terms = []
             for col in range(P.shape[1]):
                 if not _is_zero(P[row, col]):
