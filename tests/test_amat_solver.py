@@ -19,6 +19,9 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
+import tempfile
+
 import numpy as np
 import pytest
 from scipy.integrate import odeint
@@ -104,12 +107,13 @@ class TestAMATSolver:
 
     def test_amat_solver(self):
 
-        w: float = 1
+        w_exc: float = 100.    # increment of the excitatory synaptic current per spike (pA)
+        w_inh: float = 50.     # increment of the inhibitory synaptic current per spike (pA)
 
         parameters = {
             "C_m": 200,
             "E_L": -70,
-            "I_e": 0,
+            "I_e": 150,    # nonzero, so that the inhomogeneous terms in V_m and V_th_v_aux are exercised
             "alpha_1": 10,
             "alpha_2": 0,
             "beta": 1,
@@ -128,13 +132,13 @@ class TestAMATSolver:
                 {
                     "expression": "V_th_alpha_1' = -V_th_alpha_1 / tau_1",
                     "initial_values": {
-                        "V_th_alpha_1": "0"
+                        "V_th_alpha_1": "3"
                     }
                 },
                 {
                     "expression": "V_th_alpha_2' = -V_th_alpha_2 / tau_2",
                     "initial_values": {
-                        "V_th_alpha_2": "0"
+                        "V_th_alpha_2": "1"
                     }
                 },
                 {
@@ -189,90 +193,92 @@ class TestAMATSolver:
                 "I_stim": "0"
             }
         }
-        dt = .1                               # time resolution (ms)
-        T = 500.                              # simulation time (ms)
-        input_spike_times = np.array([100., 300.])  # array of input spike times (ms)
+        dt = .1                                    # time resolution (ms)
+        T = 500.                                   # simulation time (ms)
+        exc_spike_times = np.array([100., 300.])   # excitatory input spike times (ms)
+        inh_spike_times = np.array([200., 400.])   # inhibitory input spike times (ms)
 
         stimuli = [{"type": "list",
-                    "list": " ".join([str(el) for el in input_spike_times]),
-                    "variables": ["I_kernel_exc__X__exc_spikes"]}]
+                    "list": " ".join([str(el) for el in exc_spike_times]),
+                    "variables": ["I_kernel_exc__X__exc_spikes"]},
+                   {"type": "list",
+                    "list": " ".join([str(el) for el in inh_spike_times]),
+                    "variables": ["I_kernel_inh__X__inh_spikes"]}]
 
         spike_times = SpikeGenerator.spike_times_from_json(stimuli, T)
 
         # analyse with ODE-toolbox
-        solver_dict = odetoolbox.analysis(indict, log_level="DEBUG", disable_stiffness_check=True)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
 
-        # simulate with ode-toolbox
-        ODE_INITIAL_VALUES = {}
-        for key, string_value in solver_dict["initial_values"].items():
-            ODE_INITIAL_VALUES[key] = float(string_value)
-            ODE_INITIAL_VALUES["I_kernel_exc__X__exc_spikes"] = 0.
-            ODE_INITIAL_VALUES["I_kernel_inh__X__inh_spikes"] = 0.
+        # simulate with ode-toolbox; the synaptic kernels start at zero and are incremented at each spike
+        ODE_INITIAL_VALUES = {key: float(string_value) for key, string_value in solver_dict["initial_values"].items()}
+        ODE_INITIAL_VALUES["I_kernel_exc__X__exc_spikes"] = 0.
+        ODE_INITIAL_VALUES["I_kernel_inh__X__inh_spikes"] = 0.
 
         N = int(np.ceil(T / dt) + 1)
         timevec = np.linspace(0., T, N)
         analytic_integrator = AnalyticIntegrator(solver_dict, spike_times)
-        analytic_integrator.shape_starting_values[sympy.Symbol("I_kernel_exc__X__exc_spikes", real=True)] = w
+        analytic_integrator.shape_starting_values[sympy.Symbol("I_kernel_exc__X__exc_spikes", real=True)] = w_exc
+        analytic_integrator.shape_starting_values[sympy.Symbol("I_kernel_inh__X__inh_spikes", real=True)] = w_inh
         analytic_integrator.set_initial_values(ODE_INITIAL_VALUES)
         analytic_integrator.reset()
-        state = {"timevec": []}
 
-        for var_name in solver_dict["state_variables"]:
-            state[var_name] = []
-
-        for step, t in enumerate(timevec):
-            state_ = analytic_integrator.get_value(t)
-            state["timevec"].append(t)
-            for sym, val in state_.items():
+        state = {var_name: [] for var_name in solver_dict["state_variables"]}
+        for t in timevec:
+            for sym, val in analytic_integrator.get_value(t).items():
                 state[str(sym)].append(val)
 
-        # simulate with scipy odeint
-        ts0 = np.arange(0., input_spike_times[0] - dt / 2, dt)
-        ts1 = np.arange(input_spike_times[0], input_spike_times[1] - dt / 2, dt)
-        ts2 = np.arange(input_spike_times[1], T + dt, dt)
+        state = {var_name: np.array(values, dtype=float) for var_name, values in state.items()}
 
-        y0 = [parameters["E_L"], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        # simulate with scipy odeint, restarting the integration at each spike with the state incremented by the synaptic weight. Note that the inhibitory kernel enters the ODE for ``V_m`` with a negative sign, while the scipy state variable ``I_syn_in`` enters with a positive sign; hence the inhibitory increment is negative.
+        scipy_state_idx = {"V_m": 0, "V_th_alpha_1": 1, "V_th_alpha_2": 2, "V_th_v_aux": 3, "V_th_v": 4, "I_kernel_exc__X__exc_spikes": 5, "I_kernel_inh__X__inh_spikes": 6}
+        scipy_state_sign = {var_name: -1. if var_name == "I_kernel_inh__X__inh_spikes" else 1. for var_name in scipy_state_idx.keys()}
 
-        w_one_hot_vec = [0, 0, 0, 0, 0, 1, 0]    # variable to which weight increments will be applied
-        y_ = odeint(neuron_ode, y0, ts0, args=(parameters,))
-        y_ = np.vstack([y_, odeint(neuron_ode, y_[-1, :] + w * w_one_hot_vec, ts1, args=(parameters,))])
-        y_ = np.vstack([y_, odeint(neuron_ode, y_[-1, :] + w * w_one_hot_vec, ts2, args=(parameters,))])
-        timevec_scipy = np.hstack([ts0, ts1, ts2])
+        spike_events = [(t_sp, scipy_state_idx["I_kernel_exc__X__exc_spikes"], w_exc) for t_sp in exc_spike_times]
+        spike_events.extend([(t_sp, scipy_state_idx["I_kernel_inh__X__inh_spikes"], -w_inh) for t_sp in inh_spike_times])
+        spike_events.sort()
+        segment_boundaries = [0.] + [t_sp for t_sp, _, _ in spike_events] + [T + dt]
+
+        y_start = np.zeros(len(scipy_state_idx))
+        for var_name, idx in scipy_state_idx.items():
+            y_start[idx] = scipy_state_sign[var_name] * ODE_INITIAL_VALUES[var_name]
+
+        y_segments = []
+        timevec_segments = []
+        for i in range(len(segment_boundaries) - 1):
+            if i > 0:
+                # apply the spike at the start of this segment
+                _, spike_idx, spike_weight = spike_events[i - 1]
+                y_start = y_segments[-1][-1, :].copy()
+                y_start[spike_idx] += spike_weight
+
+            ts = np.arange(segment_boundaries[i], segment_boundaries[i + 1] - dt / 2, dt)
+            y_segments.append(odeint(neuron_ode, y_start, ts, args=(parameters,), rtol=1E-12, atol=1E-12))
+            timevec_segments.append(ts)
+
+        y_ = np.vstack(y_segments)
+        timevec_scipy = np.hstack(timevec_segments)
 
         if ENABLE_PLOTS:
-            fig, ax = plt.subplots(nrows=5, figsize=(5, 4), dpi=300)
-            ax[0].plot(timevec, state["I_kernel_exc__X__exc_spikes"], "-", lw=2, color="k", label=r"$I_\mathrm{syn}$ (ODEtb)")
-            ax[0].plot(timevec_scipy, y_[:, 5], "--", lw=2, color="orange", label=r"$I_\mathrm{syn}$ (scipy)", alpha=.5)
-
-            ax[1].plot(timevec, state["V_th_v"], "-", lw=2, color="k", label=r"V_th_v (ODEtb)")
-            ax[1].plot(timevec_scipy, y_[:, 4], "--", lw=2, color="orange", label=r"V_th_v (scipy)", alpha=.5)
-
-            ax[2].plot(timevec, state["V_th_v_aux"], "-", lw=2, color="k", label=r"V_th_v_aux (ODEtb)")
-            ax[2].plot(timevec_scipy, y_[:, 3], "--", lw=2, color="orange", label=r"V_th_v_aux (scipy)", alpha=.5)
-
-            ax[3].plot(timevec, state["V_th_alpha_1"], "-", lw=2, color="k", label=r"V_th_alpha_1 (ODEtb)")
-            ax[3].plot(timevec_scipy, y_[:, 1], "--", lw=2, color="orange", label=r"V_th_alpha_1 (scipy)", alpha=.5)
-
-            ax[4].plot(timevec, state["V_th_alpha_2"], "-", lw=2, color="k", label=r"V_th_alpha_2 (ODEtb)")
-            ax[4].plot(timevec_scipy, y_[:, 2], "--", lw=2, color="orange", label=r"V_th_alpha_2 (scipy)", alpha=.5)
-
-            for _ax in ax:
+            fig, ax = plt.subplots(nrows=len(scipy_state_idx), figsize=(5, 2 * len(scipy_state_idx)), dpi=150)
+            for _ax, (var_name, idx) in zip(ax, scipy_state_idx.items()):
+                _ax.plot(timevec, state[var_name], "-", lw=2, color="k", label=var_name + " (ODEtb)")
+                _ax.plot(timevec_scipy, scipy_state_sign[var_name] * y_[:, idx], "--", lw=2, color="orange", label=var_name + " (scipy)", alpha=.5)
                 _ax.set_xlim(0., T + dt)
                 _ax.legend()
 
-            ax[-1].set_xlabel(r"time (ms)")
+            ax[-1].set_xlabel("time (ms)")
 
-            fig.savefig("test_amat_solver.png")
+            fig.savefig(os.path.join(tempfile.gettempdir(), "test_amat_solver.png"))
+            plt.close(fig)
 
-        scipy_V_th_v_interp = np.interp(timevec_scipy, timevec, state["V_th_v"])
-        scipy_V_th_v_aux_interp = np.interp(timevec_scipy, timevec, state["V_th_v_aux"])
-        scipy_V_th_alpha_1_interp = np.interp(timevec_scipy, timevec, state["V_th_alpha_1"])
-        scipy_V_th_alpha_2_interp = np.interp(timevec_scipy, timevec, state["V_th_alpha_2"])
+        # compare all state variables of the model
+        for var_name, idx in scipy_state_idx.items():
+            odetb_interp = np.interp(timevec_scipy, timevec, state[var_name])
+            np.testing.assert_allclose(scipy_state_sign[var_name] * y_[:, idx], odetb_interp, rtol=1E-7, atol=1E-7, err_msg="for state variable " + var_name)
 
-        np.testing.assert_allclose(y_[:, 4], scipy_V_th_v_interp, atol=1E-7)
-        np.testing.assert_allclose(y_[:, 3], scipy_V_th_v_aux_interp, atol=1E-7)
-        np.testing.assert_allclose(y_[:, 1], scipy_V_th_alpha_1_interp, atol=1E-7)
-        np.testing.assert_allclose(y_[:, 2], scipy_V_th_alpha_2_interp, atol=1E-7)
+        # the refractoriness timer decreases linearly
+        np.testing.assert_allclose(state["refr_t"], ODE_INITIAL_VALUES["refr_t"] - timevec, atol=1E-9)
