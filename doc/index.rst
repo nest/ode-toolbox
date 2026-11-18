@@ -606,7 +606,7 @@ In some cases, elements of :math:`\mathbf{A}` may contain terms that involve a p
 Working with large expressions
 ------------------------------
 
-In several places during processing, a SymPy expression simplification (\ :python:`simplify()`\ ) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with SymPy, we introduce the :python:`expression_simplification_threshold` constant, which causes expressions whose string representation is longer than this number of characters to be skipped when simplifying expressions. The default value is 1000.
+In several places during processing, a SymPy expression simplification (\ :python:`simplify()`\ ) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with SymPy, we introduce the :python:`expression_simplification_threshold` constant, which causes expressions whose string representation is longer than this number of characters to be skipped when simplifying expressions. The default value is 2500.
 
 
 Examples
