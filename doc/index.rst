@@ -160,8 +160,8 @@ The following flags exist:
      - :python:`logging.WARN`
      - Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
    * - ``disable_cse``
-     - :python: `False`
-     - Set to True to enable common subexpression elimination (CSE) in the analytical and propagator solver's expressions. ODE-toolbox will then return a set of auxiliary "helper" expressions that are each computed once and reused, rather than being recomputed inline every time they occur. 
+     - :python:`False`
+     - By default, common subexpression elimination (CSE) is applied to the analytical and numerical solvers' expressions: ODE-toolbox then returns a set of auxiliary "helper" expressions (under the ``"cse"`` key) that are each computed once and reused, rather than being recomputed inline every time they occur. Set to True to disable CSE, so that all expressions are returned in full.
 
 
 Input

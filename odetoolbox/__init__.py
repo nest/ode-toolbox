@@ -605,7 +605,7 @@ def analysis(indict,
     :param use_alternative_expM: If :python:`False`, use the sympy function ``sympy.exp`` to compute the matrix exponential. If :python:`True`, use an alternative function (see :py:func:`odetoolbox.sympy_helpers.expMt` for details). This can be useful as calls to ``sympy.exp`` can sometimes take a very large amount of time.
     :param preserve_expressions: Set to True, or a list of strings corresponding to individual variable names, to disable internal rewriting of expressions, and return same output as input expression where possible. Only applies to variables specified as first-order differential equations.
     :param log_level: Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
-    :param disable_cse: Boolean flag set to False. If enabled it will perform sub-expression elimination on update_expression, propagators and singularity conditions of the generated .cpp nestml file.
+    :param disable_cse: If False (the default), perform common subexpression elimination (CSE) on the update expressions and propagators of the generated solvers (including conditional solvers); the helper expressions are returned under the ``"cse"`` key. If True, all expressions are returned in full.
 
     :return: The result of the analysis. For details, see https://ode-toolbox.readthedocs.io/en/latest/index.html#output
     """
