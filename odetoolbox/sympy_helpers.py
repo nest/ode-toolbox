@@ -66,8 +66,11 @@ class NumericalIssueException(Exception):
 
 
 def _sympy_floats_to_ints(expr):
-    r"""Replace integer-valued Floats (1.0, 2.0, ...) by sympy Integers; leave all other Floats untouched."""
-    return expr.xreplace({f: sympy.Integer(int(f)) for f in expr.atoms(sympy.Float) if float(f).is_integer()})
+    r"""Replace integer-valued Floats (1.0, 2.0, ...) by sympy Integers; leave all other Floats untouched.
+
+    Only Floats with magnitude up to :math:`2^{53}` (the number of mantissa bits of a double-precision float, ``sys.float_info.mant_dig``) are converted. Above that, not every integer is representable as a float, so that converting would yield integers that look spurious (for instance, ``1E23`` would become ``99999999999999991611392``) and that can be too large to be represented as an integer literal in generated code."""
+    max_exact_int = 2 ** sys.float_info.mant_dig
+    return expr.xreplace({f: sympy.Integer(int(f)) for f in expr.atoms(sympy.Float) if float(f).is_integer() and abs(float(f)) <= max_exact_int})
 
 
 def _sympy_parse_real(expr: str, global_dict: Optional[Dict] = None, local_dict: Optional[Dict] = None, evaluate: bool = True) -> sympy.core.expr.Expr:
