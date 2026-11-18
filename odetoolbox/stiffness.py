@@ -26,7 +26,6 @@ from odetoolbox.sympy_helpers import _sympy_parse_real, sympy_globals
 
 from .mixed_integrator import MixedIntegrator
 from .mixed_integrator import ParametersIncompleteException
-from .shapes import Shape
 from .spike_generator import SpikeGenerator
 
 
