@@ -24,7 +24,6 @@ from __future__ import annotations
 from typing import List, Tuple
 
 import functools
-import logging
 import re
 import sympy
 import sympy.parsing.sympy_parser
@@ -32,7 +31,7 @@ import sympy.parsing.sympy_parser
 from sympy.core.expr import Expr as SympyExpr
 
 from .config import Config
-from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _custom_simplify_expr, _is_constant_term, _is_sympy_type, _is_zero, _sympy_parse_real
+from .sympy_helpers import _check_numerical_issue, _check_forbidden_name, _custom_simplify_expr, _is_constant_term, _is_sympy_type, _is_zero, _sympy_parse_real, sympy_globals
 
 
 class MalformedInputException(Exception):
@@ -60,41 +59,6 @@ class Shape:
 
     the :python:`symbol` of the ODE would be :python:`x` (i.e. without any qualifiers), :python:`order` would be 3, :python:`derivative_factors` would contain the linear part in the form of the list :python:`[c1, c2, c3]`, the inhomogeneous term would be :python:`c0` and the nonlinear part :python:`x*y + x**2` is stored in :python:`nonlin_term`.
     """
-
-    # a minimal subset of sympy classes and functions to avoid "from sympy import *"
-    _sympy_globals = {"Symbol": sympy.Symbol,
-                      "Integer": sympy.Integer, # XXX TO DO: Utilise this in our LOCALS optimisation condition
-                      "Float": sympy.Float,
-                      "Function": sympy.Function,
-                      "Add": sympy.Add,
-                      "Mul": sympy.Mul,
-                      "Pow": sympy.Pow,
-                      "power": sympy.Pow,
-                      "exp": sympy.exp,
-                      "log": sympy.log,
-                      "sin": sympy.sin,
-                      "cos": sympy.cos,
-                      "tan": sympy.tan,
-                      "asin": sympy.asin,
-                      "sinh": sympy.sinh,
-                      "asinh": sympy.asinh,
-                      "acos": sympy.acos,
-                      "cosh": sympy.cosh,
-                      "acosh": sympy.acosh,
-                      "tanh": sympy.tanh,
-                      "atanh": sympy.atanh,
-                      "min": sympy.Min,
-                      "max": sympy.Max,
-                      "Heaviside": sympy.Heaviside,
-                      "e": sympy.exp(1),
-                      "E": sympy.exp(1),
-                      "t": sympy.Symbol("t", real=True),
-                      "DiracDelta": sympy.DiracDelta}
-
-    # cython backend (used by sympy autowrap()) cannot handle these functions; need to provide alternative implementation
-    _sympy_autowrap_helpers = [("Min", (abs(sympy.symbols("x", real=True) + sympy.symbols("y", real=True)) - abs(sympy.symbols("x", real=True) - sympy.symbols("y", real=True))) / 2, [sympy.symbols("x", real=True), sympy.symbols("y", real=True)]),
-                               ("Max", (abs(sympy.symbols("x", real=True) + sympy.symbols("y", real=True)) + abs(sympy.symbols("x", real=True) - sympy.symbols("y", real=True))) / 2, [sympy.symbols("x", real=True), sympy.symbols("y", real=True)]),
-                               ("Heaviside", (sympy.symbols("x", real=True) + abs(sympy.symbols("x", real=True))) / (2 * abs(sympy.symbols("x", real=True)) + 1E-300), [sympy.symbols("x", real=True)])]
 
     def __init__(self, symbol: sympy.Symbol, order, initial_values, derivative_factors, inhom_term=sympy.Float(0.), nonlin_term=sympy.Float(0.), lower_bound=None, upper_bound=None):
         r"""
@@ -124,7 +88,7 @@ class Shape:
 
         self.symbol = symbol
 
-        if str(symbol) in Shape._sympy_globals.keys():
+        if str(symbol) in sympy_globals.keys():
             raise MalformedInputException("The symbol name " + str(symbol) + " clashes with a predefined symbol by the same name")
 
         if not type(order) is int:
@@ -438,7 +402,7 @@ class Shape:
 
         all_variable_symbols_dict = {str(el): el for el in all_variable_symbols}
 
-        definition = _sympy_parse_real(definition, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict)
+        definition = _sympy_parse_real(definition, global_dict=sympy_globals, local_dict=all_variable_symbols_dict)
 
         # ``derivatives`` is a list of all derivatives of `shape` up to the order we are checking, starting at 0.
         derivatives = [definition, sympy.diff(definition, sympy.Symbol(Config().input_time_symbol, real=True))]
@@ -572,16 +536,16 @@ class Shape:
             parameter_symbols_real_dict = {str(sym): sym for sym in parameters.keys()}    # make a dict with a symbol for each parameter to make sure we can set the domain to Real
         else:
             parameter_symbols_real_dict = {}
-        definition = _sympy_parse_real(definition.replace("'", Config().differential_order_symbol), global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict | parameter_symbols_real_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
+        definition = _sympy_parse_real(definition.replace("'", Config().differential_order_symbol), global_dict=sympy_globals, local_dict=all_variable_symbols_dict | parameter_symbols_real_dict)  # minimal global_dict to make no assumptions (e.g. "beta" could otherwise be recognised as a function instead of as a parameter symbol)
 
         # validate input for forbidden names
-        _initial_values = {k: _sympy_parse_real(v, evaluate=False, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items()}
+        _initial_values = {k: _sympy_parse_real(v, evaluate=False, global_dict=sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items()}
         for iv_expr in _initial_values.values():
             for var in iv_expr.atoms():
                 _check_forbidden_name(var)
 
         # parse input
-        initial_values = {k: _sympy_parse_real(v, global_dict=Shape._sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items()}
+        initial_values = {k: _sympy_parse_real(v, global_dict=sympy_globals, local_dict=all_variable_symbols_dict) for k, v in initial_values.items()}
 
         # validate input for numerical issues
         for iv_expr in initial_values.values():

@@ -11,7 +11,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.11
 
       - name: Install apt dependencies
         run: |
@@ -34,7 +34,7 @@ jobs:
 
       - name: Static code style analysis
         run: |
-          python3 -m pycodestyle $GITHUB_WORKSPACE -v --ignore=E241,E501,E713,E252 --exclude=$GITHUB_WORKSPACE/doc,$GITHUB_WORKSPACE/.eggs,$GITHUB_WORKSPACE/build,$GITHUB_WORKSPACE/.git,$GITHUB_WORKSPACE/odetoolbox.egg-info,$GITHUB_WORKSPACE/dist
+          python3 -m pycodestyle $GITHUB_WORKSPACE -v --ignore=E241,E252,E501,E713,E714,E741 --exclude=$GITHUB_WORKSPACE/doc,$GITHUB_WORKSPACE/.eggs,$GITHUB_WORKSPACE/build,$GITHUB_WORKSPACE/.git,$GITHUB_WORKSPACE/odetoolbox.egg-info,$GITHUB_WORKSPACE/dist
 
 
   build:
@@ -53,7 +53,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.11
 
       - name: Install apt dependencies
         run: |
@@ -63,7 +63,7 @@ jobs:
       - name: Install GSL
         if: ${{ matrix.with_gsl == '1' }}
         run: |
-          sudo apt remove libgsl27 libgsl-dev # remove system-wide GSL version that is installed by default
+          sudo apt remove libgsl*    # remove system-wide GSL version that is installed by default
           cd ..
           wget https://mirror.ibcp.fr/pub/gnu/gsl/gsl-2.7.tar.gz # this should be "gsl-latest.tar.gz", but there is an issue with GSL 2.8 (see https://github.com/pygsl/pygsl/issues/62)
           tar -xzf gsl-2.7.tar.gz

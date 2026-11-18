@@ -95,8 +95,7 @@ def weighted_expression_cost(expr):
 
     if not isinstance(expr, sympy.Basic):
         raise TypeError(
-            f"weighted expression costs expect a SymPy expression. Received : {
-                type(expr).__name__}")
+            f"weighted expression costs expect a SymPy expression. Received : {type(expr).__name__}")
 
     if expr.is_Atom:  # individual numbers/ symbols doesnt require any calculation
         return 0.0
@@ -445,8 +444,7 @@ def _apply_cse_to_solver_blocks(solver_blocks):
     if not isinstance(solver_blocks, list):
         raise TypeError(
             "_apply_cse_to_solver_blocks() expects a list of solver dictionaries",
-            f"received: {
-                type(solver_blocks).__name__}")
+            f"received: {type(solver_blocks).__name__}")
 
     result = []
     multiple_blocks = len(solver_blocks) > 1
@@ -541,8 +539,7 @@ def deserialize_cse_replacements(replacements):
     declares the symbols as real-valued SymPy Symbols, and parses the expressions while maintaining proper scoping dependencies between intermediate terms.
     """
 
-    from .shapes import Shape
-    from .sympy_helpers import _sympy_parse_real
+    from .sympy_helpers import _sympy_parse_real, sympy_globals
 
     if not replacements:
         return []
@@ -562,7 +559,7 @@ def deserialize_cse_replacements(replacements):
 
         parsed_expr = _sympy_parse_real(
             str(expression),
-            global_dict=Shape._sympy_globals,
+            global_dict=sympy_globals,
             local_dict=temporary_symbols)  # ensures 'beta' string isnt being treated like a var
 
         result.append((temporary_symbols[name], parsed_expr))
@@ -575,8 +572,7 @@ def expand_cse_expressions(reduced_expressions, replacements):
     expand one cse-reduced expression back to a normal sympy expression.
     """
 
-    from .shapes import Shape
-    from .sympy_helpers import _sympy_parse_real
+    from .sympy_helpers import _sympy_parse_real, sympy_globals
 
     # convert serialized replacement into ordered sympy
     replacements = deserialize_cse_replacements(replacements)
@@ -594,7 +590,7 @@ def expand_cse_expressions(reduced_expressions, replacements):
         # have domain Real
         expression = _sympy_parse_real(
             str(reduced_expressions),
-            global_dict=Shape._sympy_globals,
+            global_dict=sympy_globals,
             local_dict=temporary_symbols)  # ensures 'beta' string isnt being treated like a var
 
     #

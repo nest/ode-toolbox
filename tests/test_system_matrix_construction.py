@@ -22,7 +22,7 @@
 import sympy
 
 from odetoolbox import _from_json_to_shapes
-from odetoolbox.sympy_helpers import _sympy_parse_real
+from odetoolbox.sympy_helpers import _sympy_floats_to_ints, _sympy_parse_real
 from odetoolbox.system_of_shapes import SystemOfShapes
 from tests.test_utils import load_test_json
 
@@ -56,15 +56,20 @@ class TestSystemMatrixConstruction:
                                              [x * y]])
 
     def test_morris_lecar(self):
+        r"""The decimal input (``.5``, ``1E3``) yields a mix of integer-valued Floats and Integers in the system matrices (for instance, ``expand()`` turns ``0.5 * 1000`` into ``500.0``). Since sympy 1.13, ``Float(500.0) != Integer(500)``, so integer-valued Floats are converted to Integers before comparing."""
         indict = load_test_json("morris_lecar.json")
         shapes, parameters = _from_json_to_shapes(indict)
         shape_sys = SystemOfShapes.from_shapes(shapes, parameters=parameters)
+        shape_sys.A_ = _sympy_floats_to_ints(shape_sys.A_)
+        shape_sys.b_ = _sympy_floats_to_ints(shape_sys.b_)
+        shape_sys.c_ = _sympy_floats_to_ints(shape_sys.c_)
+
         C_m, g_Ca, g_K, g_L, E_Ca, E_K, E_L, I_ext = sympy.symbols("C_m g_Ca g_K g_L E_Ca E_K E_L I_ext", real=True)
-        assert shape_sys.A_ == sympy.Matrix([[_sympy_parse_real("-500.0 * g_Ca / C_m - 1000.0 * g_L / C_m"), _sympy_parse_real("1000.0 * E_K * g_K / C_m")],
+        assert shape_sys.A_ == sympy.Matrix([[_sympy_parse_real("-500 * g_Ca / C_m - 1000 * g_L / C_m"), _sympy_parse_real("1000 * E_K * g_K / C_m")],
                                             [_sympy_parse_real("0"), _sympy_parse_real("0")]])
 
         V, W = sympy.symbols("V W", real=True)
-        assert shape_sys.b_ == sympy.Matrix([[_sympy_parse_real("500.0 * E_Ca * g_Ca / C_m + 1000.0 * E_L * g_L / C_m + 1000.0 * I_ext / C_m")],
+        assert shape_sys.b_ == sympy.Matrix([[_sympy_parse_real("500 * E_Ca * g_Ca / C_m + 1000 * E_L * g_L / C_m + 1000 * I_ext / C_m")],
                                              [_sympy_parse_real("0")]])
-        assert shape_sys.c_ == sympy.Matrix([[_sympy_parse_real("500.0 * E_Ca * g_Ca * tanh(V / 15 + 1 / 15) / C_m - 1000.0 * V * W * g_K / C_m - 500.0 * V * g_Ca * tanh(V / 15 + 1 / 15) / C_m")],
-                                             [_sympy_parse_real("-200.0 * W * cosh(V / 60) + 100.0 * cosh(V / 60) * tanh(V / 30) + 100.0 * cosh(V / 60)")]])
+        assert shape_sys.c_ == sympy.Matrix([[_sympy_parse_real("500 * E_Ca * g_Ca * tanh(V / 15 + 1 / 15) / C_m - 1000 * V * W * g_K / C_m - 500 * V * g_Ca * tanh(V / 15 + 1 / 15) / C_m")],
+                                             [_sympy_parse_real("-200 * W * cosh(V / 60) + 100 * cosh(V / 60) * tanh(V / 30) + 100 * cosh(V / 60)")]])
