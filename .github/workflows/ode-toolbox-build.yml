@@ -60,15 +60,15 @@ jobs:
           sudo apt update
           sudo apt install pkg-config python3-all-dev
 
-      - name: Install GSL
-        if: ${{ matrix.with_gsl == '1' }}
-        run: |
-          sudo apt remove libgsl27 libgsl-dev # remove system-wide GSL version that is installed by default
-          cd ..
-          wget https://mirror.ibcp.fr/pub/gnu/gsl/gsl-2.7.tar.gz # this should be "gsl-latest.tar.gz", but there is an issue with GSL 2.8 (see https://github.com/pygsl/pygsl/issues/62)
-          tar -xzf gsl-2.7.tar.gz
-          cd gsl-2.7
-          ./configure && make && sudo make install
+#      - name: Install GSL
+#        if: ${{ matrix.with_gsl == '1' }}
+#        run: |
+#          sudo apt remove libgsl*    # remove system-wide GSL version that is installed by default
+#          cd ..
+#          wget https://mirror.ibcp.fr/pub/gnu/gsl/gsl-2.7.tar.gz # this should be "gsl-latest.tar.gz", but there is an issue with GSL 2.8 (see https://github.com/pygsl/pygsl/issues/62)
+#          tar -xzf gsl-2.7.tar.gz
+#          cd gsl-2.7
+#          ./configure && make && sudo make install
 
       - name: Install Python dependencies
         run: |
