@@ -417,28 +417,11 @@ def _analysis(indict,
                     solver_json["parameters"][param_name] = str(sympy_expr)
 
     #
-    # perform cse after parameter discovery whilst expressions are Sympy objects
-    #
-
-    if disable_cse:
-        logging.getLogger(__name__).debug("CSE disabled")
-    else:
-        logging.getLogger(__name__).debug("Applying CSE to %d solver block(s): %s", len(solvers_json), ", ".join(solver.get("solver", "unknown") for solver in solvers_json))
-
-        solvers_json = (_apply_cse_to_solver_blocks(solvers_json))  # pass solver dict as a list into blocks
-
-    #
-    #   convert expressions from sympy to string
-    #
+    #   resolve the set of variables whose expressions are to be preserved
     #
 
     if type(preserve_expressions) is bool:
         if preserve_expressions:
-            if disable_cse:
-                logging.getLogger(__name__).debug("CSE disabled")
-            else:
-                raise Exception("If cse is enabled then then this requires setting ``preserve_expressions`` to False for numerical expressions!")
-
             # grab all first-order variables
             preserve_expressions = _get_all_first_order_variables(indict)
         else:
@@ -453,6 +436,20 @@ def _analysis(indict,
     else:
         raise MalformedInputException(
             "``preserve_expressions`` parameter should be either a boolean or a list of strings corresponding to variable names")
+
+    #
+    # perform cse after parameter discovery whilst expressions are Sympy objects
+    #
+
+    if not disable_cse:
+        logging.getLogger(__name__).debug("Applying CSE to %d solver block(s): %s", len(solvers_json), ", ".join(solver.get("solver", "unknown") for solver in solvers_json))
+
+        # preserved expressions are replaced by their input definition below, so they are left out of the CSE input
+        solvers_json = _apply_cse_to_solver_blocks(solvers_json, preserved_symbols=preserve_expressions)
+
+    #
+    #   convert expressions from sympy to string
+    #
 
     for solver_json in solvers_json:
 
@@ -534,8 +531,6 @@ def _analysis(indict,
 
     assert not problems, ("Non-JSON safe objects remain in solvers_json")
 
-    # output log the json file
-    json.dumps(solvers_json, indent=4, sort_keys=True)     # default hides bugs
     return solvers_json, shape_sys, shapes
 
 

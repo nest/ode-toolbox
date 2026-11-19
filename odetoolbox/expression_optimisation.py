@@ -33,8 +33,14 @@ OP_WEIGHTS = {  # define individual weights of expressions
     sympy.Pow: 4.0,
     sympy.exp: 8.0,
     sympy.log: 8.0,
+    sympy.tan: 8.0,
     sympy.sin: 8.0,
     sympy.cos: 8.0,
+    sympy.tanh: 8.0,
+    sympy.sinh: 8.0,
+    sympy.cosh: 8.0,
+    sympy.atan: 8.0,
+    sympy.erf: 8.0,
 }
 
 TEMPORARY_OVERHEAD = 1.0  # cost of creating of a tmp variable
@@ -330,10 +336,36 @@ def _contains_internal_control_flow(expressions):
             sympy.Piecewise) for expression in expressions)
 
 
+def _drop_unreferenced_replacements(replacements, reduced_expressions):
+    """
+    Remove CSE temporaries that are not (transitively) referenced by any of the reduced expressions.
+
+    Replacements are dependency ordered (a temporary may only refer to earlier ones), so a single reverse pass suffices.
+    """
+
+    referenced = set()
+    for expr in reduced_expressions:
+        referenced |= expr.free_symbols
+
+    kept = []
+    for symbol, expr in reversed(replacements):
+        if symbol in referenced:
+            kept.append((symbol, expr))
+            referenced |= expr.free_symbols
+
+    kept.reverse()
+
+    if len(kept) < len(replacements):
+        logging.getLogger(__name__).debug("[CSE] dropped %d unreferenced temporaries", len(replacements) - len(kept))
+
+    return kept
+
+
 def _apply_cse_to_expression_region(
         region,
         symbol_prefix,
-        solver_name="unknown"):
+        solver_name="unknown",
+        preserved_symbols=()):
     """
     Apply CSE independently inside one execution region.
 
@@ -341,21 +373,25 @@ def _apply_cse_to_expression_region(
     receive multiple singularity branches as this function does not hold logic for interpreting these singularities.
 
     'propagator' 'update_expressions' are also handled differently as they are executed in different contexts down stream.
+
+    Update expressions for variables in ``preserved_symbols`` are left out of the CSE input; they are passed through unchanged.
     """
 
     result = dict(region)
     cse_data = {}  # use a dict instead of a list [] to avoid KeyError downstream
 
+    # update expressions that participate in CSE (preserved expressions are excluded)
+    cse_update_expressions = {sym: expr for sym, expr in region.get("update_expressions", {}).items() if sym not in preserved_symbols}
+
     # collect all expressions safely into a list for the non-finite check
     all_math_expressions = []
 
     if region.get(
-            "propagators"):  # collect update_expressions values inside all_math_expressions
+            "propagators"):  # collect propagator values inside all_math_expressions
         all_math_expressions.extend(region["propagators"].values())
 
-    if region.get(
-            "update_expressions"):  # collect propagator values inside all_math_expressions
-        all_math_expressions.extend(region["update_expressions"].values())
+    # collect update_expressions values inside all_math_expressions
+    all_math_expressions.extend(cse_update_expressions.values())
 
     # safety check before running cse in singularity
     if _contains_nonfinite_expression(
@@ -379,17 +415,20 @@ def _apply_cse_to_expression_region(
         replacements, reduced = _run_profitable_cse(
             region["propagators"], symbol_prefix + "prop_",
             solver_name=solver_name, region_name="propagators")
+        replacements = _drop_unreferenced_replacements(replacements, reduced.values())
         if replacements:
             result["propagators"] = reduced
             cse_data["propagators"] = replacements
 
     # numerical state update expressions
-    if region.get("update_expressions"):
+    if cse_update_expressions:
         replacements, reduced = _run_profitable_cse(
-            region["update_expressions"], symbol_prefix + "update_",
+            cse_update_expressions, symbol_prefix + "update_",
             solver_name=solver_name, region_name="update_expressions")
+        replacements = _drop_unreferenced_replacements(replacements, reduced.values())
         if replacements:
-            result["update_expressions"] = reduced
+            # merge reduced expressions back, keeping the original ordering and leaving preserved expressions untouched
+            result["update_expressions"] = {sym: reduced.get(sym, expr) for sym, expr in region["update_expressions"].items()}
             cse_data["update_expressions"] = replacements
 
     if cse_data:
@@ -398,14 +437,19 @@ def _apply_cse_to_expression_region(
     return result
 
 
-def apply_cse_to_solver(solver, symbol_prefix="__ode_cse_"):
+def apply_cse_to_solver(solver, symbol_prefix="__ode_cse_", preserved_symbols=()):
     """
     Apply CSE to one ODE-toolbox solver dictionary. Singularity branches are treated as independent execution regions that has no variable relationships to eachother.
     Both solvers are passed to _apply_cse_to_expression_region
+
+    ``preserved_symbols`` only applies to numeric solvers; analytic solvers do not preserve expressions.
     """
 
     result = dict(solver)
     solver_name = solver.get("solver", "unknown")
+
+    if "analytic" in solver_name:
+        preserved_symbols = ()
 
     if "conditions" in solver:  # handle singularity conditions
 
@@ -422,7 +466,8 @@ def apply_cse_to_solver(solver, symbol_prefix="__ode_cse_"):
             optimised_conditions[condition] = _apply_cse_to_expression_region(
                 branch,
                 symbol_prefix=branch_prefix,
-                solver_name=solver_name)  # apply cse to each independent branch
+                solver_name=solver_name,
+                preserved_symbols=preserved_symbols)  # apply cse to each independent branch
 
         result["conditions"] = optimised_conditions
 
@@ -430,10 +475,10 @@ def apply_cse_to_solver(solver, symbol_prefix="__ode_cse_"):
 
     # ordinary analytical or numerical solver passing.
     return _apply_cse_to_expression_region(
-        solver, symbol_prefix=symbol_prefix, solver_name=solver_name)
+        solver, symbol_prefix=symbol_prefix, solver_name=solver_name, preserved_symbols=preserved_symbols)
 
 
-def _apply_cse_to_solver_blocks(solver_blocks):
+def _apply_cse_to_solver_blocks(solver_blocks, preserved_symbols=()):
     """
     Apply CSE independently to every solver block produced by ODEtoolbox
 
@@ -461,7 +506,7 @@ def _apply_cse_to_solver_blocks(solver_blocks):
         else:
             symbol_prefix = f"__ode_cse_"
 
-        result.append(apply_cse_to_solver(solver, symbol_prefix=symbol_prefix))
+        result.append(apply_cse_to_solver(solver, symbol_prefix=symbol_prefix, preserved_symbols=preserved_symbols))
 
     return result
 

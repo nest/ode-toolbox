@@ -161,7 +161,7 @@ The following flags exist:
      - Sets the logging threshold. Logging messages which are less severe than ``log_level`` will be ignored. Log levels can be provided as an integer or string, for example "INFO" (more messages) or "WARN" (fewer messages). For a list of valid logging levels, see https://docs.python.org/3/library/logging.html#logging-levels
    * - ``disable_cse``
      - :python:`False`
-     - By default, common subexpression elimination (CSE) is applied to the analytical and numerical solvers' expressions: ODE-toolbox then returns a set of auxiliary "helper" expressions (under the ``"cse"`` key) that are each computed once and reused, rather than being recomputed inline every time they occur. Set to True to disable CSE, so that all expressions are returned in full.
+     - By default, common subexpression elimination (CSE) is applied to the analytical and numerical solvers' expressions: ODE-toolbox then returns a set of auxiliary "helper" expressions (under the ``"cse"`` key) that are each computed once and reused, rather than being recomputed inline every time they occur. Set to True to disable CSE, so that all expressions are returned in full. CSE can be combined with ``preserve_expressions``: preserved expressions are excluded from CSE and returned unchanged.
 
 
 Input
@@ -405,7 +405,7 @@ ODE-toolbox will return a list of solvers. **Each solver has the following keys:
 - :python:`"state_variables"`\ : an unordered list containing all variable symbols.
 - :python:`"initial_values"`\ : a dictionary that maps each variable symbol (in string form) to a SymPy expression. For example :python:`"g" : "e / tau"`.
 - :python:`"parameters"`\ : only present when parameters were supplied in the input. The input parameters are copied into the output for convenience.
-- :python:`"cse"`\ : only present if cse is not disabled. Dictionary mapping temporary varaibles (in string form) to the repeated SymPy expression. Here these temporary variables will be found in `update_expressions` and `propagators`.
+- :python:`"cse"`\ : only present if cse is not disabled. Dictionary mapping temporary variables (in string form) to the repeated SymPy expression. Here these temporary variables will be found in `update_expressions` and `propagators`.
 
 
 **Numeric solvers have the following extra entries:**
@@ -658,6 +658,7 @@ Operations are assigned approximate relative costs:
    log            8
    sin            8
    cos            8
+   (etc.)
 
 These values are heuristic weights and should not be interpreted as exact CPU-cycle costs. Here, we express that operations such as exponentials and trigonometric functions are generally more expensive than additions or multiplications.
 
@@ -688,6 +689,9 @@ CSE is applied while solver expressions are represented as SymPy objects. The re
    }
 
 In this analytical solver example, the `propagators` dictionary contains the reduced expressions, while the corresponding temporary definitions are stored under `cse["propagators"]`.
+
+Temporaries must be evaluated in dict order. Each may reference earlier ones (for example ``prop_1 = exp(-prop_0)``). Python's json keeps insertion order; a consumer must not sort the keys. Conditional (singularity-guarded) analytic solvers carry a separate "cse" inside each branch under "conditions". Temporaries are branch-local and never shared between branches.  Names are of the form ``__ode_cse_[solver_<k>_][cond_<i>_](prop|update)_<n>``. The ``solver_<k>_`` part appears only when there is more than one solver block. Numbering has gaps, because rejected candidates are inlined.
+
 
 Examples
 --------
