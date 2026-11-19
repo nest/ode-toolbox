@@ -560,12 +560,12 @@ def _analysis(indict,
             indent=4,
             sort_keys=True))
 
-    problems = _find_non_json_serializable(solver_json)
+    problems = _find_non_json_serializable(solvers_json)
     for path, type_name, value in problems:      # non serialized json bug
         logging.getLogger(__name__).error("non-json value %s -> %s: %s",
                                           path, type_name, value)
 
-    assert not problems, ("Non-JSON safe objects remain in solver_json")
+    assert not problems, ("Non-JSON safe objects remain in solvers_json")
 
     # output log the json file
     json.dumps(solvers_json, indent=4, sort_keys=True)     # default hides bugs
@@ -589,9 +589,9 @@ def analysis(indict,
              disable_singularity_detection: bool = False,
              disable_singularity_mitigation: bool = False,
              use_alternative_expM: bool = False,
-             disable_cse: bool = False,
              preserve_expressions: Union[bool,
                                          Iterable[str]] = False,
+             disable_cse: bool = False,
              log_level: Union[str,
                               int] = logging.WARNING) -> List[Dict]:
     r"""
