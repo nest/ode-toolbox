@@ -444,8 +444,8 @@ class TestSingularityCases:
         for parameters in parameter_points:
             self._integrate_and_compare(solver_dict, dynamics, parameters)
 
-    @pytest.mark.xfail(strict=True, reason="for underdamped and overdamped oscillators, the propagators contain re(), im() and atan2(), which cannot be compiled")
-    @pytest.mark.parametrize("zeta", [.5, 2.])
+    @pytest.mark.parametrize("zeta", [pytest.param(.5, marks=pytest.mark.xfail(strict=True, reason="for an underdamped oscillator, the propagators contain the square root of the negative number zeta**2 - 1, and complex numbers are not supported")),
+                                      2.])
     def test_damped_oscillator_generic(self, zeta: float):
         dynamics, _, _ = self.CASES["damped_oscillator"]
         indict = {"dynamics": [{"expression": sym + "' = " + rhs, "initial_value": str(iv)} for sym, rhs, iv in dynamics],
