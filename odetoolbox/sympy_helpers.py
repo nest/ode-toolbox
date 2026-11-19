@@ -39,6 +39,7 @@ sympy_globals = {"Symbol": sympy.Symbol,
                  "power": sympy.Pow,
                  "exp": sympy.exp,
                  "log": sympy.log,
+                 "sqrt": sympy.sqrt,
                  "sin": sympy.sin,
                  "cos": sympy.cos,
                  "tan": sympy.tan,
@@ -205,25 +206,15 @@ def _custom_simplify_expr(expr: Union[str, sympy.matrices.MatrixBase]):
         if isinstance(expr_simplified, sympy.Basic):
             expr_simplified = _sympy_floats_to_ints(expr_simplified)
 
+        if isinstance(expr_simplified, sympy.Basic):
+            expr_simplified = _sympy_floats_to_ints(expr_simplified)
+
         return expr_simplified
     except Exception as e:
         print("Exception occurred while applying expression simplification function: " + type(e).__name__)
         print(str(e))
         print("Check that the parameter ``simplify_expression`` is properly formatted.")
         sys.exit(1)
-
-
-def _find_in_matrix(A, el):
-    num_rows = A.rows
-    num_cols = A.cols
-
-    # Iterate over the elements of the matrix
-    for i in range(num_rows):
-        for j in range(num_cols):
-            if A[i, j] == el:
-                return (i, j)
-
-    return None
 
 
 def symbol_in_expression(list_of_symbols, expr) -> bool:

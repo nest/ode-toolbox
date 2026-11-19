@@ -19,25 +19,17 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sympy
-import sympy.parsing.sympy_parser
 from odetoolbox.sympy_helpers import _sympy_parse_real, sympy_globals
 
 from tests.test_utils import load_test_json
 
 from .context import odetoolbox
 
-try:
-    import pygsl
-    PYGSL_AVAILABLE = True
-except ImportError:
-    PYGSL_AVAILABLE = False
-
 
 class TestLorenzAttractor:
     def test_lorenz_attractor(self):
         indict = load_test_json("lorenz_attractor.json")
-        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=not PYGSL_AVAILABLE)
+        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, disable_singularity_detection=True)
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"].startswith("numeric")

@@ -366,7 +366,7 @@ The following global options are defined. Note that all are typically formatted 
    * - ``propagators_prefix``
      - ``"__P"``
      - string
-     - Generated propagator terms are given names of the form ``"<propagators_prefix>__<var_name_1>__<var_name_2>"``.
+     - Generated propagator terms are given names of the form ``"<propagators_prefix>__<var_name_1>__<var_name_2>"``, and inhomogeneous update terms are given names of the form ``"<propagators_prefix>__<var_name>__1"``.
    * - ``differential_order_symbol``
      - :python:`"__d"`
      - string
@@ -412,32 +412,34 @@ ODE-toolbox will return a list of solvers. **Each solver has the following keys:
 In case of a solver without conditions:
 
 - :python:`"update_expressions"`\ : a dictionary that maps each variable symbol (in string form) to a SymPy propagator expression. The interpretation of an entry :python:`"g" : "g * __P__g__g + h * __P__g__h"` is that, at each integration timestep, when the state of the system needs to be updated from the current time :math:`t` to the next step :math:`t + \Delta t`, we assign the new value :python:`"g * __P__g__g + h * __P__g__h"` to the variable :python:`g`. Note that the expression is always evaluated at the old time :math:`t`; this means that when more than one state variable needs to be updated, all of the expressions have to be calculated before updating any of the variables.
-- :python:`propagators`\ : a dictionary that maps each propagator matrix entry to its defining expression; for example :python:`"__P__g__h" : "__h*exp(-__h/tau)"`
+- :python:`propagators`\ : a dictionary that maps each propagator matrix entry to its defining expression; for example :python:`"__P__g__h" : "__h*exp(-__h/tau)"`. For each variable :python:`g` whose update includes a constant (inhomogeneous) term (the entry of :math:`Qb` for that variable; see :ref:`Computing the update expressions`), there is an additional entry :python:`"__P__g__1"`, which is added to the update expression without a multiplying state variable, for example :python:`"g" : "g * __P__g__g + h * __P__g__h + __P__g__1"`. All terms that depend on the timestep are contained in the propagators, so that they only need to be recomputed when the timestep or a parameter changes, and not in each timestep.
 
 In some cases, parameter choices of the input can lead to numerical singularities (divisions by zero; see the sections :ref:`Computing the propagator matrix` and :ref:`Computing the update expressions` for more details). In this case, certain propagators and update expressions are only valid under certain conditions. These conditions, and the propagators and update expressions for each condition, are returned as follows:
 
 - :python:`"conditions"`\ : a dictionary that maps conditional expressions (as strings) to a nested dictionary containing the keys :python:`"update_expressions"` and :python:`"propagators"` as described in the previous paragraph. The default solver (in case none of the other conditions hold) is indicated by the key :python:`"default"`\ .
 
-  For example, if the condition :math:`d=-p` will cause a singularity in the update expression for the state variable :python:`z`, two separate solvers are returned, one for the condition :math:`d=-p`, and another for the default ("otherwise") condition:
+  For example, for the ODE :math:`z' = -(d + p) z / \tau_z + (p - d/2) / \tau_z`, the condition :math:`p=-d` will cause a singularity in the update expression for the state variable :python:`z`, so two separate solvers are returned, one for the condition :math:`p=-d`, and another for the default ("otherwise") condition:
 
   .. code:: python
 
      {
          "conditions": {
-             "(d == -p)": {
+             "(p == -d)": {
                  "propagators": {
-                     "__P__z__z": "1"
+                     "__P__z__z": "1",
+                     "__P__z__1": "-1.5*__h*d/tau_z"
                  },
                  "update_expressions": {
-                     "z": "__P__z__z*z + 1.5*__h*p/tau_z"
+                     "z": "__P__z__1 + __P__z__z*z"
                  }
              },
              "default": {
                  "propagators": {
-                     "__P__z__z": "exp(-__h*(d + p)/tau_z)"
+                     "__P__z__z": "exp(-__h*(d + p)/tau_z)",
+                     "__P__z__1": "0.5*(d - 2*p + (-d + 2*p)*exp(__h*(d + p)/tau_z))*exp(-__h*(d + p)/tau_z)/(d + p)"
                  },
                  "update_expressions": {
-                     "z": "(__P__z__z*(0.5*d - p + z*(d + p)) - 0.5*d + p)/(d + p)"
+                     "z": "__P__z__1 + __P__z__z*z"
                  }
              }
          }
@@ -536,7 +538,7 @@ The propagator matrix :math:`\mathbf{P}` is derived from the system matrix by ma
 
 .. math::
 
-   \mathbf{P} = \exp(\mathbf{A} \cdot h)
+   \mathbf{P} = \exp(\mathbf{A} \cdot \Delta t)
 
 If the imaginary unit :math:`i` is found in any of the entries in :math:`\mathbf{P}`, fail. This usually indicates an unstable (diverging) dynamical system. Double-check the dynamical equations.
 
@@ -546,7 +548,7 @@ To speed up processing, the final system matrix :math:`\mathbf{A}` is rewritten 
 
 .. math::
 
-   \exp(\mathbf{A}\cdot h) = \text{diag}(\exp(\mathbf{A}_1 \cdot h), \exp(\mathbf{A}_2 \cdot h), \dots, \exp(\mathbf{A}_k \cdot h))
+   \exp(\mathbf{A}\cdot \Delta t) = \text{diag}(\exp(\mathbf{A}_1 \cdot \Delta t), \exp(\mathbf{A}_2 \cdot \Delta t), \dots, \exp(\mathbf{A}_k \cdot \Delta t))
 
 
 Computing the update expressions
@@ -559,41 +561,48 @@ The update expressions formulate the way in which the propagators are used to co
    I_{syn} &\leftarrow P_{I_{syn},I_{syn}} I_{syn}\\
    V_m &\leftarrow P_{V_m,V_m} V_m + P_{V_m,I_{syn}} I_{syn}
 
-In the case of an autonomous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry, and the corresponding entry in :math:`\textbf{A}` is zero), the update equation is of the form:
+In the case of an inhomogeneous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry), the update equation is of the form:
+
+.. math::
+   :label: eq-update-inhomogeneous
+
+   x \leftarrow P x + Q b
+
+where
 
 .. math::
 
-   x \leftarrow P x + \Delta t \cdot b
+   Q = \int_0^{\Delta t} \exp(A s)\,ds
 
-For example for the ODE:
+When :math:`A` is invertible, the integral can be evaluated as
+
+.. math::
+
+   Q = A^{-1}(P - I)
+
+However, :math:`A` is in general not invertible (for instance, when :math:`A = 0`). ODE-toolbox therefore never explicitly inverts :math:`A`, but computes :math:`P` and the product :math:`Qb` together, by exponentiating an augmented matrix using the "Van Loan method" [4]_:
+
+.. math::
+
+   \exp\left(\left[\begin{matrix}A & b\\ 0 & 0\end{matrix}\right] \Delta t\right) = \left[\begin{matrix}P & Qb\\ 0 & 1\end{matrix}\right]
+
+Note that this method assumes that :math:`b` is constant over the timestep :math:`\Delta t`. If :math:`b` depends on parameters or external inputs that change during simulation, the update is exact only if these values remain constant within each timestep (that is, they are updated only at timestep boundaries). Inputs that vary continuously within a timestep (for instance, a sinusoidal or ramping current) are only approximated in this way.
+
+For example for the following ODE with :math:`A = 0` and :math:`b = 1.618`:
 
 .. math::
 
    \frac{dx}{dt} = 1.618
 
-the update equation is:
+the update equation is :eq:`eq-update-inhomogeneous` with :math:`Q = \Delta t` and :math:`P = 1`.
 
-.. math::
-
-   x \leftarrow P x + \Delta t \cdot 1.618
-
-In the case of an inhomogenous ODE (for which :math:`\textbf{b}` contains a nonzero, constant entry, but the corresponding entry in :math:`\textbf{A}` is nonzero), the update equation is of the form:
-
-.. math::
-
-   x \leftarrow P \left(x + \frac{b}{A}\right) - \frac{b}{A}
-
-For example for the ODE:
+As a second example, for the ODE with :math:`A = -1` and :math:`b = 1.618`:
 
 .. math::
 
    \frac{dx}{dt} = 1.618 - x
 
-the update equation is:
-
-.. math::
-
-   x \leftarrow P (x - 1.618) + 1.618
+the update equation is :eq:`eq-update-inhomogeneous` with :math:`P = \exp(-\Delta t)` and :math:`Q = 1 - \exp(-\Delta t)`.
 
 In some cases, elements of :math:`\mathbf{A}` may contain terms that involve a parameter of the system to be integrated. If at a later stage, the numerical value of these parameters is chosen equal to zero, a numerical singularity (division by zero) occurs. ODE-toolbox will detect the conditions (for instance, :python:`param1 - param2 = 0`) under which these singularities occur. In case potential division by zero is detected, separate, conditional solvers are generated, so that a valid solver can be selected (for the given choice of parameter values) during numerical integration.
 
@@ -601,7 +610,7 @@ In some cases, elements of :math:`\mathbf{A}` may contain terms that involve a p
 Working with large expressions
 ------------------------------
 
-In several places during processing, a SymPy expression simplification (\ :python:`simplify()`\ ) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with SymPy, we introduce the :python:`expression_simplification_threshold` constant, which causes expressions whose string representation is longer than this number of characters to be skipped when simplifying expressions. The default value is 1000.
+In several places during processing, a SymPy expression simplification (\ :python:`simplify()`\ ) needs to be performed to ensure correctness. For very large expressions, this can result in long wait times, while it is most often found that the resulting system of equations has no analytical solution anyway. To address these performance issues with SymPy, we introduce the :python:`expression_simplification_threshold` constant, which causes expressions whose string representation is longer than this number of characters to be skipped when simplifying expressions. The default value is 2500.
 
 
 Examples
@@ -683,6 +692,7 @@ References
 
 .. [3] Inga Blundell, Dimitri Plotnikov, Jochen Martin Eppler and Abigail Morrison (2018) **Automatically selecting a suitable integration scheme for systems of differential equations in neuron models.** Front. Neuroinform. `doi:10.3389/fninf.2018.00050 <https://doi.org/10.3389/fninf.2018.00050>`__.
 
+.. [4] Van Loan, C. (1978). Computing integrals involving the matrix exponential. IEEE Transactions on Automatic Control, 23(3), 395–404. https://doi.org/10.1109/tac.1978.1101743
 
 Acknowledgements
 ----------------
