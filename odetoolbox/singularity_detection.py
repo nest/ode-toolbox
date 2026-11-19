@@ -22,9 +22,8 @@ from typing import Dict, List, Set, Union
 
 import logging
 import sympy
-import sympy.parsing.sympy_parser
 
-from .sympy_helpers import SymmetricEq, _custom_simplify_expr, symbol_in_expression, _is_zero
+from .sympy_helpers import SymmetricEq, _sympy_floats_to_ints, symbol_in_expression, _is_zero
 
 
 class SingularityDetectionException(Exception):
@@ -148,7 +147,7 @@ class SingularityDetection:
             assert symbol.is_real
             singularity_set = sympy.calculus.singularities(expr, symbol=symbol, domain=sympy.Reals)
             for singular_value in singularity_set:
-                singular_value = sympy.nsimplify(singular_value)    # nsimplify is necessary to remove 1.0* factors
+                singular_value = _sympy_floats_to_ints(singular_value)
                 singular_condition = SymmetricEq(symbol, singular_value)
                 assert symbol.is_real
                 assert singular_value.is_real

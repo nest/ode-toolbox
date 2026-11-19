@@ -383,6 +383,10 @@ The following global options are defined. Note that all are typically formatted 
      - :python:`False`
      - boolean
      - If :python:`False`, use the sympy function ``sympy.exp`` to compute the matrix exponential. If :python:`True`, use an alternative function (see :py:func:`odetoolbox.sympy_helpers.expMt` for details). This can be useful as calls to ``sympy.exp`` can sometimes take a very large amount of time.
+   * - ``max_float_to_int_bits``
+     - 23
+     - integer
+     - Integer-valued floating-point numbers (such as ``2.0``) in expressions are converted to integers (``2``), but only if their magnitude is strictly less than :math:`2^N`, where :math:`N` is the value of this option. Beyond the number of mantissa bits of the floating-point type, not every integer is representable as a float, and large integers might not fit in the integer type of the target platform. The default value of 23 is conservative: it is within the number of mantissa bits of a single-precision float (24) as well as within the range of a signed 32-bit integer. If generating code exclusively for platforms with wider types, a larger value can be chosen, for instance 31 or 32 for signed or unsigned 32-bit integers, respectively, or 53 (``sys.float_info.mant_dig`` on most platforms) for double-precision floats.
 
 
 Output
