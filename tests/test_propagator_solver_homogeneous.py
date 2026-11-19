@@ -40,4 +40,4 @@ class TestPropagatorSolverHomogeneous:
         for cond_solver_dict in solver_dict["conditions"].values():
             assert float(cond_solver_dict["propagators"]["__P__refr_t__refr_t"]) == 1.
 
-        assert str(solver_dict["conditions"]["default"]["propagators"]["__P__V_m__V_m"]) == "exp(-__h/tau_m)"
+        assert solver_dict["conditions"]["default"]["propagators"]["__P__V_m__V_m"] == "exp(-__h/tau_m)"
