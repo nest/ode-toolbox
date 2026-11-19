@@ -71,48 +71,20 @@ def _find_analytically_solvable_equations(shape_sys, shapes, parameters=None):
 
     Perform dependency analysis and plot dependency graph.
     """
-    logging.getLogger(__name__).debug(
-        "Finding analytically solvable equations...")
+    logging.getLogger(__name__).debug("Finding analytically solvable equations...")
 
-    # dependency edges of the ODE. building a graph showing which variables
-    # influence eachother
     dependency_edges = shape_sys.get_dependency_edges()
 
-    if PLOT_DEPENDENCY_GRAPH:
-
-        node_is_analytically_solvable = {sym: False for sym in list(
-            shape_sys.x_)}      # checking for linear coefficients
-
-        # this function creates a dict mapping to each vairable to true
-        # (solvable) or false (not solvable / non-linear)
-        DependencyGraphPlotter.plot_graph(
-            shapes,
-            dependency_edges,
-            node_is_analytically_solvable,
-            fn="/tmp/ode_dependency_graph.dot")
-
-    node_is_analytically_solvable = shape_sys.get_lin_cc_symbols(
-        dependency_edges, parameters=parameters)
-
-    if PLOT_DEPENDENCY_GRAPH:
-        DependencyGraphPlotter.plot_graph(
-            shapes,
-            dependency_edges,
-            node_is_analytically_solvable,
-            fn="/tmp/ode_dependency_graph_analytically_solvable_before_propagated.dot")
-
-    # (#PR107) removes the logic by _find_in_matrix for dependencies of neighbour ODE terms
-
-    # propagating the judgement, if variable a depends on variable b &&
-    # variable b (unsolvable) therefore a is unsolvable
+    node_is_analytically_solvable = shape_sys.get_lin_cc_symbols(dependency_edges, parameters=parameters)
     node_is_analytically_solvable = shape_sys.propagate_lin_cc_judgements(
         node_is_analytically_solvable, dependency_edges)
+
     if PLOT_DEPENDENCY_GRAPH:
         DependencyGraphPlotter.plot_graph(
             shapes,
             dependency_edges,
             node_is_analytically_solvable,
-            fn="/tmp/ode_dependency_graph_analytically_solvable.dot")
+            fn=os.path.join(tempfile.gettempdir(), "ode_dependency_graph.dot"))
 
     return dependency_edges, node_is_analytically_solvable
 
@@ -542,11 +514,6 @@ def _analysis(indict,
                 if "propagators" in cond_solver:
                     for sym, expr in cond_solver["propagators"].items():
                         cond_solver["propagators"][sym] = str(expr)
-
-                # serialisation belonging to conditional branches
-                if "cse" in solver_json:
-                    # CSE for conditional branches
-                    _serialize_cse_region_blocks(cond_solver)
 
         # serialisation cse belonging to this solver.
         if "cse" in solver_json:

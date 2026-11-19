@@ -117,8 +117,8 @@ class TestCSEMixedSolver:
             spike_times={},
             random_seed=123,
             max_step_size=max_step_size,
-            integration_accuracy_abs=1E-4,
-            integration_accuracy_rel=1E-4,
+            integration_accuracy_abs=1E-6,
+            integration_accuracy_rel=1E-6,
             sim_time=simulation_time,
             alias_spikes=False)
 

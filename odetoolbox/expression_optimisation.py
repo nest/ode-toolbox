@@ -68,7 +68,7 @@ def common_subexpression_elimination(
 
     # infinite generator for the temp local variables to hold isolated math
     # subexpressions
-    temporary_symbols = sympy.numbered_symbols(symbol_prefix)
+    temporary_symbols = sympy.numbered_symbols(symbol_prefix, real=True)
 
     # perform cse
     replacements, reduced_values = sympy.cse(
