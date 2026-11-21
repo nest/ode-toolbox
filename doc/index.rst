@@ -9,6 +9,8 @@ ODE-toolbox
    :tocdepth: 1
 
    index
+   Impressum <https://nest-initiative.org/impressum/>
+   Data protection <https://www.nest-initiative.org/data-protection/>
 
 .. role:: python(code)
    :language: python
