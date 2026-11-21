@@ -20,6 +20,7 @@
 #
 
 from .context import odetoolbox
+from odetoolbox.expression_optimisation import expand_cse_solver
 from tests.test_utils import load_test_json
 
 
@@ -33,7 +34,10 @@ class TestPropagatorSolverHomogeneous:
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"
 
+        # expand any common subexpressions, so that the propagators can be checked regardless of whether CSE is enabled
+        solver_dict = expand_cse_solver(solver_dict)
+
         for cond_solver_dict in solver_dict["conditions"].values():
             assert float(cond_solver_dict["propagators"]["__P__refr_t__refr_t"]) == 1.
 
-        assert solver_dict["conditions"]["default"]["propagators"]["__P__V_m__V_m"] == "exp(-__h/tau_m)"
+        assert str(solver_dict["conditions"]["default"]["propagators"]["__P__V_m__V_m"]) == "exp(-__h/tau_m)"

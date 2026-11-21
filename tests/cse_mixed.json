@@ -1,0 +1,26 @@
+{
+    "dynamics": [
+        {
+            "expression": "a' = -a / tau",
+            "initial_value": "1"
+        },
+        {
+            "expression": "b' = -b / tau",
+            "initial_value": "2"
+        },
+        {
+            "expression": "x' = -x**2 + exp(x + y) + sin(x + y)",
+            "initial_value": "1"
+        },
+        {
+            "expression": "y' = -y**2 + exp(x + y) + 3 * sin(x + y)",
+            "initial_value": "2"
+        }
+    ],
+    "parameters": {
+        "tau": "10"
+    },
+    "options": {
+        "output_timestep_symbol": "__h"
+    }
+}
