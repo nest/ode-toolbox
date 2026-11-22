@@ -112,6 +112,25 @@ def _count_collectable_terms(expr: sympy.Expr, sym: sympy.Symbol) -> int:
     return 0
 
 
+def _count_collectable_terms(expr: sympy.Expr, sym: sympy.Symbol) -> int:
+    r"""
+    Count the additive terms in ``expr`` that ``sympy.collect(expr, sym)`` can group, i.e. those that have ``sym`` (or a power of it, such as ``1/sym``) as a multiplicative factor.
+
+    Like ``sympy.collect``, this looks at every sum that can be reached through sums, products and powers (for instance, the numerator of ``(a*sym + b*sym)/c``), but not inside function arguments: the ``sym`` in ``a*exp(sym) + b*exp(sym)`` is not counted.
+    """
+    if expr.is_Add:
+        n_terms = sum(any(factor.as_base_exp()[0] == sym for factor in sympy.Mul.make_args(term)) for term in expr.args)
+        return n_terms + sum(_count_collectable_terms(term, sym) for term in expr.args)
+
+    if expr.is_Mul:
+        return sum(_count_collectable_terms(factor, sym) for factor in expr.args)
+
+    if expr.is_Pow:
+        return _count_collectable_terms(expr.base, sym)
+
+    return 0
+
+
 class PropagatorGenerationException(Exception):
     """
     Thrown in case an error occurs while generating propagators.
