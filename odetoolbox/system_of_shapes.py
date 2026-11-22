@@ -422,7 +422,7 @@ class SystemOfShapes:
         for name, expr in update_expr.items():
             update_expr[name] = _custom_simplify_expr(expr)
             collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
-            update_expr[name] = sympy.collect(update_expr[name], collect_syms)
+            update_expr[name] = sympy.collect(update_expr[name], sorted(collect_syms, key=str))
 
         return update_expr
 
