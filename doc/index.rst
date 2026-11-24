@@ -669,9 +669,9 @@ Citing ODE-toolbox
 
 If you use ODE-toolbox in your work, please cite it depending on the version you are using. (It is recommended to use the latest release version whenever possible; please go to https://github.com/nest/ode-toolbox/releases/ to obtain the latest version.)
 
-For the latest version (v3.0.0), please use the following citation [1]_:
+For the latest version (v3.1.0), please use the following citation [1]_:
 
-.. [1] Charl Linssen, Pooja N. Babu and Abigail Morrison (2026) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.22110361 <https://doi.org/10.5281/zenodo.22110361>`__.
+.. [1] Charl Linssen, Pooja N. Babu and Abigail Morrison (2026) **ODE-toolbox: Automatic selection and generation of integration schemes for systems of ordinary differential equations.** Zenodo. `doi:10.5281/zenodo.24495827 <https://doi.org/10.5281/zenodo.24495827>`__.
 
 For prior versions, please see [2]_ and the references to older versions contained within:
 
