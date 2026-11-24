@@ -38,12 +38,12 @@ class TestStiffnessChecker:
         indict = load_test_json("stiff_system.json")
 
         indict["parameters"]["a"] = "-100"
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
         assert len(result) == 1 \
                and result[0]["solver"].endswith("implicit")
 
         indict["parameters"]["a"] = "-1"
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
         assert len(result) == 1 \
                and result[0]["solver"].endswith("explicit")
 
@@ -52,12 +52,12 @@ class TestStiffnessChecker:
 
         indict["options"]["integration_accuracy_abs"] = 1E-9
         indict["options"]["integration_accuracy_rel"] = 1E-9
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
         assert len(result) == 1 \
                and result[0]["solver"].endswith("implicit")
 
         indict["options"]["integration_accuracy_abs"] = 1E-3
         indict["options"]["integration_accuracy_rel"] = 1E-3
-        result = odetoolbox.analysis(indict, disable_analytic_solver=True, disable_stiffness_check=not PYGSL_AVAILABLE)
+        result = odetoolbox.analysis(indict, disable_analytic_solver=True)
         assert len(result) == 1 \
                and result[0]["solver"].endswith("explicit")

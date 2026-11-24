@@ -19,15 +19,20 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import copy
+
+
 class Config:
     r"""Static class to store global configuration options.
 
-    Options are stored in the static dict ``config``. Access using either :python:`Config().key` or :python:`Config()[key]` or :python:`Config.config[key]`.
+    Options are stored in the static dict ``config``. Access using either :python:`Config().key` or :python:`Config()["key"]` or :python:`Config.config["key"]`.
+
+    The options persist across invocations of ODE-toolbox in the same process; call :py:meth:`reset` to restore the default values.
     """
 
-    config = {
+    _default_config = {
         "simplify_expression": "sympy.simplify(expr)",
-        "expression_simplification_threshold": 1000,
+        "expression_simplification_threshold": 2500,
         "input_time_symbol": "t",
         "output_timestep_symbol": "__h",
         "differential_order_symbol": "__d",
@@ -40,6 +45,13 @@ class Config:
         "use_alternative_expM": False,
         "max_float_to_int_bits": 23
     }
+
+    config = copy.deepcopy(_default_config)
+
+    @classmethod
+    def reset(cls):
+        r"""Restore all options to their default values."""
+        cls.config = copy.deepcopy(cls._default_config)
 
     def __getitem__(self, key):
         return Config.config[key]

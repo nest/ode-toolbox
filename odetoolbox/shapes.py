@@ -24,7 +24,6 @@ from __future__ import annotations
 from typing import List, Tuple
 
 import functools
-import logging
 import re
 import sympy
 import sympy.parsing.sympy_parser
