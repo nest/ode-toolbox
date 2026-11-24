@@ -235,13 +235,6 @@ class SingularityDetection:
         except Exception as e:
             raise SingularityDetectionException(str(e)) from e
 
-        if conditions:
-            # if there is one or more condition under which the solution goes to infinity...
-            logging.getLogger(__name__).warning("Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.")
-            logging.getLogger(__name__).warning("List of all conditions that result in a division by zero:")
-            for cond in conditions:
-                logging.getLogger(__name__).warning("\t" + str(cond.lhs) + " = " + str(cond.rhs))
-
         return conditions
 
     @staticmethod
@@ -294,6 +287,34 @@ class SingularityDetection:
             return False
 
     @staticmethod
+    def log_conditions(conditions: Set[SymmetricEq], message: str, previously_reported_conditions: Optional[Set[SymmetricEq]] = None) -> None:
+        r"""Log a warning listing the given conditions, skipping those that are identical or equivalent to a condition in ``previously_reported_conditions`` (so that the same condition is not reported twice). If no conditions remain, nothing is logged."""
+        if previously_reported_conditions is None:
+            previously_reported_conditions = set()
+
+        conditions_to_report = []
+        for cond in conditions:
+            already_reported = False
+            for prev_cond in previously_reported_conditions:
+                if cond == prev_cond \
+                   or SymmetricEq(-cond.lhs, -cond.rhs) == prev_cond \
+                   or SingularityDetection._conditions_are_equivalent(cond, prev_cond):
+                    already_reported = True
+                    break
+
+            if not already_reported:
+                conditions_to_report.append(cond)
+
+        if not conditions_to_report:
+            return
+
+        # if there is one or more condition under which the solution goes to infinity...
+        logging.getLogger(__name__).warning(message)
+        logging.getLogger(__name__).warning("List of all conditions that result in a division by zero:")
+        for cond in conditions_to_report:
+            logging.getLogger(__name__).warning("\t" + str(cond.lhs) + " = " + str(cond.rhs))
+
+    @staticmethod
     def _remove_duplicate_conditions(conditions: Set[SymmetricEq]):
         r"""Remove duplicated conditions. ``conditions`` is already a set of ``SymmetricEq`` (so that ``a == b`` is equivalent to ``b == a``), so duplicates should normally not be possible anyway, but sometimes, in addition to ``a == b``, the condition ``-a == -b`` is present, which is effectively a duplicate. Similarly, the same condition can be found solved for different symbols, such as :math:`g = 1/\tau` and :math:`\tau = 1/g`; in that case, the simplest of the two is kept. This method removes those kinds of duplicates."""
         for cond in conditions:
@@ -339,13 +360,6 @@ class SingularityDetection:
             conditions = SingularityDetection._generate_singularity_conditions(P)
             conditions = SingularityDetection._filter_valid_conditions(conditions, A)  # filters out the invalid conditions (invalid means those for which A is not defined)
             conditions = SingularityDetection._remove_duplicate_conditions(conditions)
-            if conditions:
-                # if there is one or more condition under which the solution goes to infinity...
-                logging.getLogger(__name__).warning("Under certain conditions, the propagator matrix is singular (contains infinities).")
-                logging.getLogger(__name__).warning("List of all conditions that result in a division by zero:")
-                for cond in conditions:
-                    logging.getLogger(__name__).warning("\t" + str(cond.lhs) + " = " + str(cond.rhs))
-
         except Exception as e:
             print(e)
             raise SingularityDetectionException()

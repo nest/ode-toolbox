@@ -351,19 +351,22 @@ class SystemOfShapes:
         #
 
         if not disable_singularity_detection:
-            conditions = set()
-
+            propagator_conditions = set()
             try:
-                conditions = conditions.union(SingularityDetection.find_propagator_singularities(P, self.A_))
+                propagator_conditions = SingularityDetection.find_propagator_singularities(P, self.A_)
             except SingularityDetectionException:
                 logging.getLogger(__name__).warning("Could not check the propagator matrix for singularities.")
 
+            inhomogeneous_conditions = set()
             try:
-                conditions = conditions.union(SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_, Qb))
+                inhomogeneous_conditions = SingularityDetection.find_inhomogeneous_singularities(self.A_, self.b_, Qb)
             except SingularityDetectionException:
                 logging.getLogger(__name__).warning("Could not check the inhomogeneous update terms for singularities.")
 
-            conditions = SingularityDetection._remove_duplicate_conditions(conditions)
+            SingularityDetection.log_conditions(propagator_conditions, "Under certain conditions, the propagator matrix is singular (contains infinities).")
+            SingularityDetection.log_conditions(inhomogeneous_conditions, "Under certain conditions, one or more inhomogeneous term(s) in the system contain a division by zero.", previously_reported_conditions=propagator_conditions)
+
+            conditions = SingularityDetection._remove_duplicate_conditions(propagator_conditions.union(inhomogeneous_conditions))
 
             if conditions and not disable_singularity_mitigation:
                 # generate solver for the base case (with singularity conditions that are not met)
