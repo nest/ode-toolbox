@@ -187,7 +187,7 @@ class TestAnalyticSolverIntegration:
 
         print("Starting ODE-toolbox analysis...")
         indict = load_test_json("test_integration.json")
-        solver_dict = odetoolbox.analysis(indict, disable_stiffness_check=True, use_alternative_expM=use_alternative_expM, log_level="DEBUG")
+        solver_dict = odetoolbox.analysis(indict, disable_singularity_mitigation=True, disable_stiffness_check=True, use_alternative_expM=use_alternative_expM, log_level="DEBUG")
         assert len(solver_dict) == 1
         solver_dict = solver_dict[0]
         assert solver_dict["solver"] == "analytical"

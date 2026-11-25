@@ -19,11 +19,11 @@
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import pytest
-
 import numpy as np
+import os
 import scipy.integrate
 import sympy
+import tempfile
 
 from .context import odetoolbox
 from odetoolbox.analytic_integrator import AnalyticIntegrator
@@ -109,7 +109,7 @@ class TestInhomogeneousNumericallyZero:
                 if not _ax == ax[-1]:
                     _ax.set_xticklabels([])
 
-            fig.savefig("/tmp/test_propagators_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png")
+            fig.savefig(os.path.join(tempfile.gettempdir(), "test_propagators_[late_ltd_check=" + str(late_ltd_check) + "]_[late_ltp_check=" + str(late_ltp_check) + "].png"))
 
         #
         #   test
