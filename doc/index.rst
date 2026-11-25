@@ -168,6 +168,14 @@ The JSON input dictionary that is passed to ODE-toolbox contains :ref:`dynamics 
 
 All expressions are parsed as SymPy expressions, and subsequently simplified through :python:`sympy.simplify()`. There are several predefined symbols, such as :python:`e` and :python:`E` for Euler's number, trigonometric functions, etc. :python:`t` is assumed to represent time. The list of predefined symbols is defined in `sympy_helpers.py <https://github.com/nest/ode-toolbox/blob/main/odetoolbox/sympy_helpers.py>`_, as the module-level variable :python:`sympy_globals`. Variable names should be chosen such that they do not conflict with the predefined symbols.
 
+For equations that are solved numerically, after simplification (see the ``simplify_expression`` parameter under :ref:`global options <Global options>`), the terms of each right-hand side that share a parameter as a factor are grouped together using :python:`sympy.collect()`. :python:`collect()` is greedy: terms that have been grouped under one symbol are no longer available to the symbols that come after it, so the order in which the symbols are collected determines how far the expression is factored. ODE-toolbox collects the symbols that can group the most terms first, breaking ties by name, so that the output does not depend on the order in which Python iterates over the symbols. For example, if the equation
+
+.. code-block:: text
+
+   V_m' = -(V_m - E_L) / tau_m + I_e / C_m
+
+is solved numerically, the update expression is returned as ``(E_L - V_m)/tau_m + I_e/C_m`` (collecting ``tau_m`` first) rather than ``E_L/tau_m - V_m/tau_m + I_e/C_m`` (collecting ``E_L`` first).
+
 Dynamics
 ~~~~~~~~
 

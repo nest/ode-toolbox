@@ -69,6 +69,25 @@ def get_block_diagonal_blocks(A):
     return blocks
 
 
+def _count_collectable_terms(expr: sympy.Expr, sym: sympy.Symbol) -> int:
+    r"""
+    Count the additive terms in ``expr`` that ``sympy.collect(expr, sym)`` can group, i.e. those that have ``sym`` (or a power of it, such as ``1/sym``) as a multiplicative factor.
+
+    Like ``sympy.collect``, this looks at every sum that can be reached through sums, products and powers (for instance, the numerator of ``(a*sym + b*sym)/c``), but not inside function arguments: the ``sym`` in ``a*exp(sym) + b*exp(sym)`` is not counted.
+    """
+    if expr.is_Add:
+        n_terms = sum(any(factor.as_base_exp()[0] == sym for factor in sympy.Mul.make_args(term)) for term in expr.args)
+        return n_terms + sum(_count_collectable_terms(term, sym) for term in expr.args)
+
+    if expr.is_Mul:
+        return sum(_count_collectable_terms(factor, sym) for factor in expr.args)
+
+    if expr.is_Pow:
+        return _count_collectable_terms(expr.base, sym)
+
+    return 0
+
+
 class PropagatorGenerationException(Exception):
     """
     Thrown in case an error occurs while generating propagators.
@@ -422,6 +441,9 @@ class SystemOfShapes:
         for name, expr in update_expr.items():
             update_expr[name] = _custom_simplify_expr(expr)
             collect_syms = [sym for sym in update_expr[name].free_symbols if not (sym in state_variables or str(sym) in state_variables)]
+
+            # ``sympy.collect`` is greedy: terms grouped under one symbol are no longer available to the symbols after it. Collect the symbols that can group the most terms first (ties broken by name, so the result does not depend on set iteration order).
+            collect_syms = sorted(collect_syms, key=lambda sym: (-_count_collectable_terms(update_expr[name], sym), str(sym)))
             update_expr[name] = sympy.collect(update_expr[name], collect_syms)
 
         return update_expr
